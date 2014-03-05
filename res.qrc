@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/image">
+        <file alias="welcome">C:/Users/zhijian/Pictures/本机照片/my001.jpg</file>
+    </qresource>
+</RCC>

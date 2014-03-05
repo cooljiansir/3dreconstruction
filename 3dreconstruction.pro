@@ -13,11 +13,18 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp
+        mainwindow.cpp \
+    photodialog.cpp \
+    rtfdocument.cpp \
+    tinyxml2.cpp
 
-HEADERS  += mainwindow.h
+HEADERS  += mainwindow.h \
+    photodialog.h \
+    rtfdocument.h \
+    tinyxml2.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    photodialog.ui
 
 
 
@@ -25,5 +32,9 @@ INCLUDEPATH +=include\
             include\opencv\
             include\opencv2\
 
-LIBS += lib\libopencv_highgui247.dll.a\
-        lib\libopencv_core247.dll.a
+
+LIBS += $$_PRO_FILE_PWD_\lib\libopencv_highgui247.dll.a\
+        $$_PRO_FILE_PWD_\lib\libopencv_core247.dll.a
+
+RESOURCES += \
+    res.qrc
