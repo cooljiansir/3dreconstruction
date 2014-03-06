@@ -50,7 +50,7 @@
      <property name="title">
       <string>GroupBox</string>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout" stretch="18,1,1,1,8,3,3,3">
+     <layout class="QHBoxLayout" name="horizontalLayout" stretch="18,1,1,1,8,3,3">
       <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
@@ -72,7 +72,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="lineEdit"/>
+       <widget class="QLineEdit" name="widthEdit"/>
       </item>
       <item>
        <widget class="QLabel" name="label_2">
@@ -93,13 +93,6 @@
          </size>
         </property>
        </spacer>
-      </item>
-      <item>
-       <widget class="QPushButton" name="undoBut">
-        <property name="text">
-         <string>UnDo</string>
-        </property>
-       </widget>
       </item>
       <item>
        <widget class="QPushButton" name="okBut">

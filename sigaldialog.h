@@ -17,6 +17,7 @@ public:
     explicit SigalDialog(QString filename,RTFDocument *doc,QWidget *parent = 0);
     ~SigalDialog();
     void setOkButEnable(bool b);
+    QString getInputWidth();
 
 private slots:
     void on_cancelBut_clicked();

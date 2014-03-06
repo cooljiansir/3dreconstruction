@@ -10,7 +10,7 @@ SigalDialog::SigalDialog(QString filename, RTFDocument *doc, QWidget *parent):
     ui->setupUi(this);
 
     QStackedLayout *layout = new QStackedLayout(ui->ImageContainer);
-    this->label = new ClickLabel(filename,doc,ui->ImageContainer);
+    this->label = new ClickLabel(filename,doc,this);
     layout->addWidget(label);
 //    /label->setPixmap(QPixmap(filename));
 
@@ -18,8 +18,8 @@ SigalDialog::SigalDialog(QString filename, RTFDocument *doc, QWidget *parent):
                          |Qt::WindowMaximizeButtonHint
                          |Qt::WindowMinimizeButtonHint
                          |Qt::WindowCloseButtonHint);
+    this->showMaximized();
     ui->okBut->setEnabled(false);
-    ui->undoBut->setEnabled(false);
 }
 
 SigalDialog::~SigalDialog()
@@ -38,5 +38,8 @@ void SigalDialog::on_okBut_clicked()
     la->onOk();
 }
 void SigalDialog::setOkButEnable(bool b){
-    //ui->okBut->
+    ui->okBut->setEnabled(b);
+}
+QString SigalDialog::getInputWidth(){
+    return this->ui->widthEdit->text();
 }

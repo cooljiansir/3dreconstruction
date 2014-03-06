@@ -52,6 +52,9 @@ public:
     bool havepoint(int x,int y);
 
     void getCornerByHand(vector<CPoint> &rec_4, vector<vector<Point2f> > &corner);
+
+    //添加到表格数据
+    void addCorner(vector<vector<Point2f> > &corner,double width);
 private:
 
     //左摄像机内参

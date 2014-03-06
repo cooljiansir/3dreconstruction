@@ -83,6 +83,25 @@ bool RTFDocument::havepoint(int x, int y){
     }
     return count==1;
 }
+void RTFDocument::addCorner(vector<vector<Point2f> > &corner, double width){
+    for(int i = 0;i<corner.size();i++){
+        vector<Point2f> vec;
+        for(int j = 0;j<corner[i].size();j++){
+            Point2f p;
+            p.x = i*width;
+            p.y = j*width;
+            vec.push_back(p);
+        }
+        this->image_point.push_back(corner[i]);
+        this->object_point.push_back(vec);
+    }
+}
+
+
+
+
+
+
 
 int cmp_x(const Point2f &a,const Point2f &b){
     return a.x<b.x;
@@ -303,6 +322,9 @@ void  RTFDocument::getCornerByHand(vector<CPoint> &rec_4,vector<vector<Point2f> 
             }
         }
     }
+    corner = grid_c[0];
+
+    /*
     Mat teMat = this->selectimg.clone();
     Mat teMat2 = this->selectimg.clone();
 
@@ -317,6 +339,6 @@ void  RTFDocument::getCornerByHand(vector<CPoint> &rec_4,vector<vector<Point2f> 
             circle(teMat2,grid_c[1][i][j],SERACH_RANGE,Scalar(0,0,255));
     }
     imshow("corners2",teMat2);
+    */
 
-    corner = grid_c[0];
 }

@@ -26,12 +26,17 @@ public:
     void onOk();
 private:
     Ui::ClickLabel *ui;
+    int status;
     QPixmap *pixmap;
     int mouse_x;
     int mouse_y;
     vector<int> mouse_x_v;
     vector<int> mouse_y_v;
     RTFDocument *doc;
+    QWidget *father;
+    vector<vector<Point2f> > corners;
+static const int STATUS_FINDING = 1;
+static const int STATUS_FOUND   = 2;
 };
 
 #endif // CLICKLABEL_H
