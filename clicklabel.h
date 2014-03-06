@@ -3,6 +3,9 @@
 
 #include <QLabel>
 #include <vector>
+#include "mainwindow.h"
+
+
 using namespace std;
 
 namespace Ui {
@@ -16,10 +19,11 @@ class ClickLabel : public QLabel
 protected:
     void paintEvent(QPaintEvent *);
 public:
-    explicit ClickLabel(QString filename,QWidget *parent = 0);
+    explicit ClickLabel(QString filename,RTFDocument *doc,QWidget *parent = 0);
     ~ClickLabel();
     void mouseMoveEvent(QMouseEvent *);
     void mousePressEvent(QMouseEvent *ev);
+    void onOk();
 private:
     Ui::ClickLabel *ui;
     QPixmap *pixmap;
@@ -27,6 +31,7 @@ private:
     int mouse_y;
     vector<int> mouse_x_v;
     vector<int> mouse_y_v;
+    RTFDocument *doc;
 };
 
 #endif // CLICKLABEL_H

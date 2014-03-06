@@ -35,6 +35,7 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+public:
     RTFDocument *doc;
 
 };

@@ -129,8 +129,8 @@ void MainWindow::on_adddataBut_clicked()
        "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
     if (!filename.isNull()) { //用户选择了文件
         this->doc->selectBegin(filename.toStdString());
-          this->doc->selectBegin(filename.toStdString());
-          SigalDialog dig(filename,this);
+          //this->doc->selectBegin(filename.toStdString());
+          SigalDialog dig(filename,this->doc,this);
           dig.setWindowTitle(filename.mid(filename.lastIndexOf("/")+1));
           dig.exec();
     }

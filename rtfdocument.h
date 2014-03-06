@@ -17,7 +17,16 @@ using namespace tinyxml2;
  *
  */
 
-#define SERACH_RANGE  9//9个像素搜索范围
+#define SERACH_RANGE  7//7个像素搜索范围
+
+//之前从MFC迁移过来的代码，有CPoint
+struct CPoint{
+    double x,y;
+    CPoint(double x,double y){
+        this->x = x;
+        this->y = y;
+    }
+};
 
 class RTFDocument
 {
@@ -41,6 +50,8 @@ public:
     bool selectBegin(string filename);
     //该点附近是否有角点
     bool havepoint(int x,int y);
+
+    void getCornerByHand(vector<CPoint> &rec_4, vector<vector<Point2f> > &corner);
 private:
 
     //左摄像机内参

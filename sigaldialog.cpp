@@ -3,15 +3,14 @@
 #include "clicklabel.h"
 #include <QStackedLayout>
 
-SigalDialog::SigalDialog(QString filename, QWidget *parent) :
+SigalDialog::SigalDialog(QString filename, RTFDocument *doc, QWidget *parent):
     QDialog(parent),
     ui(new Ui::SigalDialog)
 {
     ui->setupUi(this);
-    this->parent = parent;
 
     QStackedLayout *layout = new QStackedLayout(ui->ImageContainer);
-    ClickLabel *label = new ClickLabel(filename,ui->ImageContainer);
+    this->label = new ClickLabel(filename,doc,ui->ImageContainer);
     layout->addWidget(label);
 //    /label->setPixmap(QPixmap(filename));
 
@@ -31,4 +30,13 @@ SigalDialog::~SigalDialog()
 void SigalDialog::on_cancelBut_clicked()
 {
     this->close();
+}
+
+void SigalDialog::on_okBut_clicked()
+{
+    ClickLabel *la = (ClickLabel*)this->label;
+    la->onOk();
+}
+void SigalDialog::setOkButEnable(bool b){
+    //ui->okBut->
 }
