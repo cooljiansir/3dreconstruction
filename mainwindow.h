@@ -31,6 +31,8 @@ private slots:
 
     void on_actionNew_triggered();
 
+    void on_adddataBut_clicked();
+
 private:
     Ui::MainWindow *ui;
     RTFDocument *doc;

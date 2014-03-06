@@ -16,15 +16,24 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     photodialog.cpp \
     rtfdocument.cpp \
-    tinyxml2.cpp
+    tinyxml2.cpp \
+    sigaldialog.cpp \
+    clicklabel.cpp
 
 HEADERS  += mainwindow.h \
     photodialog.h \
     rtfdocument.h \
-    tinyxml2.h
+    tinyxml2.h \
+    sigaldialog.h \
+    clicklabel.h
 
 FORMS    += mainwindow.ui \
-    photodialog.ui
+    photodialog.ui \
+    sigaldialog.ui \
+    imagelable.ui \
+    imagelabel.ui \
+    clickframe.ui \
+    clicklabel.ui
 
 
 
@@ -34,7 +43,8 @@ INCLUDEPATH +=include\
 
 
 LIBS += $$_PRO_FILE_PWD_\lib\libopencv_highgui247.dll.a\
-        $$_PRO_FILE_PWD_\lib\libopencv_core247.dll.a
+        $$_PRO_FILE_PWD_\lib\libopencv_core247.dll.a\
+        $$_PRO_FILE_PWD_\lib\libopencv_imgproc247.dll.a
 
 RESOURCES += \
     res.qrc

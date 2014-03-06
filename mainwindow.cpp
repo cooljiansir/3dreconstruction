@@ -4,6 +4,7 @@
 #include <QFileDialog>
 #include <QDir>
 #include <QMessageBox>
+#include "sigaldialog.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -13,10 +14,13 @@ MainWindow::MainWindow(QWidget *parent) :
     this->doc = new RTFDocument();
     ui->actionSave->setEnabled(false);
     ui->actionNew->setEnabled(true);
-    ui->actionDual->setEnabled(false);
-    ui->actionTake_Photoes->setEnabled(true);
     ui->actionOpen_file->setEnabled(true);
+    ui->actionDual->setEnabled(false);
+    ui->actionTake_Photoes->setEnabled(false);
     ui->actionSigalCamera->setEnabled(false);
+    ui->action3D_reconstruction->setEnabled(false);
+    ui->actionTake_Photoes_2->setEnabled(false);
+    ui->actionPolar_Correction->setEnabled(false);
     this->ui->stackedWidget->setCurrentIndex(1);//welcome!
 }
 
@@ -66,6 +70,13 @@ void MainWindow::on_actionOpen_file_triggered()
           this->setWindowTitle(filename.mid(filename.lastIndexOf("/")+1));
           ui->actionNew->setEnabled(false);
           ui->actionSave->setEnabled(true);
+
+          ui->action3D_reconstruction->setEnabled(true);
+          ui->actionDual->setEnabled(true);
+          ui->actionPolar_Correction->setEnabled(true);
+          ui->actionSigalCamera->setEnabled(true);
+          ui->actionTake_Photoes->setEnabled(true);
+          ui->actionTake_Photoes_2->setEnabled(true);
     } else{ // 用户取消选择
 
     }
@@ -98,5 +109,29 @@ void MainWindow::on_actionNew_triggered()
     ui->actionOpen_file->setEnabled(false);
     ui->actionSave->setEnabled(true);
     ui->actionNew->setEnabled(false);
+
+    ui->action3D_reconstruction->setEnabled(true);
+    ui->actionDual->setEnabled(true);
+    ui->actionPolar_Correction->setEnabled(true);
+    ui->actionSigalCamera->setEnabled(true);
+    ui->actionTake_Photoes->setEnabled(true);
+    ui->actionTake_Photoes_2->setEnabled(true);
+
     this->setWindowTitle("untitiled.rtf");
+}
+
+void MainWindow::on_adddataBut_clicked()
+{
+    QString filename = QFileDialog::getOpenFileName(
+       this,
+       "Open Document",
+       QDir::currentPath(),
+       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if (!filename.isNull()) { //用户选择了文件
+        this->doc->selectBegin(filename.toStdString());
+          this->doc->selectBegin(filename.toStdString());
+          SigalDialog dig(filename,this);
+          dig.setWindowTitle(filename.mid(filename.lastIndexOf("/")+1));
+          dig.exec();
+    }
 }

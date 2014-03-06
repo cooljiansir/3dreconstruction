@@ -5,7 +5,9 @@
 #include <string>
 #include <vector>
 #include "tinyxml2.h"
+#include <cv.h>
 
+using namespace cv;
 using namespace std;
 using namespace tinyxml2;
 
@@ -15,10 +17,7 @@ using namespace tinyxml2;
  *
  */
 
-struct RPoint{
-    double x;
-    double y;
-};
+#define SERACH_RANGE  9//9个像素搜索范围
 
 class RTFDocument
 {
@@ -27,9 +26,22 @@ private:
     bool fileopen;
 
     //图像坐标
-    vector<vector<RPoint> > image_point;
+    vector<vector<Point2f> > image_point;
     //实际坐标
-    vector<vector<RPoint> > object_point;
+    vector<vector<Point2f> > object_point;
+
+    //描点所用的
+    //打开的图片
+    Mat selectimg;
+    //监测到图片上所有角点
+    vector<Point2f> harriscorners;
+
+public:
+    //开始
+    bool selectBegin(string filename);
+    //该点附近是否有角点
+    bool havepoint(int x,int y);
+private:
 
     //左摄像机内参
     bool l_insok;       //是否有效

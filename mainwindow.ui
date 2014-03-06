@@ -187,11 +187,10 @@ font: 48pt &quot;Agency FB&quot;;</string>
    </widget>
    <widget class="QMenu" name="menuCalibration">
     <property name="title">
-     <string>Calibration</string>
+     <string>Single</string>
     </property>
     <addaction name="actionTake_Photoes"/>
     <addaction name="actionSigalCamera"/>
-    <addaction name="actionDual"/>
    </widget>
    <widget class="QMenu" name="menuPolar">
     <property name="title">
@@ -205,8 +204,16 @@ font: 48pt &quot;Agency FB&quot;;</string>
     </property>
     <addaction name="action3D_reconstruction"/>
    </widget>
+   <widget class="QMenu" name="menuBinocular">
+    <property name="title">
+     <string>Binocular</string>
+    </property>
+    <addaction name="actionTake_Photoes_2"/>
+    <addaction name="actionDual"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
+   <addaction name="menuBinocular"/>
    <addaction name="menuPolar"/>
    <addaction name="menu3d_recongnition"/>
   </widget>
@@ -236,7 +243,7 @@ font: 48pt &quot;Agency FB&quot;;</string>
   </action>
   <action name="actionTake_Photoes">
    <property name="text">
-    <string>Take Photoes</string>
+    <string>Take Photos</string>
    </property>
   </action>
   <action name="actionNew">
@@ -246,7 +253,7 @@ font: 48pt &quot;Agency FB&quot;;</string>
   </action>
   <action name="actionSigalCamera">
    <property name="text">
-    <string>Sigal Camera</string>
+    <string>Singal Camera</string>
    </property>
   </action>
   <action name="actionPolar_Correction">
@@ -257,6 +264,11 @@ font: 48pt &quot;Agency FB&quot;;</string>
   <action name="action3D_reconstruction">
    <property name="text">
     <string>3D reconstruction</string>
+   </property>
+  </action>
+  <action name="actionTake_Photoes_2">
+   <property name="text">
+    <string>Take Photos</string>
    </property>
   </action>
  </widget>
