@@ -18,19 +18,22 @@ SOURCES += main.cpp\
     rtfdocument.cpp \
     tinyxml2.cpp \
     sigaldialog.cpp \
-    clicklabel.cpp
+    clicklabel.cpp \
+    binoculardialog.cpp
 
 HEADERS  += mainwindow.h \
     photodialog.h \
     rtfdocument.h \
     tinyxml2.h \
     sigaldialog.h \
-    clicklabel.h
+    clicklabel.h \
+    binoculardialog.h
 
 FORMS    += mainwindow.ui \
     photodialog.ui \
     sigaldialog.ui \
-    clicklabel.ui
+    clicklabel.ui \
+    binoculardialog.ui
 
 
 

@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QMessageBox>
 #include "sigaldialog.h"
+#include "binoculardialog.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -21,7 +22,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->action3D_reconstruction->setEnabled(false);
     ui->actionTake_Photoes_2->setEnabled(false);
     ui->actionPolar_Correction->setEnabled(false);
-    this->ui->stackedWidget->setCurrentIndex(1);//welcome!
+    this->ui->stackedWidget->setCurrentIndex(0);//welcome!
 }
 
 MainWindow::~MainWindow()
@@ -166,6 +167,8 @@ void MainWindow::on_actionOpen_file_triggered()
           ui->actionSigalCamera->setEnabled(true);
           ui->actionTake_Photoes->setEnabled(true);
           ui->actionTake_Photoes_2->setEnabled(true);
+
+          ui->stackedWidget->setCurrentIndex(1);
     } else{ // 用户取消选择
 
     }
@@ -189,7 +192,7 @@ void MainWindow::on_actionSave_triggered()
 //
 void MainWindow::on_actionSigalCamera_triggered()
 {
-    ui->stackedWidget->setCurrentIndex(0);
+    ui->stackedWidget->setCurrentIndex(1);
     setupCalibUI();
 }
 //新建文档
@@ -207,6 +210,7 @@ void MainWindow::on_actionNew_triggered()
     ui->actionTake_Photoes_2->setEnabled(true);
 
     this->setWindowTitle("untitiled.rtf");
+    ui->stackedWidget->setCurrentIndex(1);
 }
 
 void MainWindow::on_adddataBut_clicked()
@@ -243,5 +247,31 @@ void MainWindow::on_rightAddData_clicked()
           dig.setWindowTitle(filename.mid(filename.lastIndexOf("/")+1));
           dig.exec();
           this->loadCalidUI();
+    }
+}
+
+void MainWindow::on_actionDual_triggered()
+{
+    ui->stackedWidget->setCurrentIndex(2);
+}
+
+void MainWindow::on_bincularAddBut_clicked()
+{
+    QString leftfilename = QFileDialog::getOpenFileName(
+       this,
+       "Binocular Calibration - Open Left Image",
+       QDir::currentPath(),
+       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if (!leftfilename.isNull()) { //用户选择了左图文件
+        QString rightfilename = QFileDialog::getOpenFileName(
+           this,
+           "Binocular Calibration - Open Left Image",
+           QDir::currentPath(),
+           "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+        if (!rightfilename.isNull()) { //用户选择了右图文件
+
+
+
+        }
     }
 }

@@ -39,6 +39,8 @@ private slots:
 
     void on_actionDual_triggered();
 
+    void on_bincularAddBut_clicked();
+    
 public:
     void loadCalidUI();
 private:
