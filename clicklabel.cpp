@@ -8,17 +8,20 @@
 
 
 
-ClickLabel::ClickLabel(QString filename, RTFDocument *doc, QWidget *parent) :
+ClickLabel::ClickLabel(int isright, QString filename, RTFDocument *doc, QWidget *parent) :
     QLabel(parent),
     ui(new Ui::ClickLabel)
 {
     ui->setupUi(this);
+    this->isright = isright;
     this->doc = doc;
+    this->doc->selectBegin(filename.toStdString(),selectimg,harriscorners);
     QWidget::setMouseTracking(true);
     this->pixmap = new QPixmap(filename);
     this->setPixmap(*pixmap);
     this->father  = parent;
     this->status = ClickLabel::STATUS_FINDING;
+    connect(this,SIGNAL(ok()),parent,SLOT(onLabelOk()));
 }
 
 ClickLabel::~ClickLabel()
@@ -63,7 +66,7 @@ void ClickLabel::mousePressEvent(QMouseEvent *ev){
     //QMessageBox::information(this,"debug","debug");
     if(this->status!=ClickLabel::STATUS_FINDING)
         return;
-    if(this->doc->havepoint(ev->x(),ev->y())){
+    if(this->doc->havepoint(this->harriscorners,ev->x(),ev->y())){
         this->mouse_x_v.push_back(ev->x());
         this->mouse_y_v.push_back(ev->y());
         if(this->mouse_x_v.size()==4){
@@ -71,16 +74,16 @@ void ClickLabel::mousePressEvent(QMouseEvent *ev){
             for(int i = 0;i<mouse_x_v.size();i++){
                 points_4.push_back(CPoint(mouse_x_v[i],mouse_y_v[i]));
             }
-            this->doc->getCornerByHand(points_4,this->corners);
+            this->doc->getCornerByHand(this->harriscorners,points_4,this->corners);
             if(this->corners.size()==0){
                 QMessageBox::information(this,"ERROR","You don't select a triangle !");
                 this->mouse_x_v.clear();
                 this->mouse_y_v.clear();
                 return ;
             }
-            SigalDialog *sig = (SigalDialog*)father;
-            sig->setOkButEnable(true);
-
+            //SigalDialog *sig = (SigalDialog*)father;
+            //sig->setOkButEnable(true);
+            this->onOk();
             this->status = ClickLabel::STATUS_FOUND;
             this->repaint();
         }
@@ -90,16 +93,7 @@ void ClickLabel::mousePressEvent(QMouseEvent *ev){
 }
 
 void ClickLabel::onOk(){
-    if(mouse_x_v.size()!=4)
-        return;
-    SigalDialog *sig = (SigalDialog*)father;
-    QString width = sig->getInputWidth();
-    if(width.length()==0){
-        QMessageBox::information(this,"Information","Please Input the width of each small square!");
-        return ;
-    }
-    this->doc->addCorner(corners,width.toDouble());
-    this->father->close();
+    emit this->ok();
 }
 
 

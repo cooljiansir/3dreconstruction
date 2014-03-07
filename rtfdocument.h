@@ -45,32 +45,23 @@ private:
     //实际坐标
     vector<vector<Point3f> > object_point_r;
 
-    //当前是哪个摄像头，0左，1右
-    int isright;
-
-    //一下数据是打开一个手动标定窗口需要的
-    //描点所用的
-    //打开的图片
-    Mat selectimg;
-    //监测到图片上所有角点
-    vector<Point2f> harriscorners;
 
 public:
     //开始
-    bool selectBegin(int isr, string filename);
+    bool selectBegin(string filename,Mat &selectimg,vector<Point2f> &harriscorners);
     //该点附近是否有角点
-    bool havepoint(int x,int y);
+    bool havepoint(vector<Point2f> &harriscorners, int x, int y);
 
-    void getCornerByHand(vector<CPoint> &rec_4, vector<vector<Point2f> > &corner);
+    void getCornerByHand(vector<Point2f> harriscorners, vector<CPoint> &rec_4, vector<vector<Point2f> > &corner);
 
     //添加到表格数据
-    void addCorner(vector<vector<Point2f> > selectcorner, double width);
+    void addCorner(int isright, Mat &selectimg, vector<vector<Point2f> > selectcorner, double width);
 
     //获取表格数据
     void getCorner(int isright,vector<vector<Point2f> > &image_point,vector<vector<Point3f> > &object_point);
 
     //获取各种参数
-    void calParams();
+    void calParams(Mat &selectimg);
 private:
 
     //左摄像机内参
@@ -85,6 +76,22 @@ private:
     //右摄像机畸变参数
     bool r_disok;       //是否有效
     Mat r_distortion;
+private:
+    //双目标定数据
+    //图像坐标
+    vector<vector<Point2f> > bin_image_point_l;
+    //图像坐标
+    vector<vector<Point2f> > bin_image_point_r;
+    //实际坐标
+    vector<vector<Point3f> > bin_object_point_l;
+public:
+    void getBinData(vector<vector<Point2f> > &bin_image_point_l,
+                    vector<vector<Point2f> > &bin_image_point_r,
+                    vector<vector<Point3f> > &bin_object_point_l);
+    void addBinData(Mat &selectimg,
+                    vector<vector<Point2f> > &cornerL,
+                    vector<vector<Point2f> > &cornerR,
+                    double width);
 
 public:
     bool getLintrisic(Mat &intrinsic);

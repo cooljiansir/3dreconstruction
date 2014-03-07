@@ -2,18 +2,19 @@
 #include "ui_sigaldialog.h"
 #include "clicklabel.h"
 #include <QStackedLayout>
+#include <QMessageBox>
 
-SigalDialog::SigalDialog(QString filename, RTFDocument *doc, QWidget *parent):
+SigalDialog::SigalDialog(int isright,QString filename, RTFDocument *doc, QWidget *parent):
     QDialog(parent),
     ui(new Ui::SigalDialog)
 {
     ui->setupUi(this);
-
+    this->isright = isright;
+    this->doc = doc;
     QStackedLayout *layout = new QStackedLayout(ui->ImageContainer);
-    this->label = new ClickLabel(filename,doc,this);
+    this->label = new ClickLabel(isright,filename,doc,this);
     layout->addWidget(label);
 //    /label->setPixmap(QPixmap(filename));
-
     this->setWindowFlags(Qt::Dialog
                          |Qt::WindowMaximizeButtonHint
                          |Qt::WindowMinimizeButtonHint
@@ -34,12 +35,16 @@ void SigalDialog::on_cancelBut_clicked()
 
 void SigalDialog::on_okBut_clicked()
 {
+    QString width = ui->widthEdit->text();
+    if(width.length()==0){
+        QMessageBox::information(this,"Information","Please Input the width of each small square!");
+        return ;
+    }
     ClickLabel *la = (ClickLabel*)this->label;
-    la->onOk();
+    doc->addCorner(isright,la->selectimg,la->corners,width.toDouble());
+    this->close();
 }
-void SigalDialog::setOkButEnable(bool b){
-    ui->okBut->setEnabled(b);
-}
-QString SigalDialog::getInputWidth(){
-    return this->ui->widthEdit->text();
+
+void SigalDialog::onLabelOk(){
+    ui->okBut->setEnabled(true);
 }

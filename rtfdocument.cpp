@@ -55,9 +55,8 @@ bool RTFDocument::write(string filename){
 
 }
 
-bool RTFDocument::selectBegin(int isr,string filename){
-    this->isright = isr;
-    this->selectimg = imread(filename.c_str());
+bool RTFDocument::selectBegin(string filename, Mat &selectimg, vector<Point2f> &harriscorners){
+    selectimg = imread(filename.c_str());
     int maxCorner = 1000;
     double quality_level = 0.1;
     double min_dis = 9;
@@ -70,7 +69,7 @@ bool RTFDocument::selectBegin(int isr,string filename){
     TermCriteria criteria = TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 );
     cornerSubPix( matgray,harriscorners, winSize, zeroZone, criteria );
 }
-bool RTFDocument::havepoint(int x, int y){
+bool RTFDocument::havepoint(vector<Point2f> &harriscorners, int x, int y){
     int count = 0;
     for(int i = 0;i<harriscorners.size();i++){
         double dis = (harriscorners[i].x - x)*(harriscorners[i].x - x)
@@ -81,7 +80,7 @@ bool RTFDocument::havepoint(int x, int y){
     }
     return count==1;
 }
-void RTFDocument::addCorner(vector<vector<Point2f> > selectcorner,double width){
+void RTFDocument::addCorner(int isright, Mat &selectimg,vector<vector<Point2f> > selectcorner, double width){
     vector<Point2f> img_vec;
     vector<Point3f> obj_vec;
     for(int i = 0;i<selectcorner.size();i++){
@@ -94,15 +93,15 @@ void RTFDocument::addCorner(vector<vector<Point2f> > selectcorner,double width){
             obj_vec.push_back(p);
         }
     }
-    if(this->isright==0){
+    if(isright==0){
         image_point_l.push_back(img_vec);
         object_point_l.push_back(obj_vec);
     }
-    else if(this->isright==1){
+    else if(isright==1){
         image_point_r.push_back(img_vec);
         object_point_r.push_back(obj_vec);
     }
-    this->calParams();
+    this->calParams(selectimg);
 }
 void RTFDocument::getCorner(int isr,vector<vector<Point2f> > &image_point, vector<vector<Point3f> > &object_point){
     if(isr==0){
@@ -113,7 +112,7 @@ void RTFDocument::getCorner(int isr,vector<vector<Point2f> > &image_point, vecto
         object_point = this->object_point_r;
     }
 }
-void RTFDocument::calParams(){
+void RTFDocument::calParams(Mat &selectimg){
     if(this->image_point_l.size()>0){
         this->l_disok = this->l_insok = true;
         vector<Mat> R_vec;
@@ -177,6 +176,24 @@ bool RTFDocument::getRdistortion(Mat &distortion){
     return true;
 }
 
+void RTFDocument::getBinData(vector<vector<Point2f> > &bin_image_point_l,
+                             vector<vector<Point2f> > &bin_image_point_r,
+                             vector<vector<Point3f> > &bin_object_point_l){
+    bin_image_point_l = this->bin_image_point_l;
+    bin_image_point_r = this->bin_image_point_r;
+    bin_object_point_l = this->bin_object_point_l;
+}
+void RTFDocument::addBinData(Mat &selectimg,
+                             vector<vector<Point2f> > &cornerL,
+                             vector<vector<Point2f> > &cornerR,
+                             double width){
+    vector<Point2f> vecL;
+    vector<Point2f> vecR;
+    vector<Point3f> vecO;
+    for(int i = 0;i<cornerL.size();i++){
+
+    }
+}
 
 int cmp_x(const Point2f &a,const Point2f &b){
     return a.x<b.x;
@@ -277,7 +294,7 @@ void findCorner(vector<Point2f> &corners,CPoint a,CPoint b,vector<Point2f> &find
          *********************
 
 */
-void  RTFDocument::getCornerByHand(vector<CPoint> &rec_4,vector<vector<Point2f> > &corner){
+void  RTFDocument::getCornerByHand(vector<Point2f> harriscorners,vector<CPoint> &rec_4,vector<vector<Point2f> > &corner){
     //更正角点顺序为
     //0  1
     //2  3

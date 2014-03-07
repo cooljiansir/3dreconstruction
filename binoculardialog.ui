@@ -89,7 +89,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="lineEdit"/>
+       <widget class="QLineEdit" name="widthEdit"/>
       </item>
       <item>
        <widget class="QLabel" name="label_2">
@@ -112,14 +112,14 @@
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton">
+       <widget class="QPushButton" name="okBut">
         <property name="text">
          <string>Ok</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton_2">
+       <widget class="QPushButton" name="cancelBut">
         <property name="text">
          <string>Cancel</string>
         </property>

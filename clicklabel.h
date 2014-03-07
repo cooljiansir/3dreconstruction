@@ -19,14 +19,19 @@ class ClickLabel : public QLabel
 protected:
     void paintEvent(QPaintEvent *);
 public:
-    explicit ClickLabel(QString filename,RTFDocument *doc,QWidget *parent = 0);
+    explicit ClickLabel(int isright,QString filename,RTFDocument *doc,QWidget *parent = 0);
     ~ClickLabel();
     void mouseMoveEvent(QMouseEvent *);
     void mousePressEvent(QMouseEvent *ev);
     void onOk();
+public:
+    Mat selectimg;
+    vector<vector<Point2f> > corners;
 private:
     Ui::ClickLabel *ui;
+    int isright;
     int status;
+    vector<Point2f> harriscorners;
     QPixmap *pixmap;
     int mouse_x;
     int mouse_y;
@@ -34,9 +39,18 @@ private:
     vector<int> mouse_y_v;
     RTFDocument *doc;
     QWidget *father;
-    vector<vector<Point2f> > corners;
+
 static const int STATUS_FINDING = 1;
 static const int STATUS_FOUND   = 2;
+
+public:
+static const int KIND_SINGAL    = 1;
+static const int KIND_BINOCULAR = 2;
+
+
+signals:
+    void ok();
+
 };
 
 #endif // CLICKLABEL_H

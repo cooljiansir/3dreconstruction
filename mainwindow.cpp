@@ -168,7 +168,8 @@ void MainWindow::on_actionOpen_file_triggered()
           ui->actionTake_Photoes->setEnabled(true);
           ui->actionTake_Photoes_2->setEnabled(true);
 
-          ui->stackedWidget->setCurrentIndex(1);
+          //ui->stackedWidget->setCurrentIndex(1);
+          this->on_actionSigalCamera_triggered();
     } else{ // 用户取消选择
 
     }
@@ -210,7 +211,7 @@ void MainWindow::on_actionNew_triggered()
     ui->actionTake_Photoes_2->setEnabled(true);
 
     this->setWindowTitle("untitiled.rtf");
-    ui->stackedWidget->setCurrentIndex(1);
+    this->on_actionSigalCamera_triggered();
 }
 
 void MainWindow::on_adddataBut_clicked()
@@ -221,8 +222,8 @@ void MainWindow::on_adddataBut_clicked()
        QDir::currentPath(),
        "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
     if (!filename.isNull()) { //用户选择了文件
-          this->doc->selectBegin(0,filename.toStdString());
-          SigalDialog dig(filename,this->doc,this);
+          //this->doc->selectBegin(filename.toStdString());
+          SigalDialog dig(0,filename,this->doc,this);
           dig.setWindowTitle(filename.mid(filename.lastIndexOf("/")+1));
           dig.exec();
           this->loadCalidUI();
@@ -242,8 +243,8 @@ void MainWindow::on_rightAddData_clicked()
        QDir::currentPath(),
        "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
     if (!filename.isNull()) { //用户选择了文件
-          this->doc->selectBegin(1,filename.toStdString());
-          SigalDialog dig(filename,this->doc,this);
+          //this->doc->selectBegin(1,filename.toStdString());
+          SigalDialog dig(1,filename,this->doc,this);
           dig.setWindowTitle(filename.mid(filename.lastIndexOf("/")+1));
           dig.exec();
           this->loadCalidUI();
@@ -265,13 +266,12 @@ void MainWindow::on_bincularAddBut_clicked()
     if (!leftfilename.isNull()) { //用户选择了左图文件
         QString rightfilename = QFileDialog::getOpenFileName(
            this,
-           "Binocular Calibration - Open Left Image",
+           "Binocular Calibration - Open Right Image",
            QDir::currentPath(),
            "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
         if (!rightfilename.isNull()) { //用户选择了右图文件
-
-
-
+            BinocularDialog dig(leftfilename,rightfilename,this->doc,this);
+            dig.exec();
         }
     }
 }

@@ -213,7 +213,7 @@
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,9">
            <item>
-            <widget class="QPushButton" name="pushButton">
+            <widget class="QPushButton" name="bincularAddBut">
              <property name="text">
               <string>addData</string>
              </property>
