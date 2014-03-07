@@ -84,19 +84,24 @@ bool RTFDocument::havepoint(int x, int y){
     return count==1;
 }
 void RTFDocument::addCorner(vector<vector<Point2f> > &corner, double width){
+    vector<Point2f> img_vec;
+    vector<Point2f> obj_vec;
     for(int i = 0;i<corner.size();i++){
-        vector<Point2f> vec;
         for(int j = 0;j<corner[i].size();j++){
             Point2f p;
-            p.x = i*width;
-            p.y = j*width;
-            vec.push_back(p);
+            p.x = j*width;
+            p.y = i*width;
+            img_vec.push_back(corner[i][j]);
+            obj_vec.push_back(p);
         }
-        this->image_point.push_back(corner[i]);
-        this->object_point.push_back(vec);
     }
+    image_point.push_back(img_vec);
+    object_point.push_back(obj_vec);
 }
-
+void RTFDocument::getCorner(vector<vector<Point2f> > &image_point, vector<vector<Point2f> > &object_point){
+    image_point = this->image_point;
+    object_point = this->object_point;
+}
 
 
 

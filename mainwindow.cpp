@@ -34,21 +34,30 @@ MainWindow::~MainWindow()
 void MainWindow::setupCalibUI(){
 
     //显示列表
-    QStandardItemModel *model = new QStandardItemModel();
-    model->setColumnCount(5);
-    this->ui->tableView->setModel(model);
-    model->setHeaderData(0,Qt::Horizontal,QString::fromLocal8Bit("Image"));
-    model->setHeaderData(1,Qt::Horizontal,QString::fromLocal8Bit("u"));
-    model->setHeaderData(2,Qt::Horizontal,QString::fromLocal8Bit("v"));
-    model->setHeaderData(3,Qt::Horizontal,QString::fromLocal8Bit("x"));
-    model->setHeaderData(4,Qt::Horizontal,QString::fromLocal8Bit("y"));
-    for(int i = 0; i < 300; i++)
-    {
-        model->setItem(i,0,new QStandardItem());
-        model->setItem(i,1,new QStandardItem());
-        model->setItem(i,2,new QStandardItem());
-        model->setItem(i,3,new QStandardItem());
-        model->setItem(i,4,new QStandardItem());
+    singal_model = new QStandardItemModel();
+    singal_model->setColumnCount(5);
+    this->ui->tableView->setModel(singal_model);
+    singal_model->setHeaderData(0,Qt::Horizontal,QString::fromLocal8Bit("Image"));
+    singal_model->setHeaderData(1,Qt::Horizontal,QString::fromLocal8Bit("u"));
+    singal_model->setHeaderData(2,Qt::Horizontal,QString::fromLocal8Bit("v"));
+    singal_model->setHeaderData(3,Qt::Horizontal,QString::fromLocal8Bit("x"));
+    singal_model->setHeaderData(4,Qt::Horizontal,QString::fromLocal8Bit("y"));
+    this->loadCalidUI();
+}
+void MainWindow::loadCalidUI(){
+    vector<vector<Point2f> > image_point;
+    vector<vector<Point2f> > object_point;
+    this->doc->getCorner(image_point,object_point);
+    int count = 0;
+    for(int i = 0;i<image_point.size();i++){
+        for(int j = 0;j<image_point[i].size();j++){
+            singal_model->setItem(count,0,new QStandardItem(QString::number(i)));
+            singal_model->setItem(count,1,new QStandardItem(QString::number(image_point[i][j].x)));
+            singal_model->setItem(count,2,new QStandardItem(QString::number(image_point[i][j].y)));
+            singal_model->setItem(count,3,new QStandardItem(QString::number(object_point[i][j].x)));
+            singal_model->setItem(count,4,new QStandardItem(QString::number(object_point[i][j].y)));
+            count++;
+        }
     }
 }
 
@@ -133,5 +142,6 @@ void MainWindow::on_adddataBut_clicked()
           SigalDialog dig(filename,this->doc,this);
           dig.setWindowTitle(filename.mid(filename.lastIndexOf("/")+1));
           dig.exec();
+          this->loadCalidUI();
     }
 }

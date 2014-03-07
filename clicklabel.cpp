@@ -91,7 +91,7 @@ void ClickLabel::onOk(){
         QMessageBox::information(this,"Information","Please Input the width of each small square!");
         return ;
     }
-
+    this->doc->addCorner(corners,width.toDouble());
     this->father->close();
 }
 

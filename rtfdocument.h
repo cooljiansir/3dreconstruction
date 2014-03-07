@@ -55,6 +55,9 @@ public:
 
     //添加到表格数据
     void addCorner(vector<vector<Point2f> > &corner,double width);
+
+    //获取表格数据
+    void getCorner(vector<vector<Point2f> > &image_point,vector<vector<Point2f> > &object_point);
 private:
 
     //左摄像机内参

@@ -5,6 +5,7 @@
 #include "photodialog.h"
 #include "rtfdocument.h"
 #include <QFile>
+#include <QStandardItemModel>
 
 namespace Ui {
 class MainWindow;
@@ -32,9 +33,11 @@ private slots:
     void on_actionNew_triggered();
 
     void on_adddataBut_clicked();
-
+public:
+    void loadCalidUI();
 private:
     Ui::MainWindow *ui;
+    QStandardItemModel *singal_model;
 public:
     RTFDocument *doc;
 
