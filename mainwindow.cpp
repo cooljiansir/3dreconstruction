@@ -83,7 +83,62 @@ void MainWindow::loadCalidUI(){
             count++;
         }
     }
-
+    Mat l_intrinsic;
+    Mat l_distortion;
+    Mat r_intrinsic;
+    Mat r_distortion;
+    if(this->doc->getLintrisic(l_intrinsic)){
+        QString str="";
+        for(int i = 0;i<l_intrinsic.rows;i++) {
+            for(int j = 0;j<l_intrinsic.cols;j++){
+                QString s = QString::number(l_intrinsic.at<double>(i,j));
+                str += s;
+                str += QString(20-s.length(),' ');
+                str += '\r';
+            }
+            str +='\n';
+        }
+        this->ui->l_IntrinLabel->setText(str);
+    }
+    if(this->doc->getLdistortion(l_distortion)){
+        QString str="";
+        for(int i = 0;i<l_distortion.rows;i++) {
+            for(int j = 0;j<l_distortion.cols;j++){
+                QString s = QString::number(l_distortion.at<double>(i,j));
+                str += s;
+                str += QString(20-s.length(),' ');
+                str += '\r';
+            }
+            str +='\n';
+        }
+        this->ui->l_DistorLabel->setText(str);
+    }
+    if(this->doc->getRintrinsic(r_intrinsic)){
+        QString str="";
+        for(int i = 0;i<3;i++) {
+            for(int j = 0;j<3;j++){
+                QString s = QString::number(r_intrinsic.at<double>(i,j));
+                str += s;
+                str += QString(20-s.length(),' ');
+                str += '\r';
+            }
+            str +='\n';
+        }
+        this->ui->r_IntrinLabel->setText(str);
+    }
+    if(this->doc->getRdistortion(r_distortion)){
+        QString str="";
+        for(int i = 0;i<r_distortion.rows;i++) {
+            for(int j = 0;j<r_distortion.cols;j++){
+                QString s = QString::number(r_distortion.at<double>(i,j));
+                str += s;
+                str += QString(20-s.length(),' ');
+                str += '\r';
+            }
+            str +='\n';
+        }
+        this->ui->r_DistorLabel->setText(str);
+    }
 }
 
 //截屏

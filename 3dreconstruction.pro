@@ -41,7 +41,9 @@ INCLUDEPATH +=include\
 
 LIBS += $$_PRO_FILE_PWD_\lib\libopencv_highgui247.dll.a\
         $$_PRO_FILE_PWD_\lib\libopencv_core247.dll.a\
-        $$_PRO_FILE_PWD_\lib\libopencv_imgproc247.dll.a
+        $$_PRO_FILE_PWD_\lib\libopencv_imgproc247.dll.a\
+        $$_PRO_FILE_PWD_\lib\libopencv_calib3d247.dll.a
+
 
 RESOURCES += \
     res.qrc

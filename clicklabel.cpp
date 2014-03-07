@@ -67,13 +67,20 @@ void ClickLabel::mousePressEvent(QMouseEvent *ev){
         this->mouse_x_v.push_back(ev->x());
         this->mouse_y_v.push_back(ev->y());
         if(this->mouse_x_v.size()==4){
-            SigalDialog *sig = (SigalDialog*)father;
-            sig->setOkButEnable(true);
             vector<CPoint> points_4;
             for(int i = 0;i<mouse_x_v.size();i++){
                 points_4.push_back(CPoint(mouse_x_v[i],mouse_y_v[i]));
             }
             this->doc->getCornerByHand(points_4,this->corners);
+            if(this->corners.size()==0){
+                QMessageBox::information(this,"ERROR","You don't select a triangle !");
+                this->mouse_x_v.clear();
+                this->mouse_y_v.clear();
+                return ;
+            }
+            SigalDialog *sig = (SigalDialog*)father;
+            sig->setOkButEnable(true);
+
             this->status = ClickLabel::STATUS_FOUND;
             this->repaint();
         }

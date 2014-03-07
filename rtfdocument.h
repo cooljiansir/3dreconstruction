@@ -55,10 +55,6 @@ private:
     //监测到图片上所有角点
     vector<Point2f> harriscorners;
 
-
-
-
-
 public:
     //开始
     bool selectBegin(int isr, string filename);
@@ -73,25 +69,28 @@ public:
     //获取表格数据
     void getCorner(int isright,vector<vector<Point2f> > &image_point,vector<vector<Point3f> > &object_point);
 
-    //获取各种参
+    //获取各种参数
+    void calParams();
 private:
 
     //左摄像机内参
     bool l_insok;       //是否有效
-    double l_intrinsic[3][3];
+    Mat l_intrinsic;
     //左摄像机畸变参数
     bool l_disok;       //是否有效
-    double l_distortion[5];
+    Mat l_distortion;
     //左摄像机内参
     bool r_insok;       //是否有效
-    double r_intrinsic[3][3];
+    Mat r_intrinsic;
     //右摄像机畸变参数
     bool r_disok;       //是否有效
-    double r_distortion[5];
+    Mat r_distortion;
 
-    //双目标定参数
-    //.....
-
+public:
+    bool getLintrisic(Mat &intrinsic);
+    bool getLdistortion(Mat &distortion);
+    bool getRintrinsic(Mat &intrinsic);
+    bool getRdistortion(Mat &distortion);
 
 
 public:

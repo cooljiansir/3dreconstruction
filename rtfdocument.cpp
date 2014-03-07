@@ -6,6 +6,7 @@
 
 RTFDocument::RTFDocument(){
     this->fileopen = false;
+    this->l_disok = this->l_insok = this->r_disok = this->r_insok = false;
 }
 RTFDocument::~RTFDocument(){
 
@@ -101,6 +102,7 @@ void RTFDocument::addCorner(vector<vector<Point2f> > selectcorner,double width){
         image_point_r.push_back(img_vec);
         object_point_r.push_back(obj_vec);
     }
+    this->calParams();
 }
 void RTFDocument::getCorner(int isr,vector<vector<Point2f> > &image_point, vector<vector<Point3f> > &object_point){
     if(isr==0){
@@ -111,10 +113,69 @@ void RTFDocument::getCorner(int isr,vector<vector<Point2f> > &image_point, vecto
         object_point = this->object_point_r;
     }
 }
+void RTFDocument::calParams(){
+    if(this->image_point_l.size()>0){
+        this->l_disok = this->l_insok = true;
+        vector<Mat> R_vec;
+        vector<Mat> T_vec;
+        l_distortion = Mat::zeros(8, 1, CV_64F);
+        l_intrinsic = Mat::eye(3, 3, CV_64F);
+        calibrateCamera(this->object_point_l,
+                        this->image_point_l,
+                        selectimg.size(),
+                        l_intrinsic,
+                        l_distortion,
+                        R_vec,
+                        T_vec,
+                        CV_CALIB_FIX_K3
+                        );
+    }
+    if(this->image_point_r.size()>0){
+        this->r_disok = this->r_insok = true;
+        vector<Mat> R_vec;
+        vector<Mat> T_vec;
+        r_distortion = Mat::zeros(8, 1, CV_64F);
+        r_intrinsic = Mat::eye(3, 3, CV_64F);
+        calibrateCamera(this->object_point_r,
+                        this->image_point_r,
+                        selectimg.size(),
+                        r_intrinsic,
+                        r_distortion,
+                        R_vec,
+                        T_vec,
+                        CV_CALIB_FIX_K3
+                        );
 
+    }
+}
 
+bool RTFDocument::getLintrisic(Mat &intrinsic){
+    if(!this->l_insok)
+        return false;
+    intrinsic =  this->l_intrinsic;
+    return true;
+}
 
+bool RTFDocument::getLdistortion(Mat &distortion){
+    if(!this->l_disok)
+        return false;
+    distortion = this->l_distortion;
+    return true;
+}
 
+bool RTFDocument::getRintrinsic(Mat &intrinsic){
+    if(!this->r_insok)
+        return false;
+    intrinsic = this->r_intrinsic;
+    return true;
+}
+
+bool RTFDocument::getRdistortion(Mat &distortion){
+    if(!this->r_disok)
+        return false;
+    distortion =  this->r_distortion;
+    return true;
+}
 
 
 int cmp_x(const Point2f &a,const Point2f &b){
