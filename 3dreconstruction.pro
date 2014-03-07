@@ -30,9 +30,6 @@ HEADERS  += mainwindow.h \
 FORMS    += mainwindow.ui \
     photodialog.ui \
     sigaldialog.ui \
-    imagelable.ui \
-    imagelabel.ui \
-    clickframe.ui \
     clicklabel.ui
 
 

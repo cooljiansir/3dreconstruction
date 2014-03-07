@@ -35,19 +35,29 @@ void MainWindow::setupCalibUI(){
 
     //显示列表
     singal_model = new QStandardItemModel();
-    singal_model->setColumnCount(5);
+    singal_model->setColumnCount(6);
     this->ui->tableView->setModel(singal_model);
     singal_model->setHeaderData(0,Qt::Horizontal,QString::fromLocal8Bit("Image"));
     singal_model->setHeaderData(1,Qt::Horizontal,QString::fromLocal8Bit("u"));
     singal_model->setHeaderData(2,Qt::Horizontal,QString::fromLocal8Bit("v"));
     singal_model->setHeaderData(3,Qt::Horizontal,QString::fromLocal8Bit("x"));
     singal_model->setHeaderData(4,Qt::Horizontal,QString::fromLocal8Bit("y"));
+    singal_model->setHeaderData(5,Qt::Horizontal,QString::fromLocal8Bit("z"));
+    singal_model_r = new QStandardItemModel();
+    singal_model_r->setColumnCount(6);
+    this->ui->tableView_2->setModel(singal_model_r);
+    singal_model_r->setHeaderData(0,Qt::Horizontal,QString::fromLocal8Bit("Image"));
+    singal_model_r->setHeaderData(1,Qt::Horizontal,QString::fromLocal8Bit("u"));
+    singal_model_r->setHeaderData(2,Qt::Horizontal,QString::fromLocal8Bit("v"));
+    singal_model_r->setHeaderData(3,Qt::Horizontal,QString::fromLocal8Bit("x"));
+    singal_model_r->setHeaderData(4,Qt::Horizontal,QString::fromLocal8Bit("y"));
+    singal_model_r->setHeaderData(5,Qt::Horizontal,QString::fromLocal8Bit("z"));
     this->loadCalidUI();
 }
 void MainWindow::loadCalidUI(){
     vector<vector<Point2f> > image_point;
-    vector<vector<Point2f> > object_point;
-    this->doc->getCorner(image_point,object_point);
+    vector<vector<Point3f> > object_point;
+    this->doc->getCorner(0,image_point,object_point);
     int count = 0;
     for(int i = 0;i<image_point.size();i++){
         for(int j = 0;j<image_point[i].size();j++){
@@ -56,9 +66,24 @@ void MainWindow::loadCalidUI(){
             singal_model->setItem(count,2,new QStandardItem(QString::number(image_point[i][j].y)));
             singal_model->setItem(count,3,new QStandardItem(QString::number(object_point[i][j].x)));
             singal_model->setItem(count,4,new QStandardItem(QString::number(object_point[i][j].y)));
+            singal_model->setItem(count,5,new QStandardItem(QString::number(object_point[i][j].z)));
             count++;
         }
     }
+    this->doc->getCorner(1,image_point,object_point);
+    count = 0;
+    for(int i = 0;i<image_point.size();i++){
+        for(int j = 0;j<image_point[i].size();j++){
+            singal_model_r->setItem(count,0,new QStandardItem(QString::number(i)));
+            singal_model_r->setItem(count,1,new QStandardItem(QString::number(image_point[i][j].x)));
+            singal_model_r->setItem(count,2,new QStandardItem(QString::number(image_point[i][j].y)));
+            singal_model_r->setItem(count,3,new QStandardItem(QString::number(object_point[i][j].x)));
+            singal_model_r->setItem(count,4,new QStandardItem(QString::number(object_point[i][j].y)));
+            singal_model_r->setItem(count,5,new QStandardItem(QString::number(object_point[i][j].z)));
+            count++;
+        }
+    }
+
 }
 
 //截屏
@@ -137,8 +162,28 @@ void MainWindow::on_adddataBut_clicked()
        QDir::currentPath(),
        "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
     if (!filename.isNull()) { //用户选择了文件
-        this->doc->selectBegin(filename.toStdString());
-          //this->doc->selectBegin(filename.toStdString());
+          this->doc->selectBegin(0,filename.toStdString());
+          SigalDialog dig(filename,this->doc,this);
+          dig.setWindowTitle(filename.mid(filename.lastIndexOf("/")+1));
+          dig.exec();
+          this->loadCalidUI();
+    }
+}
+
+void MainWindow::on_pushButton_clicked()
+{
+
+}
+
+void MainWindow::on_rightAddData_clicked()
+{
+    QString filename = QFileDialog::getOpenFileName(
+       this,
+       "Open Document",
+       QDir::currentPath(),
+       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if (!filename.isNull()) { //用户选择了文件
+          this->doc->selectBegin(1,filename.toStdString());
           SigalDialog dig(filename,this->doc,this);
           dig.setWindowTitle(filename.mid(filename.lastIndexOf("/")+1));
           dig.exec();

@@ -34,30 +34,46 @@ class RTFDocument
 private:
     bool fileopen;
 
-    //图像坐标
-    vector<vector<Point2f> > image_point;
-    //实际坐标
-    vector<vector<Point2f> > object_point;
 
+    //图像坐标
+    vector<vector<Point2f> > image_point_l;
+    //实际坐标
+    vector<vector<Point3f> > object_point_l;
+
+    //图像坐标
+    vector<vector<Point2f> > image_point_r;
+    //实际坐标
+    vector<vector<Point3f> > object_point_r;
+
+    //当前是哪个摄像头，0左，1右
+    int isright;
+
+    //一下数据是打开一个手动标定窗口需要的
     //描点所用的
     //打开的图片
     Mat selectimg;
     //监测到图片上所有角点
     vector<Point2f> harriscorners;
 
+
+
+
+
 public:
     //开始
-    bool selectBegin(string filename);
+    bool selectBegin(int isr, string filename);
     //该点附近是否有角点
     bool havepoint(int x,int y);
 
     void getCornerByHand(vector<CPoint> &rec_4, vector<vector<Point2f> > &corner);
 
     //添加到表格数据
-    void addCorner(vector<vector<Point2f> > &corner,double width);
+    void addCorner(vector<vector<Point2f> > selectcorner, double width);
 
     //获取表格数据
-    void getCorner(vector<vector<Point2f> > &image_point,vector<vector<Point2f> > &object_point);
+    void getCorner(int isright,vector<vector<Point2f> > &image_point,vector<vector<Point3f> > &object_point);
+
+    //获取各种参
 private:
 
     //左摄像机内参

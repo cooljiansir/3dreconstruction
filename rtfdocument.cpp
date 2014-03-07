@@ -19,26 +19,28 @@ bool RTFDocument::read(string filename){
     while(it!=NULL){
         XMLElement *ij = it->FirstChildElement();
         vector<Point2f> img_v;
-        vector<Point2f> img_r;
+        vector<Point3f> img_r;
         while(ij!=NULL){
-            double u,v,x,y;
+            double u,v,x,y,z;
             ij->QueryDoubleAttribute("u",&u);
             ij->QueryDoubleAttribute("v",&v);
             ij->QueryDoubleAttribute("x",&x);
             ij->QueryDoubleAttribute("y",&y);
+            ij->QueryDoubleAttribute("y",&z);
             //printf("%lf %lf %lf %lf\n",u,v,x,y);
             Point2f p1;
             p1.x = u;
             p1.y = v;
             img_v.push_back(p1);
-            Point2f p2;
+            Point3f p2;
             p2.x = x;
             p2.y = y;
+            p2.z = z;
             img_r.push_back(p2);
             ij = ij->NextSiblingElement();
         }
-        this->image_point.push_back(img_v);
-        this->object_point.push_back(img_r);
+//        this->image_point.push_back(img_v);
+//        this->object_point.push_back(img_r);
         it = it->NextSiblingElement();
     }
 }
@@ -52,7 +54,8 @@ bool RTFDocument::write(string filename){
 
 }
 
-bool RTFDocument::selectBegin(string filename){
+bool RTFDocument::selectBegin(int isr,string filename){
+    this->isright = isr;
     this->selectimg = imread(filename.c_str());
     int maxCorner = 1000;
     double quality_level = 0.1;
@@ -65,12 +68,6 @@ bool RTFDocument::selectBegin(string filename){
     Size zeroZone = Size( -1, -1 );
     TermCriteria criteria = TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 );
     cornerSubPix( matgray,harriscorners, winSize, zeroZone, criteria );
-    /*
-    for(int i = 0;i<harriscorners.size();i++){
-        circle(matgray,harriscorners[i],9,Scalar(0,0,255));
-    }
-    imshow("test",matgray);
-    */
 }
 bool RTFDocument::havepoint(int x, int y){
     int count = 0;
@@ -83,24 +80,36 @@ bool RTFDocument::havepoint(int x, int y){
     }
     return count==1;
 }
-void RTFDocument::addCorner(vector<vector<Point2f> > &corner, double width){
+void RTFDocument::addCorner(vector<vector<Point2f> > selectcorner,double width){
     vector<Point2f> img_vec;
-    vector<Point2f> obj_vec;
-    for(int i = 0;i<corner.size();i++){
-        for(int j = 0;j<corner[i].size();j++){
-            Point2f p;
+    vector<Point3f> obj_vec;
+    for(int i = 0;i<selectcorner.size();i++){
+        for(int j = 0;j<selectcorner[i].size();j++){
+            Point3f p;
             p.x = j*width;
             p.y = i*width;
-            img_vec.push_back(corner[i][j]);
+            p.z = 0;
+            img_vec.push_back(selectcorner[i][j]);
             obj_vec.push_back(p);
         }
     }
-    image_point.push_back(img_vec);
-    object_point.push_back(obj_vec);
+    if(this->isright==0){
+        image_point_l.push_back(img_vec);
+        object_point_l.push_back(obj_vec);
+    }
+    else if(this->isright==1){
+        image_point_r.push_back(img_vec);
+        object_point_r.push_back(obj_vec);
+    }
 }
-void RTFDocument::getCorner(vector<vector<Point2f> > &image_point, vector<vector<Point2f> > &object_point){
-    image_point = this->image_point;
-    object_point = this->object_point;
+void RTFDocument::getCorner(int isr,vector<vector<Point2f> > &image_point, vector<vector<Point3f> > &object_point){
+    if(isr==0){
+        image_point = this->image_point_l;
+        object_point = this->object_point_l;
+    }else if(isr==1){
+        image_point = this->image_point_r;
+        object_point = this->object_point_r;
+    }
 }
 
 

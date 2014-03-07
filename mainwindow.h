@@ -33,11 +33,16 @@ private slots:
     void on_actionNew_triggered();
 
     void on_adddataBut_clicked();
+    void on_pushButton_clicked();
+
+    void on_rightAddData_clicked();
+
 public:
     void loadCalidUI();
 private:
     Ui::MainWindow *ui;
     QStandardItemModel *singal_model;
+    QStandardItemModel *singal_model_r;
 public:
     RTFDocument *doc;
 
