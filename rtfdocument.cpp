@@ -1,5 +1,6 @@
 #include "rtfdocument.h"
 #include <highgui.h>
+#include <QDebug>
 
 #define ZERO 0.000000001
 
@@ -11,48 +12,260 @@ RTFDocument::RTFDocument(){
 RTFDocument::~RTFDocument(){
 
 }
-bool RTFDocument::read(string filename){
+bool RTFDocument::read(QString filename){
+    this->fileopen = true;
+    this->filename = filename;
     XMLDocument doc;
-    doc.LoadFile(filename.c_str());
+    doc.LoadFile(filename.toStdString().c_str());
     XMLElement *root = doc.RootElement();
-    XMLElement *points = root->FirstChildElement();
-    XMLElement *it = points->FirstChildElement();
-    while(it!=NULL){
-        XMLElement *ij = it->FirstChildElement();
-        vector<Point2f> img_v;
-        vector<Point3f> img_r;
-        while(ij!=NULL){
-            double u,v,x,y,z;
-            ij->QueryDoubleAttribute("u",&u);
-            ij->QueryDoubleAttribute("v",&v);
-            ij->QueryDoubleAttribute("x",&x);
-            ij->QueryDoubleAttribute("y",&y);
-            ij->QueryDoubleAttribute("y",&z);
-            //printf("%lf %lf %lf %lf\n",u,v,x,y);
-            Point2f p1;
-            p1.x = u;
-            p1.y = v;
-            img_v.push_back(p1);
-            Point3f p2;
-            p2.x = x;
-            p2.y = y;
-            p2.z = z;
-            img_r.push_back(p2);
-            ij = ij->NextSiblingElement();
+    XMLElement *rootchild = root->FirstChildElement();
+    while(rootchild!=NULL){
+        qDebug()<<"root chile name"<<rootchild->Name()<<endl;
+        if(strcmp(rootchild->Name(),"single")==0){
+            XMLElement * singlechild = rootchild->FirstChildElement();
+            while(singlechild!=NULL){
+                if(strcmp(singlechild->Name(),"left")==0){
+                    XMLElement *leftchild = singlechild->FirstChildElement();
+                    while(leftchild!=NULL){
+                        if(strcmp(leftchild->Name(),"intrinsic")==0){
+                            l_intrinsic = Mat::zeros(3, 3, CV_64F);
+                            l_insok = true;
+                            if(leftchild->QueryDoubleAttribute("d0",&l_intrinsic.at<double>(0,0))!=XML_NO_ERROR)
+                                l_insok = false;
+                            if(leftchild->QueryDoubleAttribute("d1",&l_intrinsic.at<double>(0,1))!=XML_NO_ERROR)
+                                l_insok = false;
+                            if(leftchild->QueryDoubleAttribute("d2",&l_intrinsic.at<double>(0,2))!=XML_NO_ERROR)
+                                l_insok = false;
+                            if(leftchild->QueryDoubleAttribute("d3",&l_intrinsic.at<double>(1,0))!=XML_NO_ERROR)
+                                l_insok = false;
+                            if(leftchild->QueryDoubleAttribute("d4",&l_intrinsic.at<double>(1,1))!=XML_NO_ERROR)
+                                l_insok = false;
+                            if(leftchild->QueryDoubleAttribute("d5",&l_intrinsic.at<double>(1,2))!=XML_NO_ERROR)
+                                l_insok = false;
+                            if(leftchild->QueryDoubleAttribute("d6",&l_intrinsic.at<double>(2,0))!=XML_NO_ERROR)
+                                l_insok = false;
+                            if(leftchild->QueryDoubleAttribute("d7",&l_intrinsic.at<double>(2,1))!=XML_NO_ERROR)
+                                l_insok = false;
+                            if(leftchild->QueryDoubleAttribute("d8",&l_intrinsic.at<double>(2,2))!=XML_NO_ERROR)
+                                l_insok = false;
+                        }else if(strcmp(leftchild->Name(),"distoration")==0){
+                            l_distortion = Mat::zeros(8, 1, CV_64F);
+                            l_disok = true;
+                            leftchild->QueryDoubleAttribute("d0",&l_distortion.at<double>(0,0));
+                            leftchild->QueryDoubleAttribute("d1",&l_distortion.at<double>(1,0));
+                            leftchild->QueryDoubleAttribute("d2",&l_distortion.at<double>(2,0));
+                            leftchild->QueryDoubleAttribute("d3",&l_distortion.at<double>(3,0));
+                            leftchild->QueryDoubleAttribute("d4",&l_distortion.at<double>(4,0));
+                            leftchild->QueryDoubleAttribute("d5",&l_distortion.at<double>(5,0));
+                            leftchild->QueryDoubleAttribute("d6",&l_distortion.at<double>(6,0));
+                            leftchild->QueryDoubleAttribute("d7",&l_distortion.at<double>(7,0));
+                        }
+                        else if(strcmp(leftchild->Name(),"points")==0){
+                            XMLElement *pointchild = leftchild->FirstChildElement();
+                            while(pointchild!=NULL){
+                                if(strcmp(pointchild->Name(),"onepic")==0){
+                                    vector<Point2f> veci;
+                                    vector<Point3f> veco;
+                                    XMLElement *onepicchild = pointchild->FirstChildElement();
+                                    while(onepicchild!=NULL){
+                                        Point2f p2;
+                                        Point3f p3;
+                                        onepicchild->QueryFloatAttribute("u",&p2.x);
+                                        onepicchild->QueryFloatAttribute("v",&p2.y);
+                                        onepicchild->QueryFloatAttribute("x",&p3.x);
+                                        onepicchild->QueryFloatAttribute("y",&p3.y);
+                                        onepicchild->QueryFloatAttribute("z",&p3.z);
+                                        veci.push_back(p2);
+                                        veco.push_back(p3);
+                                        onepicchild = onepicchild->NextSiblingElement();
+                                    }
+                                    this->image_point_l.push_back(veci);
+                                    this->object_point_l.push_back(veco);
+                                }
+                                pointchild = pointchild->NextSiblingElement();
+                            }
+                        }
+                        leftchild = leftchild->NextSiblingElement();
+                    }
+                }
+                else if(strcmp(singlechild->Name(),"right")==0){
+                    XMLElement *rightchild = singlechild->FirstChildElement();
+                    while(rightchild!=NULL){
+                        if(strcmp(rightchild->Name(),"intrinsic")==0){
+                            r_intrinsic = Mat::zeros(3, 3, CV_64F);
+                            r_insok = true;
+                            if(rightchild->QueryDoubleAttribute("d0",&r_intrinsic.at<double>(0,0))!=XML_NO_ERROR)
+                                r_insok = false;
+                            if(rightchild->QueryDoubleAttribute("d1",&r_intrinsic.at<double>(0,1))!=XML_NO_ERROR)
+                                r_insok = false;
+                            if(rightchild->QueryDoubleAttribute("d2",&r_intrinsic.at<double>(0,2))!=XML_NO_ERROR)
+                                r_insok = false;
+                            if(rightchild->QueryDoubleAttribute("d3",&r_intrinsic.at<double>(1,0))!=XML_NO_ERROR)
+                                r_insok = false;
+                            if(rightchild->QueryDoubleAttribute("d4",&r_intrinsic.at<double>(1,1))!=XML_NO_ERROR)
+                                r_insok = false;
+                            if(rightchild->QueryDoubleAttribute("d5",&r_intrinsic.at<double>(1,2))!=XML_NO_ERROR)
+                                r_insok = false;
+                            if(rightchild->QueryDoubleAttribute("d6",&r_intrinsic.at<double>(2,0))!=XML_NO_ERROR)
+                                r_insok = false;
+                            if(rightchild->QueryDoubleAttribute("d7",&r_intrinsic.at<double>(2,1))!=XML_NO_ERROR)
+                                r_insok = false;
+                            if(rightchild->QueryDoubleAttribute("d8",&r_intrinsic.at<double>(2,2))!=XML_NO_ERROR)
+                                r_insok = false;
+
+                        }else if(strcmp(rightchild->Name(),"distoration")==0){
+                            r_distortion = Mat::zeros(8, 1, CV_64F);
+                            r_disok = true;
+                            rightchild->QueryDoubleAttribute("d0",&r_distortion.at<double>(0,0));
+                            rightchild->QueryDoubleAttribute("d1",&r_distortion.at<double>(1,0));
+                            rightchild->QueryDoubleAttribute("d2",&r_distortion.at<double>(2,0));
+                            rightchild->QueryDoubleAttribute("d3",&r_distortion.at<double>(3,0));
+                            rightchild->QueryDoubleAttribute("d4",&r_distortion.at<double>(4,0));
+                            rightchild->QueryDoubleAttribute("d5",&r_distortion.at<double>(5,0));
+                            rightchild->QueryDoubleAttribute("d6",&r_distortion.at<double>(6,0));
+                            rightchild->QueryDoubleAttribute("d7",&r_distortion.at<double>(7,0));
+                        }
+                        else if(strcmp(rightchild->Name(),"points")==0){
+                            XMLElement *pointchild = rightchild->FirstChildElement();
+                            while(pointchild!=NULL){
+                                if(strcmp(pointchild->Name(),"onepic")==0){
+                                    vector<Point2f> veci;
+                                    vector<Point3f> veco;
+                                    XMLElement *onepicchild = pointchild->FirstChildElement();
+                                    while(onepicchild!=NULL){
+                                        Point2f p2;
+                                        Point3f p3;
+                                        onepicchild->QueryFloatAttribute("u",&p2.x);
+                                        onepicchild->QueryFloatAttribute("v",&p2.y);
+                                        onepicchild->QueryFloatAttribute("x",&p3.x);
+                                        onepicchild->QueryFloatAttribute("y",&p3.y);
+                                        onepicchild->QueryFloatAttribute("z",&p3.z);
+                                        veci.push_back(p2);
+                                        veco.push_back(p3);
+                                        onepicchild = onepicchild->NextSiblingElement();
+                                    }
+                                    this->image_point_r.push_back(veci);
+                                    this->object_point_r.push_back(veco);
+                                }
+                                pointchild = pointchild->NextSiblingElement();
+                            }
+                        }
+                        rightchild = rightchild->NextSiblingElement();
+                    }
+                }
+                singlechild = singlechild->NextSiblingElement();
+            }
         }
-//        this->image_point.push_back(img_v);
-//        this->object_point.push_back(img_r);
-        it = it->NextSiblingElement();
+        rootchild = rootchild->NextSiblingElement();
     }
 }
 bool RTFDocument::opened(){
     return this->fileopen;
 }
 bool RTFDocument::save(){
+    tinyxml2::XMLDocument doc;
+    XMLElement *root = doc.NewElement("root");
+    doc.LinkEndChild(root);
+    //保存单目标定数据
+    XMLElement *single = doc.NewElement("single");
+    root->LinkEndChild(single);
+    XMLElement *singleleft = doc.NewElement("left");
+    single->LinkEndChild(singleleft);
+    if(l_insok){
+        XMLElement *singleleftinstrin = doc.NewElement("intrinsic");
+        singleleftinstrin->SetAttribute("d0",this->l_intrinsic.at<double>(0,0));
+        singleleftinstrin->SetAttribute("d1",this->l_intrinsic.at<double>(0,1));
+        singleleftinstrin->SetAttribute("d2",this->l_intrinsic.at<double>(0,2));
+        singleleftinstrin->SetAttribute("d3",this->l_intrinsic.at<double>(1,0));
+        singleleftinstrin->SetAttribute("d4",this->l_intrinsic.at<double>(1,1));
+        singleleftinstrin->SetAttribute("d5",this->l_intrinsic.at<double>(1,2));
+        singleleftinstrin->SetAttribute("d6",this->l_intrinsic.at<double>(2,0));
+        singleleftinstrin->SetAttribute("d7",this->l_intrinsic.at<double>(2,1));
+        singleleftinstrin->SetAttribute("d8",this->l_intrinsic.at<double>(2,2));
+        singleleft->LinkEndChild(singleleftinstrin);
+    }
+    if(l_disok){
+        XMLElement *singleleftdis = doc.NewElement("distoration");
+        singleleftdis->SetAttribute("d0",this->l_distortion.at<double>(0,0));
+        singleleftdis->SetAttribute("d1",this->l_distortion.at<double>(1,0));
+        singleleftdis->SetAttribute("d2",this->l_distortion.at<double>(2,0));
+        singleleftdis->SetAttribute("d3",this->l_distortion.at<double>(3,0));
+        singleleftdis->SetAttribute("d4",this->l_distortion.at<double>(4,0));
+        singleleft->LinkEndChild(singleleftdis);
+    }
+    XMLElement *points = doc.NewElement("points");
+    singleleft->LinkEndChild(points);
+    for(int i = 0;i<image_point_l.size();i++){
+        XMLElement *pic = doc.NewElement("onepic");//一张图片上的点
+        points->LinkEndChild(pic);
+        for(int j = 0;j<image_point_l[i].size();j++){
+            XMLElement *pa = doc.NewElement("point");
+            pic->LinkEndChild(pa);
+            pa->SetAttribute("u",this->image_point_l[i][j].x);
+            pa->SetAttribute("v",this->image_point_l[i][j].y);
+            pa->SetAttribute("x",this->object_point_l[i][j].x);
+            pa->SetAttribute("y",this->object_point_l[i][j].y);
+            pa->SetAttribute("z",this->object_point_l[i][j].z);
+        }
+    }
+    XMLElement *singleright = doc.NewElement("right");
+    single->LinkEndChild(singleright);
+    if(r_insok){
+        XMLElement *singlerightinstrin = doc.NewElement("intrinsic");
+        singlerightinstrin->SetAttribute("d0",this->r_intrinsic.at<double>(0,0));
+        singlerightinstrin->SetAttribute("d1",this->r_intrinsic.at<double>(0,1));
+        singlerightinstrin->SetAttribute("d2",this->r_intrinsic.at<double>(0,2));
+        singlerightinstrin->SetAttribute("d3",this->r_intrinsic.at<double>(1,0));
+        singlerightinstrin->SetAttribute("d4",this->r_intrinsic.at<double>(1,1));
+        singlerightinstrin->SetAttribute("d5",this->r_intrinsic.at<double>(1,2));
+        singlerightinstrin->SetAttribute("d6",this->r_intrinsic.at<double>(2,0));
+        singlerightinstrin->SetAttribute("d7",this->r_intrinsic.at<double>(2,1));
+        singlerightinstrin->SetAttribute("d8",this->r_intrinsic.at<double>(2,2));
+        singleright->LinkEndChild(singlerightinstrin);
+    }
+    if(r_disok){
+        XMLElement *singlerightdis = doc.NewElement("distoration");
+        singlerightdis->SetAttribute("d0",this->r_distortion.at<double>(0,0));
+        singlerightdis->SetAttribute("d1",this->r_distortion.at<double>(1,0));
+        singlerightdis->SetAttribute("d2",this->r_distortion.at<double>(2,0));
+        singlerightdis->SetAttribute("d3",this->r_distortion.at<double>(3,0));
+        singlerightdis->SetAttribute("d4",this->r_distortion.at<double>(4,0));
+        singleright->LinkEndChild(singlerightdis);
+    }
+    points = doc.NewElement("points");
+    singleright->LinkEndChild(points);
+    for(int i = 0;i<image_point_r.size();i++){
+        XMLElement *pic = doc.NewElement("onepic");//一张图片上的点
+        points->LinkEndChild(pic);
+        for(int j = 0;j<image_point_r[i].size();j++){
+            XMLElement *pa = doc.NewElement("point");
+            pic->LinkEndChild(pa);
+            pa->SetAttribute("u",this->image_point_r[i][j].x);
+            pa->SetAttribute("v",this->image_point_r[i][j].y);
+            pa->SetAttribute("x",this->object_point_r[i][j].x);
+            pa->SetAttribute("y",this->object_point_r[i][j].y);
+            pa->SetAttribute("z",this->object_point_r[i][j].z);
+        }
+    }
+    //保存双目标定数据
+    /*
+    XMLElement *bino = doc.NewElement("binocular");
+    root->LinkEndChild(bino);
+    if(this->bin_R_isok){
+        XMLElement *binoR = doc.NewElement("R");
+        binoR->SetAttribute("b0",bin_R.);
+        bino->LinkEndChild(binoR);
+    }
+    if(this->bin_T_isok){
 
+    }
+    */
+    doc.SaveFile(filename.toStdString().c_str());
 }
-bool RTFDocument::write(string filename){
-
+bool RTFDocument::write(QString filename){
+    this->filename = filename;
+    this->fileopen = true;
+    this->save();
 }
 
 bool RTFDocument::selectBegin(string filename, Mat &selectimg, vector<Point2f> &harriscorners){

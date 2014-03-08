@@ -157,7 +157,7 @@ void MainWindow::on_actionOpen_file_triggered()
        this,
        "Open Document",
        QDir::currentPath(),
-       "Document files (*.rtf);;All files(*.*)");
+                QString("Document files (*.")+FILE_NAME+");;All files(*.*)");
     if (!filename.isNull()) { //用户选择了文件
           this->setWindowTitle(filename.mid(filename.lastIndexOf("/")+1));
           ui->actionNew->setEnabled(false);
@@ -171,6 +171,7 @@ void MainWindow::on_actionOpen_file_triggered()
           ui->actionTake_Photoes_2->setEnabled(true);
 
           //ui->stackedWidget->setCurrentIndex(1);
+          this->doc->read(filename);
           this->on_actionSigalCamera_triggered();
     } else{ // 用户取消选择
 
@@ -185,10 +186,11 @@ void MainWindow::on_actionSave_triggered()
         QString fileName = QFileDialog::getSaveFileName(
                     this,
                     tr("Save File"),
-                    "untitled.rtf",
-                    tr("rtf files (*.rtf)"));
+                    QString("untitled.")+FILE_NAME,
+                    QString("data files (*.")+FILE_NAME+")");
         if(!fileName.isNull()){
             this->setWindowTitle(fileName.mid(fileName.lastIndexOf("/")+1));
+            this->doc->write(fileName);
         }
     }
 }
@@ -213,7 +215,7 @@ void MainWindow::on_actionNew_triggered()
     ui->actionTake_Photoes->setEnabled(true);
     ui->actionTake_Photoes_2->setEnabled(true);
 
-    this->setWindowTitle("untitiled.rtf");
+    this->setWindowTitle("untitiled");
     this->on_actionSigalCamera_triggered();
 }
 

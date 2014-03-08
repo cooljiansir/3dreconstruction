@@ -7,6 +7,8 @@
 #include <QFile>
 #include <QStandardItemModel>
 
+#define FILE_NAME   "dre"   //文件后缀名
+
 namespace Ui {
 class MainWindow;
 }

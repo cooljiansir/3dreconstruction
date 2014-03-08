@@ -6,6 +6,7 @@
 #include <vector>
 #include "tinyxml2.h"
 #include <cv.h>
+#include <QString>
 
 using namespace cv;
 using namespace std;
@@ -110,18 +111,19 @@ public:
     bool getRintrinsic(Mat &intrinsic);
     bool getRdistortion(Mat &distortion);
 
-
+private:
+    QString filename;
 public:
     RTFDocument();
     ~RTFDocument();
     //从文件读
-    bool read(string filename);
+    bool read(QString filename);
     //是否打开文件
     bool opened();
     //保存
     bool save();
     //新建文件保存
-    bool write(string filename);
+    bool write(QString filename);
 };
 
 #endif // RTFDOCUMENT_H
