@@ -84,6 +84,14 @@ private:
     vector<vector<Point2f> > bin_image_point_r;
     //实际坐标
     vector<vector<Point3f> > bin_object_point_l;
+    //双目标定参数R是否有效
+    bool bin_R_isok;
+    //双目标定参数R
+    Mat bin_R;
+    //双目标定参数T是否有效
+    bool bin_T_isok;
+    //双目标定参数T
+    Mat bin_T;
 public:
     void getBinData(vector<vector<Point2f> > &bin_image_point_l,
                     vector<vector<Point2f> > &bin_image_point_r,
@@ -92,6 +100,9 @@ public:
                     vector<vector<Point2f> > &cornerL,
                     vector<vector<Point2f> > &cornerR,
                     double width);
+    void calBinParam(Mat &matimg);
+    bool getBinR(Mat &bin_R);
+    bool getBinT(Mat &bin_T);
 
 public:
     bool getLintrisic(Mat &intrinsic);

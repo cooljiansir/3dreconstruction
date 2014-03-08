@@ -26,7 +26,7 @@ private slots:
 
 private:
     Ui::BinocularDialog *ui;
-
+    RTFDocument *doc;
     int countok;
     QLabel *labell;
     QLabel *labelr;

@@ -191,8 +191,52 @@ void RTFDocument::addBinData(Mat &selectimg,
     vector<Point2f> vecR;
     vector<Point3f> vecO;
     for(int i = 0;i<cornerL.size();i++){
-
+        for(int j = 0;j<cornerL[i].size();j++){
+            vecL.push_back(cornerL[i][j]);
+            vecR.push_back(cornerR[i][j]);
+            Point3f p;
+            p.x = j*width;
+            p.y = i*width;
+            p.z = 0;
+            vecO.push_back(p);
+        }
     }
+    this->bin_image_point_l.push_back(vecL);
+    this->bin_image_point_r.push_back(vecR);
+    this->bin_object_point_l.push_back(vecO);
+    this->calBinParam(selectimg);
+}
+void RTFDocument::calBinParam(Mat &matimg){
+    if(!this->l_insok||!this->l_disok)
+        return;
+    if(!this->r_insok||!this->r_disok)
+        return;
+    Mat E,F;
+    this->bin_R_isok = this->bin_T_isok = true;
+    stereoCalibrate(this->bin_object_point_l,
+                    this->image_point_l,
+                    this->image_point_r,
+                    l_intrinsic,
+                    l_distortion,
+                    r_intrinsic,
+                    r_distortion,
+                    matimg.size(),
+                    bin_R,
+                    bin_T,
+                    E,
+                    F,
+                    cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, 1e-5));
+}
+
+bool RTFDocument::getBinR(Mat &bin_R){
+    if(!this->bin_R_isok)
+        return false;
+    bin_R = this->bin_R;
+}
+bool RTFDocument::getBinT(Mat &bin_T){
+    if(!this->bin_T_isok)
+        return false;
+    bin_T = this->bin_T;
 }
 
 int cmp_x(const Point2f &a,const Point2f &b){

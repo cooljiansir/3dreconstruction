@@ -23,6 +23,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->actionTake_Photoes_2->setEnabled(false);
     ui->actionPolar_Correction->setEnabled(false);
     this->ui->stackedWidget->setCurrentIndex(0);//welcome!
+    this->setupCalibUI();
+    this->setupBinUI();
 }
 
 MainWindow::~MainWindow()
@@ -194,7 +196,8 @@ void MainWindow::on_actionSave_triggered()
 void MainWindow::on_actionSigalCamera_triggered()
 {
     ui->stackedWidget->setCurrentIndex(1);
-    setupCalibUI();
+    //setupCalibUI();
+    this->loadCalidUI();
 }
 //新建文档
 void MainWindow::on_actionNew_triggered()
@@ -253,7 +256,12 @@ void MainWindow::on_rightAddData_clicked()
 
 void MainWindow::on_actionDual_triggered()
 {
+    Mat l,r;
+    if(!doc->getLintrisic(l)||!doc->getRintrinsic(r)){
+        QMessageBox::information(this,"Information","You haven't done Singal Camera Calibration Yet");
+    }
     ui->stackedWidget->setCurrentIndex(2);
+    this->loadBinUI();
 }
 
 void MainWindow::on_bincularAddBut_clicked()
@@ -272,6 +280,59 @@ void MainWindow::on_bincularAddBut_clicked()
         if (!rightfilename.isNull()) { //用户选择了右图文件
             BinocularDialog dig(leftfilename,rightfilename,this->doc,this);
             dig.exec();
+            loadBinUI();
         }
     }
+}
+void MainWindow::setupBinUI(){
+    bin_model = new QStandardItemModel();
+    bin_model->setColumnCount(8);
+    ui->binTable->setModel(bin_model);
+    bin_model->setHeaderData(0,Qt::Horizontal,QString::fromLocal8Bit("Image"));
+    bin_model->setHeaderData(1,Qt::Horizontal,QString::fromLocal8Bit("u_l"));
+    bin_model->setHeaderData(2,Qt::Horizontal,QString::fromLocal8Bit("v_l"));
+    bin_model->setHeaderData(3,Qt::Horizontal,QString::fromLocal8Bit("u_r"));
+    bin_model->setHeaderData(4,Qt::Horizontal,QString::fromLocal8Bit("v_r"));
+    bin_model->setHeaderData(5,Qt::Horizontal,QString::fromLocal8Bit("x"));
+    bin_model->setHeaderData(6,Qt::Horizontal,QString::fromLocal8Bit("y"));
+    bin_model->setHeaderData(7,Qt::Horizontal,QString::fromLocal8Bit("z"));
+}
+
+void MainWindow::loadBinUI(){
+    vector<vector<Point2f> > image_point_l;
+    vector<vector<Point2f> > image_point_r;
+    vector<vector<Point3f> > object_point;
+    this->doc->getBinData(image_point_l,image_point_r,object_point);
+    int count = 0;
+    for(int i = 0;i<image_point_l.size();i++){
+        for(int j = 0;j<image_point_l[i].size();j++){
+            bin_model->setItem(count,0,new QStandardItem(QString::number(i)));
+            bin_model->setItem(count,1,new QStandardItem(QString::number(image_point_l[i][j].x)));
+            bin_model->setItem(count,2,new QStandardItem(QString::number(image_point_l[i][j].y)));
+            bin_model->setItem(count,3,new QStandardItem(QString::number(image_point_r[i][j].x)));
+            bin_model->setItem(count,4,new QStandardItem(QString::number(image_point_r[i][j].y)));
+            bin_model->setItem(count,5,new QStandardItem(QString::number(object_point[i][j].x)));
+            bin_model->setItem(count,6,new QStandardItem(QString::number(object_point[i][j].y)));
+            bin_model->setItem(count,7,new QStandardItem(QString::number(object_point[i][j].z)));
+            count++;
+        }
+    }
+    QString str = "";
+    Mat R,T;
+    if(doc->getBinR(R)&&doc->getBinT(T)){
+        for(int i = 0;i<R.rows||i<T.rows;i++){
+            for(int j = 0;j<R.cols;j++){
+                QString t = QString::number(R.at<double>(i,j));
+                str += t;
+                str += QString(20-t.length(),' ');
+            }
+            for(int j = 0;j<T.cols;j++){
+                QString t = QString::number(T.at<double>(i,j));
+                str += t;
+                str += QString(20-t.length(),' ');
+            }
+            str += '\n';
+        }
+    }
+    ui->binR_Tlabel->setText(str);
 }

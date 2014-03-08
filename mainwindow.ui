@@ -189,7 +189,7 @@
        </layout>
       </widget>
       <widget class="QWidget" name="pageBinocular">
-       <layout class="QVBoxLayout" name="verticalLayout_3">
+       <layout class="QVBoxLayout" name="verticalLayout_3" stretch="3,1,10">
         <item>
          <widget class="QGroupBox" name="groupBox_7">
           <property name="title">
@@ -197,9 +197,9 @@
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout_7">
            <item>
-            <widget class="QLabel" name="label">
+            <widget class="QLabel" name="binR_Tlabel">
              <property name="text">
-              <string>TextLabel</string>
+              <string/>
              </property>
             </widget>
            </item>
@@ -236,7 +236,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QTableWidget" name="tableWidget"/>
+         <widget class="QTableView" name="binTable"/>
         </item>
        </layout>
       </widget>

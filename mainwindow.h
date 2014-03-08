@@ -43,10 +43,13 @@ private slots:
 
 public:
     void loadCalidUI();
+    void setupBinUI();
+    void loadBinUI();
 private:
     Ui::MainWindow *ui;
     QStandardItemModel *singal_model;
     QStandardItemModel *singal_model_r;
+    QStandardItemModel *bin_model;
 public:
     RTFDocument *doc;
 
