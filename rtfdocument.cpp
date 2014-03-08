@@ -156,6 +156,80 @@ bool RTFDocument::read(QString filename){
                 singlechild = singlechild->NextSiblingElement();
             }
         }
+        else if(strcmp(rootchild->Name(),"binocular")==0){
+            XMLElement *binchild = rootchild->FirstChildElement();
+            while(binchild!=NULL){
+                if(strcmp(binchild->Name(),"R")==0){
+                    this->bin_R_isok = true;
+                    bin_R = Mat::zeros(3,3,CV_64F);
+                    if(binchild->QueryDoubleAttribute("d0",&bin_R.at<double>(0,0))!=XML_NO_ERROR){
+                        qDebug()<<"not found d0"<<endl;
+                        bin_R_isok = false;
+                    }
+                    if(binchild->QueryDoubleAttribute("d1",&bin_R.at<double>(0,1))!=XML_NO_ERROR)
+                        bin_R_isok = false;
+                    if(binchild->QueryDoubleAttribute("d2",&bin_R.at<double>(0,2))!=XML_NO_ERROR)
+                        bin_R_isok = false;
+                    if(binchild->QueryDoubleAttribute("d3",&bin_R.at<double>(1,0))!=XML_NO_ERROR)
+                        bin_R_isok = false;
+                    if(binchild->QueryDoubleAttribute("d4",&bin_R.at<double>(1,1))!=XML_NO_ERROR)
+                        bin_R_isok = false;
+                    if(binchild->QueryDoubleAttribute("d5",&bin_R.at<double>(1,2))!=XML_NO_ERROR)
+                        bin_R_isok = false;
+                    if(binchild->QueryDoubleAttribute("d6",&bin_R.at<double>(2,0))!=XML_NO_ERROR)
+                        bin_R_isok = false;
+                    if(binchild->QueryDoubleAttribute("d7",&bin_R.at<double>(2,1))!=XML_NO_ERROR)
+                        bin_R_isok = false;
+                    if(binchild->QueryDoubleAttribute("d8",&bin_R.at<double>(2,2))!=XML_NO_ERROR)
+                        bin_R_isok = false;
+                }
+                else if(strcmp(binchild->Name(),"T")==0){
+                    this->bin_T_isok = true;
+                    this->bin_T = Mat::zeros(3,1,CV_64F);
+                    if(binchild->QueryDoubleAttribute("d0",&bin_T.at<double>(0,0))!=XML_NO_ERROR){
+                        bin_T_isok = false;
+                    }
+                    if(binchild->QueryDoubleAttribute("d1",&bin_T.at<double>(1,0))!=XML_NO_ERROR){
+                        bin_T_isok = false;
+                    }
+                    if(binchild->QueryDoubleAttribute("d2",&bin_T.at<double>(2,0))!=XML_NO_ERROR){
+                        bin_T_isok = false;
+                    }
+                }
+                else if(strcmp(binchild->Name(),"points")==0){
+                    XMLElement *onepic = binchild->FirstChildElement();
+                    while(onepic!=NULL){
+                        if(strcmp(onepic->Name(),"onepic")==0){
+                            XMLElement *point = onepic->FirstChildElement();
+                            vector<Point2f> vel;
+                            vector<Point2f> ver;
+                            vector<Point3f> veo;
+                            while(point!=NULL){
+                                Point2f pl;
+                                Point2f pr;
+                                Point3f po;
+                                point->QueryFloatAttribute("u_l",&pl.x);
+                                point->QueryFloatAttribute("v_l",&pl.y);
+                                point->QueryFloatAttribute("u_r",&pr.x);
+                                point->QueryFloatAttribute("v_r",&pr.y);
+                                point->QueryFloatAttribute("x",&po.x);
+                                point->QueryFloatAttribute("y",&po.y);
+                                point->QueryFloatAttribute("z",&po.z);
+                                vel.push_back(pl);
+                                ver.push_back(pr);
+                                veo.push_back(po);
+                                point = point->NextSiblingElement();
+                            }
+                            bin_image_point_l.push_back(vel);
+                            bin_image_point_r.push_back(ver);
+                            bin_object_point_l.push_back(veo);
+                        }
+                        onepic = onepic->NextSiblingElement();
+                    }
+                }
+                binchild = binchild->NextSiblingElement();
+            }
+        }
         rootchild = rootchild->NextSiblingElement();
     }
 }
@@ -248,18 +322,46 @@ bool RTFDocument::save(){
         }
     }
     //保存双目标定数据
-    /*
+
     XMLElement *bino = doc.NewElement("binocular");
     root->LinkEndChild(bino);
     if(this->bin_R_isok){
         XMLElement *binoR = doc.NewElement("R");
-        binoR->SetAttribute("b0",bin_R.);
+        binoR->SetAttribute("d0",this->bin_R.at<double>(0,0));
+        binoR->SetAttribute("d1",this->bin_R.at<double>(0,1));
+        binoR->SetAttribute("d2",this->bin_R.at<double>(0,2));
+        binoR->SetAttribute("d3",this->bin_R.at<double>(1,0));
+        binoR->SetAttribute("d4",this->bin_R.at<double>(1,1));
+        binoR->SetAttribute("d5",this->bin_R.at<double>(1,2));
+        binoR->SetAttribute("d6",this->bin_R.at<double>(2,0));
+        binoR->SetAttribute("d7",this->bin_R.at<double>(2,1));
+        binoR->SetAttribute("d8",this->bin_R.at<double>(2,2));
         bino->LinkEndChild(binoR);
     }
     if(this->bin_T_isok){
-
+        XMLElement *binoT = doc.NewElement("T");
+        binoT->SetAttribute("d0",this->bin_T.at<double>(0,0));
+        binoT->SetAttribute("d1",this->bin_T.at<double>(1,0));
+        binoT->SetAttribute("d2",this->bin_T.at<double>(2,0));
+        bino->LinkEndChild(binoT);
     }
-    */
+    points = doc.NewElement("points");
+    bino->LinkEndChild(points);
+    for(int i = 0;i<bin_image_point_l.size();i++){
+        XMLElement *pic = doc.NewElement("onepic");//一张图片上的点
+        points->LinkEndChild(pic);
+        for(int j = 0;j<bin_image_point_l[i].size();j++){
+            XMLElement *pa = doc.NewElement("point");
+            pic->LinkEndChild(pa);
+            pa->SetAttribute("u_l",this->bin_image_point_l[i][j].x);
+            pa->SetAttribute("v_l",this->bin_image_point_l[i][j].y);
+            pa->SetAttribute("u_r",this->bin_image_point_r[i][j].x);
+            pa->SetAttribute("v_r",this->bin_image_point_r[i][j].y);
+            pa->SetAttribute("x",this->bin_object_point_l[i][j].x);
+            pa->SetAttribute("y",this->bin_object_point_l[i][j].y);
+            pa->SetAttribute("z",this->bin_object_point_l[i][j].z);
+        }
+    }
     doc.SaveFile(filename.toStdString().c_str());
 }
 bool RTFDocument::write(QString filename){
@@ -426,6 +528,7 @@ void RTFDocument::calBinParam(Mat &matimg){
         return;
     Mat E,F;
     this->bin_R_isok = this->bin_T_isok = true;
+    this->bin_T = Mat::zeros(3, 1, CV_64F);
     stereoCalibrate(this->bin_object_point_l,
                     this->bin_image_point_l,
                     this->bin_image_point_r,
