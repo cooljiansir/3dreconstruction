@@ -8,6 +8,7 @@
 RTFDocument::RTFDocument(){
     this->fileopen = false;
     this->l_disok = this->l_insok = this->r_disok = this->r_insok = false;
+    this->bin_R_isok = this->bin_T_isok = false;
 }
 RTFDocument::~RTFDocument(){
 
@@ -20,7 +21,6 @@ bool RTFDocument::read(QString filename){
     XMLElement *root = doc.RootElement();
     XMLElement *rootchild = root->FirstChildElement();
     while(rootchild!=NULL){
-        qDebug()<<"root chile name"<<rootchild->Name()<<endl;
         if(strcmp(rootchild->Name(),"single")==0){
             XMLElement * singlechild = rootchild->FirstChildElement();
             while(singlechild!=NULL){
@@ -162,10 +162,8 @@ bool RTFDocument::read(QString filename){
                 if(strcmp(binchild->Name(),"R")==0){
                     this->bin_R_isok = true;
                     bin_R = Mat::zeros(3,3,CV_64F);
-                    if(binchild->QueryDoubleAttribute("d0",&bin_R.at<double>(0,0))!=XML_NO_ERROR){
-                        qDebug()<<"not found d0"<<endl;
+                    if(binchild->QueryDoubleAttribute("d0",&bin_R.at<double>(0,0))!=XML_NO_ERROR)
                         bin_R_isok = false;
-                    }
                     if(binchild->QueryDoubleAttribute("d1",&bin_R.at<double>(0,1))!=XML_NO_ERROR)
                         bin_R_isok = false;
                     if(binchild->QueryDoubleAttribute("d2",&bin_R.at<double>(0,2))!=XML_NO_ERROR)
@@ -338,6 +336,7 @@ bool RTFDocument::save(){
         binoR->SetAttribute("d8",this->bin_R.at<double>(2,2));
         bino->LinkEndChild(binoR);
     }
+
     if(this->bin_T_isok){
         XMLElement *binoT = doc.NewElement("T");
         binoT->SetAttribute("d0",this->bin_T.at<double>(0,0));
@@ -345,6 +344,7 @@ bool RTFDocument::save(){
         binoT->SetAttribute("d2",this->bin_T.at<double>(2,0));
         bino->LinkEndChild(binoT);
     }
+
     points = doc.NewElement("points");
     bino->LinkEndChild(points);
     for(int i = 0;i<bin_image_point_l.size();i++){
@@ -362,6 +362,7 @@ bool RTFDocument::save(){
             pa->SetAttribute("z",this->bin_object_point_l[i][j].z);
         }
     }
+
     doc.SaveFile(filename.toStdString().c_str());
 }
 bool RTFDocument::write(QString filename){

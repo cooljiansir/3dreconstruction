@@ -47,11 +47,14 @@ public:
     void loadCalidUI();
     void setupBinUI();
     void loadBinUI();
+
+    void keyPressEvent(QKeyEvent *);
 private:
     Ui::MainWindow *ui;
     QStandardItemModel *singal_model;
     QStandardItemModel *singal_model_r;
     QStandardItemModel *bin_model;
+    bool opened;
 public:
     RTFDocument *doc;
 

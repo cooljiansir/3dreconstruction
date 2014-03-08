@@ -324,7 +324,7 @@ font: 48pt &quot;Agency FB&quot;;</string>
   </action>
   <action name="actionSave">
    <property name="text">
-    <string>save </string>
+    <string>save                 Ctrl + S</string>
    </property>
   </action>
   <action name="actionDual">

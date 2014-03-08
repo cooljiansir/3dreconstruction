@@ -6,6 +6,7 @@
 #include <QMessageBox>
 #include "sigaldialog.h"
 #include "binoculardialog.h"
+#include <QKeyEvent>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -13,6 +14,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     this->doc = new RTFDocument();
+    this->opened = false;
     ui->actionSave->setEnabled(false);
     ui->actionNew->setEnabled(true);
     ui->actionOpen_file->setEnabled(true);
@@ -160,6 +162,7 @@ void MainWindow::on_actionOpen_file_triggered()
                 QString("Document files (*.")+FILE_NAME+");;All files(*.*)");
     if (!filename.isNull()) { //用户选择了文件
           this->setWindowTitle(filename.mid(filename.lastIndexOf("/")+1));
+          ui->actionOpen_file->setEnabled(false);
           ui->actionNew->setEnabled(false);
           ui->actionSave->setEnabled(true);
 
@@ -173,6 +176,7 @@ void MainWindow::on_actionOpen_file_triggered()
           //ui->stackedWidget->setCurrentIndex(1);
           this->doc->read(filename);
           this->on_actionSigalCamera_triggered();
+          this->opened = true;
     } else{ // 用户取消选择
 
     }
@@ -216,6 +220,7 @@ void MainWindow::on_actionNew_triggered()
     ui->actionTake_Photoes_2->setEnabled(true);
 
     this->setWindowTitle("untitiled");
+    this->opened = true;
     this->on_actionSigalCamera_triggered();
 }
 
@@ -337,4 +342,15 @@ void MainWindow::loadBinUI(){
         }
     }
     ui->binR_Tlabel->setText(str);
+}
+void MainWindow::keyPressEvent(QKeyEvent *e){
+    int ukey = e->key();
+    Qt::Key key = static_cast<Qt::Key>(ukey);
+    Qt::KeyboardModifiers modifiers = e->modifiers();
+    if(key==Qt::Key_S&&key){
+        if(modifiers&Qt::ControlModifier){
+            if(this->opened)
+                on_actionSave_triggered();
+        }
+    }
 }
