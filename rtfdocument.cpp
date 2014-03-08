@@ -427,8 +427,8 @@ void RTFDocument::calBinParam(Mat &matimg){
     Mat E,F;
     this->bin_R_isok = this->bin_T_isok = true;
     stereoCalibrate(this->bin_object_point_l,
-                    this->image_point_l,
-                    this->image_point_r,
+                    this->bin_image_point_l,
+                    this->bin_image_point_r,
                     l_intrinsic,
                     l_distortion,
                     r_intrinsic,
