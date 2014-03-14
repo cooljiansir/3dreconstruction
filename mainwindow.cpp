@@ -7,6 +7,7 @@
 #include "sigaldialog.h"
 #include "binoculardialog.h"
 #include <QKeyEvent>
+#include "photodialog2.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -325,23 +326,30 @@ void MainWindow::loadBinUI(){
         }
     }
     QString str = "";
+    QString str1 = "";
     Mat R,T;
-    if(doc->getBinR(R)&&doc->getBinT(T)){
-        for(int i = 0;i<R.rows||i<T.rows;i++){
+    if(doc->getBinR(R)){
+        for(int i = 0;i<R.rows;i++){
             for(int j = 0;j<R.cols;j++){
                 QString t = QString::number(R.at<double>(i,j));
-                str += t;
-                str += QString(20-t.length(),' ');
-            }
-            for(int j = 0;j<T.cols;j++){
-                QString t = QString::number(T.at<double>(i,j));
                 str += t;
                 str += QString(20-t.length(),' ');
             }
             str += '\n';
         }
     }
-    ui->binR_Tlabel->setText(str);
+    if(doc->getBinT(T)){
+        for(int i = 0;i<T.rows;i++){
+            for(int j = 0;j<T.cols;j++){
+                QString t = QString::number(T.at<double>(i,j));
+                str1 += t;
+                str1 += QString(20-t.length(),' ');
+            }
+            str1 += '\n';
+        }
+    }
+    ui->bin_Rlabel->setText(str);
+    ui->bin_Tlabel->setText(str1);
 }
 void MainWindow::keyPressEvent(QKeyEvent *e){
     int ukey = e->key();
@@ -353,4 +361,10 @@ void MainWindow::keyPressEvent(QKeyEvent *e){
                 on_actionSave_triggered();
         }
     }
+}
+
+void MainWindow::on_actionTake_Photoes_2_triggered()
+{
+    PhotoDialog2 dig(this);
+    dig.exec();
 }

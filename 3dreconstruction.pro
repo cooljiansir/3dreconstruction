@@ -19,7 +19,9 @@ SOURCES += main.cpp\
     tinyxml2.cpp \
     sigaldialog.cpp \
     clicklabel.cpp \
-    binoculardialog.cpp
+    binoculardialog.cpp \
+    photodialog2.cpp \
+    uti.cpp
 
 HEADERS  += mainwindow.h \
     photodialog.h \
@@ -27,13 +29,16 @@ HEADERS  += mainwindow.h \
     tinyxml2.h \
     sigaldialog.h \
     clicklabel.h \
-    binoculardialog.h
+    binoculardialog.h \
+    uti.h \
+    photodialog2.h
 
 FORMS    += mainwindow.ui \
     photodialog.ui \
     sigaldialog.ui \
     clicklabel.ui \
-    binoculardialog.ui
+    binoculardialog.ui \
+    photodialog2.ui
 
 
 
@@ -48,5 +53,4 @@ LIBS += $$_PRO_FILE_PWD_\lib\libopencv_highgui247.dll.a\
         $$_PRO_FILE_PWD_\lib\libopencv_calib3d247.dll.a
 
 
-RESOURCES += \
-    res.qrc
+RESOURCES +=

@@ -43,6 +43,8 @@ private slots:
 
     void on_bincularAddBut_clicked();
 
+    void on_actionTake_Photoes_2_triggered();
+
 public:
     void loadCalidUI();
     void setupBinUI();
