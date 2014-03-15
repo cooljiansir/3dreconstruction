@@ -368,3 +368,8 @@ void MainWindow::on_actionTake_Photoes_2_triggered()
     PhotoDialog2 dig(this);
     dig.exec();
 }
+
+void MainWindow::on_actionPolar_Correction_triggered()
+{
+
+}

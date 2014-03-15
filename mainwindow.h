@@ -45,6 +45,8 @@ private slots:
 
     void on_actionTake_Photoes_2_triggered();
 
+    void on_actionPolar_Correction_triggered();
+
 public:
     void loadCalidUI();
     void setupBinUI();

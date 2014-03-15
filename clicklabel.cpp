@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QMouseEvent>
+#include "uti.h"
 
 
 
@@ -17,8 +18,9 @@ ClickLabel::ClickLabel(int isright, QString filename, RTFDocument *doc, QWidget 
     this->doc = doc;
     this->doc->selectBegin(filename.toStdString(),selectimg,harriscorners);
     QWidget::setMouseTracking(true);
-    this->pixmap = new QPixmap(filename);
-    this->setPixmap(*pixmap);
+    //this->pixmap = new QPixmap(filename);
+    //this->setPixmap(*pixmap);
+    this->setPixmap(QPixmap::fromImage(Mat2QImage(selectimg)));
     this->father  = parent;
     this->status = ClickLabel::STATUS_FINDING;
     connect(this,SIGNAL(ok()),parent,SLOT(onLabelOk()));
@@ -27,7 +29,7 @@ ClickLabel::ClickLabel(int isright, QString filename, RTFDocument *doc, QWidget 
 ClickLabel::~ClickLabel()
 {
     delete ui;
-    delete this->pixmap;
+    //delete this->pixmap;
 }
 
 void ClickLabel::mouseMoveEvent(QMouseEvent *e){

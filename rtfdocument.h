@@ -35,6 +35,8 @@ class RTFDocument
 private:
     bool fileopen;
 
+    int image_width;//文件中所有图片的尺寸
+    int image_height;//
 
     //图像坐标
     vector<vector<Point2f> > image_point_l;

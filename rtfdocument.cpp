@@ -9,6 +9,8 @@ RTFDocument::RTFDocument(){
     this->fileopen = false;
     this->l_disok = this->l_insok = this->r_disok = this->r_insok = false;
     this->bin_R_isok = this->bin_T_isok = false;
+    this->image_width = -1;
+    this->image_height = -1;
 }
 RTFDocument::~RTFDocument(){
 
@@ -21,7 +23,15 @@ bool RTFDocument::read(QString filename){
     XMLElement *root = doc.RootElement();
     XMLElement *rootchild = root->FirstChildElement();
     while(rootchild!=NULL){
-        if(strcmp(rootchild->Name(),"single")==0){
+        if(strcmp(rootchild->Name(),"imagesize")==0){
+            int wi,he;
+            if(rootchild->QueryIntAttribute("width",&wi)==XML_NO_ERROR&&
+                   rootchild->QueryIntAttribute("height",&he)==XML_NO_ERROR ){
+                this->image_height = he;
+                this->image_width = wi;
+            }
+        }
+        else if(strcmp(rootchild->Name(),"single")==0){
             XMLElement * singlechild = rootchild->FirstChildElement();
             while(singlechild!=NULL){
                 if(strcmp(singlechild->Name(),"left")==0){
@@ -238,6 +248,11 @@ bool RTFDocument::save(){
     tinyxml2::XMLDocument doc;
     XMLElement *root = doc.NewElement("root");
     doc.LinkEndChild(root);
+    //保存图片大小
+    XMLElement *imgsize = doc.NewElement("imagesize");
+    root->LinkEndChild(imgsize);
+    imgsize->SetAttribute("width",this->image_width);
+    imgsize->SetAttribute("height",this->image_height);
     //保存单目标定数据
     XMLElement *single = doc.NewElement("single");
     root->LinkEndChild(single);
@@ -372,7 +387,14 @@ bool RTFDocument::write(QString filename){
 }
 
 bool RTFDocument::selectBegin(string filename, Mat &selectimg, vector<Point2f> &harriscorners){
-    selectimg = imread(filename.c_str());
+    //selectimg = imread(filename.c_str());
+    Mat tempimg = imread(filename.c_str());
+    if(this->image_height!=-1&&this->image_width!=-1){
+        Size s(this->image_width,this->image_height);
+        //Size s(50,50);
+        //resize(selectimg,selectimg,s);
+        resize(tempimg,selectimg,s);
+    }
     int maxCorner = 1000;
     double quality_level = 0.1;
     double min_dis = 9;
@@ -418,6 +440,10 @@ void RTFDocument::addCorner(int isright, Mat &selectimg,vector<vector<Point2f> >
         object_point_r.push_back(obj_vec);
     }
     this->calParams(selectimg);
+    if(this->image_height==-1||this->image_width==-1){
+        this->image_width = selectimg.cols;
+        this->image_height = selectimg.rows;
+    }
 }
 void RTFDocument::getCorner(int isr,vector<vector<Point2f> > &image_point, vector<vector<Point3f> > &object_point){
     if(isr==0){
@@ -521,6 +547,10 @@ void RTFDocument::addBinData(Mat &selectimg,
     this->bin_image_point_r.push_back(vecR);
     this->bin_object_point_l.push_back(vecO);
     this->calBinParam(selectimg);
+    if(this->image_height==-1||this->image_width==-1){
+        this->image_width = selectimg.cols;
+        this->image_height = selectimg.rows;
+    }
 }
 void RTFDocument::calBinParam(Mat &matimg){
     if(!this->l_insok||!this->l_disok)
