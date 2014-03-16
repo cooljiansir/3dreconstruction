@@ -21,7 +21,8 @@ SOURCES += main.cpp\
     clicklabel.cpp \
     binoculardialog.cpp \
     photodialog2.cpp \
-    uti.cpp
+    uti.cpp \
+    comparedialog.cpp
 
 HEADERS  += mainwindow.h \
     photodialog.h \
@@ -31,14 +32,16 @@ HEADERS  += mainwindow.h \
     clicklabel.h \
     binoculardialog.h \
     uti.h \
-    photodialog2.h
+    photodialog2.h \
+    comparedialog.h
 
 FORMS    += mainwindow.ui \
     photodialog.ui \
     sigaldialog.ui \
     clicklabel.ui \
     binoculardialog.ui \
-    photodialog2.ui
+    photodialog2.ui \
+    comparedialog.ui
 
 
 

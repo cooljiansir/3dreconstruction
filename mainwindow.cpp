@@ -8,6 +8,7 @@
 #include "binoculardialog.h"
 #include <QKeyEvent>
 #include "photodialog2.h"
+#include "comparedialog.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -241,10 +242,6 @@ void MainWindow::on_adddataBut_clicked()
     }
 }
 
-void MainWindow::on_pushButton_clicked()
-{
-
-}
 
 void MainWindow::on_rightAddData_clicked()
 {
@@ -372,4 +369,55 @@ void MainWindow::on_actionTake_Photoes_2_triggered()
 void MainWindow::on_actionPolar_Correction_triggered()
 {
 
+}
+
+
+void MainWindow::on_leftUndistored_clicked()
+{
+    Mat l_ins,l_dis;
+    if(!this->doc->getLintrisic(l_ins)||!this->doc->getLdistortion(l_dis)){
+        QMessageBox::information(this,"Error","You haven't done calibration yet");
+        return;
+    }
+    QString leftfilename = QFileDialog::getOpenFileName(
+       this,
+       "Binocular Calibration - Open Left Image",
+       QDir::currentPath(),
+       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if (!leftfilename.isNull()) { //用户选择了左图文件
+        Mat mat = imread(leftfilename.toStdString().c_str());
+        //cvtColor(mat,mat,CV_BGR2GRAY);
+        Mat mapx,mapy;
+        //Mat newIns;
+        initUndistortRectifyMap(l_ins,l_dis,Mat(),l_ins,mat.size(),CV_32FC1,mapx,mapy);
+        Mat mat_;
+        remap(mat,mat_,mapx,mapy,INTER_LINEAR);
+        CompareDialog dig(mat,mat_,this);
+        dig.exec();
+    }
+}
+
+void MainWindow::on_rightUndistored_clicked()
+{
+    Mat r_ins,r_dis;
+    if(!this->doc->getRintrinsic(r_ins)||!this->doc->getRdistortion(r_dis)){
+        QMessageBox::information(this,"Error","You haven't done calibration yet");
+        return;
+    }
+    QString filename = QFileDialog::getOpenFileName(
+       this,
+       "Binocular Calibration - Open Right Image",
+       QDir::currentPath(),
+       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if (!filename.isNull()) { //用户选择了左图文件
+        Mat mat = imread(filename.toStdString().c_str());
+        //cvtColor(mat,mat,CV_BGR2GRAY);
+        Mat mapx,mapy;
+        //Mat newIns;
+        initUndistortRectifyMap(r_ins,r_dis,Mat(),r_ins,mat.size(),CV_32FC1,mapx,mapy);
+        Mat mat_;
+        remap(mat,mat_,mapx,mapy,INTER_LINEAR);
+        CompareDialog dig(mat,mat_,this);
+        dig.exec();
+    }
 }

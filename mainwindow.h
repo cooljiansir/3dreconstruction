@@ -35,7 +35,6 @@ private slots:
     void on_actionNew_triggered();
 
     void on_adddataBut_clicked();
-    void on_pushButton_clicked();
 
     void on_rightAddData_clicked();
 
@@ -46,6 +45,11 @@ private slots:
     void on_actionTake_Photoes_2_triggered();
 
     void on_actionPolar_Correction_triggered();
+
+
+    void on_leftUndistored_clicked();
+
+    void on_rightUndistored_clicked();
 
 public:
     void loadCalidUI();

@@ -388,13 +388,14 @@ bool RTFDocument::write(QString filename){
 
 bool RTFDocument::selectBegin(string filename, Mat &selectimg, vector<Point2f> &harriscorners){
     //selectimg = imread(filename.c_str());
-    Mat tempimg = imread(filename.c_str());
+    selectimg = imread(filename.c_str());
     if(this->image_height!=-1&&this->image_width!=-1){
         Size s(this->image_width,this->image_height);
         //Size s(50,50);
         //resize(selectimg,selectimg,s);
-        resize(tempimg,selectimg,s);
+        resize(selectimg,selectimg,s);
     }
+
     int maxCorner = 1000;
     double quality_level = 0.1;
     double min_dis = 9;

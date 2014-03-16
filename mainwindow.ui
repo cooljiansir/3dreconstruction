@@ -18,7 +18,7 @@
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>2</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="page">
        <layout class="QHBoxLayout" name="horizontalLayout_13">
@@ -121,7 +121,7 @@
             <property name="title">
              <string>Left</string>
             </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,9">
+            <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,9,0">
              <item>
               <widget class="QPushButton" name="adddataBut">
                <property name="text">
@@ -142,6 +142,13 @@
                </property>
               </spacer>
              </item>
+             <item>
+              <widget class="QPushButton" name="leftUndistored">
+               <property name="text">
+                <string>undistored</string>
+               </property>
+              </widget>
+             </item>
             </layout>
            </widget>
           </item>
@@ -150,7 +157,7 @@
             <property name="title">
              <string>Right</string>
             </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="1,9">
+            <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="1,9,0">
              <item>
               <widget class="QPushButton" name="rightAddData">
                <property name="text">
@@ -170,6 +177,13 @@
                 </size>
                </property>
               </spacer>
+             </item>
+             <item>
+              <widget class="QPushButton" name="rightUndistored">
+               <property name="text">
+                <string>undistored</string>
+               </property>
+              </widget>
              </item>
             </layout>
            </widget>
@@ -380,6 +394,11 @@ font: 48pt &quot;Agency FB&quot;;</string>
   <action name="actionTake_Photoes_2">
    <property name="text">
     <string>Take Photos</string>
+   </property>
+  </action>
+  <action name="actionUndistort">
+   <property name="text">
+    <string>Undistorted</string>
    </property>
   </action>
  </widget>
