@@ -53,6 +53,11 @@ void ClickLabel::paintEvent(QPaintEvent *t){
     case ClickLabel::STATUS_FOUND:
         for(int i = 0;i<this->corners.size();i++){
             for(int j = 0;j<this->corners[i].size();j++){
+                if(i==j&&i==0){//坐标原点
+                    painter.setPen(QPen(Qt::yellow,2));
+                }else{
+                    painter.setPen(QPen(Qt::red,1));
+                }
                 painter.drawLine(corners[i][j].x-5,corners[i][j].y-5,corners[i][j].x-5,corners[i][j].y+5);
                 painter.drawLine(corners[i][j].x-5,corners[i][j].y-5,corners[i][j].x+5,corners[i][j].y-5);
                 painter.drawLine(corners[i][j].x+5,corners[i][j].y+5,corners[i][j].x-5,corners[i][j].y+5);

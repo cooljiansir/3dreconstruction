@@ -196,7 +196,9 @@ void MainWindow::on_actionSave_triggered()
                     QString("data files (*.")+FILE_NAME+")");
         if(!fileName.isNull()){
             this->setWindowTitle(fileName.mid(fileName.lastIndexOf("/")+1));
+            ui->statusBar->showMessage("正在保存");
             this->doc->write(fileName);
+            ui->statusBar->showMessage("保存完毕");
         }
     }
 }
@@ -368,7 +370,51 @@ void MainWindow::on_actionTake_Photoes_2_triggered()
 
 void MainWindow::on_actionPolar_Correction_triggered()
 {
-
+    QString leftfilename = QFileDialog::getOpenFileName(
+       this,
+       "Binocular Calibration - Open Left Image",
+       QDir::currentPath(),
+       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if (!leftfilename.isNull()) { //用户选择了左图文件
+        QString rightfilename = QFileDialog::getOpenFileName(
+           this,
+           "Binocular Calibration - Open Right Image",
+           QDir::currentPath(),
+           "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+        if (!rightfilename.isNull()) { //用户选择了左图文件
+            Mat leftmat = imread(leftfilename.toStdString().c_str());
+            Mat rightmat = imread(rightfilename.toStdString().c_str());
+            Mat l_ins,l_dis,r_ins,r_dis,binR,binT;
+            if(!this->doc->getLdistortion(l_dis)||!this->doc->getLintrisic(l_ins)){
+                QMessageBox::information(this,"Error","Left camera hasn't calibrated yet!");
+                return;
+            }
+            if(!this->doc->getRdistortion(r_dis)||!this->doc->getRintrinsic(r_ins)){
+                QMessageBox::information(this,"Error","Right camera hasn't calibrated yet!");
+                return;
+            }
+            if(!this->doc->getBinR(binR)||!this->doc->getBinT(binT)){
+                QMessageBox::information(this,"Error","You should do binocular calibration first");
+                return;
+            }
+            Mat Rl,Rr,Pl,Pr,Q;
+            stereoRectify(l_ins,l_dis,r_ins,r_dis,leftmat.size(),
+                          binR,binT,Rl,Rr,Pl,Pr,Q);
+            Mat maplx,maply,maprx,mapry;
+            //initUndistortRectifyMap(l_ins,l_dis,Rl,l_ins,leftmat.size(),CV_32FC1,maplx,maply);
+            //initUndistortRectifyMap(r_ins,r_dis,Rr,r_ins,rightmat.size(),CV_32FC1,maprx,mapry);
+            initUndistortRectifyMap(l_ins,l_dis,Rl,Pl,leftmat.size(),CV_32FC1,maplx,maply);
+            initUndistortRectifyMap(r_ins,r_dis,Rr,Pr,rightmat.size(),CV_32FC1,maprx,mapry);
+            Mat leftmat_,rightmat_;
+            remap(leftmat,leftmat_,maplx,maply,INTER_LINEAR);
+            remap(rightmat,rightmat_,maprx,mapry,INTER_LINEAR);
+            imshow("pre_left",leftmat);
+            imshow("pre_right",rightmat);
+            imshow("now_left",leftmat_);
+            imshow("now_right",rightmat_);
+            cvWaitKey(0);
+        }
+    }
 }
 
 
@@ -386,9 +432,7 @@ void MainWindow::on_leftUndistored_clicked()
        "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
     if (!leftfilename.isNull()) { //用户选择了左图文件
         Mat mat = imread(leftfilename.toStdString().c_str());
-        //cvtColor(mat,mat,CV_BGR2GRAY);
         Mat mapx,mapy;
-        //Mat newIns;
         initUndistortRectifyMap(l_ins,l_dis,Mat(),l_ins,mat.size(),CV_32FC1,mapx,mapy);
         Mat mat_;
         remap(mat,mat_,mapx,mapy,INTER_LINEAR);
@@ -411,9 +455,7 @@ void MainWindow::on_rightUndistored_clicked()
        "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
     if (!filename.isNull()) { //用户选择了左图文件
         Mat mat = imread(filename.toStdString().c_str());
-        //cvtColor(mat,mat,CV_BGR2GRAY);
         Mat mapx,mapy;
-        //Mat newIns;
         initUndistortRectifyMap(r_ins,r_dis,Mat(),r_ins,mat.size(),CV_32FC1,mapx,mapy);
         Mat mat_;
         remap(mat,mat_,mapx,mapy,INTER_LINEAR);

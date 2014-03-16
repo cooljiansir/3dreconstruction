@@ -580,11 +580,13 @@ bool RTFDocument::getBinR(Mat &bin_R){
     if(!this->bin_R_isok)
         return false;
     bin_R = this->bin_R;
+    return true;
 }
 bool RTFDocument::getBinT(Mat &bin_T){
     if(!this->bin_T_isok)
         return false;
     bin_T = this->bin_T;
+    return true;
 }
 
 int cmp_x(const Point2f &a,const Point2f &b){
