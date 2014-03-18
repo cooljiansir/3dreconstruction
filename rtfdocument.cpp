@@ -18,45 +18,45 @@ RTFDocument::~RTFDocument(){
 bool RTFDocument::read(QString filename){
     this->fileopen = true;
     this->filename = filename;
-    XMLDocument doc;
+    tinyxml2::XMLDocument doc;
     doc.LoadFile(filename.toStdString().c_str());
-    XMLElement *root = doc.RootElement();
-    XMLElement *rootchild = root->FirstChildElement();
+    tinyxml2::XMLElement *root = doc.RootElement();
+    tinyxml2::XMLElement *rootchild = root->FirstChildElement();
     while(rootchild!=NULL){
         if(strcmp(rootchild->Name(),"imagesize")==0){
             int wi,he;
-            if(rootchild->QueryIntAttribute("width",&wi)==XML_NO_ERROR&&
-                   rootchild->QueryIntAttribute("height",&he)==XML_NO_ERROR ){
+            if(rootchild->QueryIntAttribute("width",&wi)==tinyxml2::XML_NO_ERROR&&
+                   rootchild->QueryIntAttribute("height",&he)==tinyxml2::XML_NO_ERROR ){
                 this->image_height = he;
                 this->image_width = wi;
             }
         }
         else if(strcmp(rootchild->Name(),"single")==0){
-            XMLElement * singlechild = rootchild->FirstChildElement();
+            tinyxml2::XMLElement * singlechild = rootchild->FirstChildElement();
             while(singlechild!=NULL){
                 if(strcmp(singlechild->Name(),"left")==0){
-                    XMLElement *leftchild = singlechild->FirstChildElement();
+                    tinyxml2::XMLElement *leftchild = singlechild->FirstChildElement();
                     while(leftchild!=NULL){
                         if(strcmp(leftchild->Name(),"intrinsic")==0){
                             l_intrinsic = Mat::zeros(3, 3, CV_64F);
                             l_insok = true;
-                            if(leftchild->QueryDoubleAttribute("d0",&l_intrinsic.at<double>(0,0))!=XML_NO_ERROR)
+                            if(leftchild->QueryDoubleAttribute("d0",&l_intrinsic.at<double>(0,0))!=tinyxml2::XML_NO_ERROR)
                                 l_insok = false;
-                            if(leftchild->QueryDoubleAttribute("d1",&l_intrinsic.at<double>(0,1))!=XML_NO_ERROR)
+                            if(leftchild->QueryDoubleAttribute("d1",&l_intrinsic.at<double>(0,1))!=tinyxml2::XML_NO_ERROR)
                                 l_insok = false;
-                            if(leftchild->QueryDoubleAttribute("d2",&l_intrinsic.at<double>(0,2))!=XML_NO_ERROR)
+                            if(leftchild->QueryDoubleAttribute("d2",&l_intrinsic.at<double>(0,2))!=tinyxml2::XML_NO_ERROR)
                                 l_insok = false;
-                            if(leftchild->QueryDoubleAttribute("d3",&l_intrinsic.at<double>(1,0))!=XML_NO_ERROR)
+                            if(leftchild->QueryDoubleAttribute("d3",&l_intrinsic.at<double>(1,0))!=tinyxml2::XML_NO_ERROR)
                                 l_insok = false;
-                            if(leftchild->QueryDoubleAttribute("d4",&l_intrinsic.at<double>(1,1))!=XML_NO_ERROR)
+                            if(leftchild->QueryDoubleAttribute("d4",&l_intrinsic.at<double>(1,1))!=tinyxml2::XML_NO_ERROR)
                                 l_insok = false;
-                            if(leftchild->QueryDoubleAttribute("d5",&l_intrinsic.at<double>(1,2))!=XML_NO_ERROR)
+                            if(leftchild->QueryDoubleAttribute("d5",&l_intrinsic.at<double>(1,2))!=tinyxml2::XML_NO_ERROR)
                                 l_insok = false;
-                            if(leftchild->QueryDoubleAttribute("d6",&l_intrinsic.at<double>(2,0))!=XML_NO_ERROR)
+                            if(leftchild->QueryDoubleAttribute("d6",&l_intrinsic.at<double>(2,0))!=tinyxml2::XML_NO_ERROR)
                                 l_insok = false;
-                            if(leftchild->QueryDoubleAttribute("d7",&l_intrinsic.at<double>(2,1))!=XML_NO_ERROR)
+                            if(leftchild->QueryDoubleAttribute("d7",&l_intrinsic.at<double>(2,1))!=tinyxml2::XML_NO_ERROR)
                                 l_insok = false;
-                            if(leftchild->QueryDoubleAttribute("d8",&l_intrinsic.at<double>(2,2))!=XML_NO_ERROR)
+                            if(leftchild->QueryDoubleAttribute("d8",&l_intrinsic.at<double>(2,2))!=tinyxml2::XML_NO_ERROR)
                                 l_insok = false;
                         }else if(strcmp(leftchild->Name(),"distoration")==0){
                             l_distortion = Mat::zeros(8, 1, CV_64F);
@@ -71,12 +71,12 @@ bool RTFDocument::read(QString filename){
                             leftchild->QueryDoubleAttribute("d7",&l_distortion.at<double>(7,0));
                         }
                         else if(strcmp(leftchild->Name(),"points")==0){
-                            XMLElement *pointchild = leftchild->FirstChildElement();
+                            tinyxml2::XMLElement *pointchild = leftchild->FirstChildElement();
                             while(pointchild!=NULL){
                                 if(strcmp(pointchild->Name(),"onepic")==0){
                                     vector<Point2f> veci;
                                     vector<Point3f> veco;
-                                    XMLElement *onepicchild = pointchild->FirstChildElement();
+                                    tinyxml2::XMLElement *onepicchild = pointchild->FirstChildElement();
                                     while(onepicchild!=NULL){
                                         Point2f p2;
                                         Point3f p3;
@@ -99,28 +99,28 @@ bool RTFDocument::read(QString filename){
                     }
                 }
                 else if(strcmp(singlechild->Name(),"right")==0){
-                    XMLElement *rightchild = singlechild->FirstChildElement();
+                    tinyxml2::XMLElement *rightchild = singlechild->FirstChildElement();
                     while(rightchild!=NULL){
                         if(strcmp(rightchild->Name(),"intrinsic")==0){
                             r_intrinsic = Mat::zeros(3, 3, CV_64F);
                             r_insok = true;
-                            if(rightchild->QueryDoubleAttribute("d0",&r_intrinsic.at<double>(0,0))!=XML_NO_ERROR)
+                            if(rightchild->QueryDoubleAttribute("d0",&r_intrinsic.at<double>(0,0))!=tinyxml2::XML_NO_ERROR)
                                 r_insok = false;
-                            if(rightchild->QueryDoubleAttribute("d1",&r_intrinsic.at<double>(0,1))!=XML_NO_ERROR)
+                            if(rightchild->QueryDoubleAttribute("d1",&r_intrinsic.at<double>(0,1))!=tinyxml2::XML_NO_ERROR)
                                 r_insok = false;
-                            if(rightchild->QueryDoubleAttribute("d2",&r_intrinsic.at<double>(0,2))!=XML_NO_ERROR)
+                            if(rightchild->QueryDoubleAttribute("d2",&r_intrinsic.at<double>(0,2))!=tinyxml2::XML_NO_ERROR)
                                 r_insok = false;
-                            if(rightchild->QueryDoubleAttribute("d3",&r_intrinsic.at<double>(1,0))!=XML_NO_ERROR)
+                            if(rightchild->QueryDoubleAttribute("d3",&r_intrinsic.at<double>(1,0))!=tinyxml2::XML_NO_ERROR)
                                 r_insok = false;
-                            if(rightchild->QueryDoubleAttribute("d4",&r_intrinsic.at<double>(1,1))!=XML_NO_ERROR)
+                            if(rightchild->QueryDoubleAttribute("d4",&r_intrinsic.at<double>(1,1))!=tinyxml2::XML_NO_ERROR)
                                 r_insok = false;
-                            if(rightchild->QueryDoubleAttribute("d5",&r_intrinsic.at<double>(1,2))!=XML_NO_ERROR)
+                            if(rightchild->QueryDoubleAttribute("d5",&r_intrinsic.at<double>(1,2))!=tinyxml2::XML_NO_ERROR)
                                 r_insok = false;
-                            if(rightchild->QueryDoubleAttribute("d6",&r_intrinsic.at<double>(2,0))!=XML_NO_ERROR)
+                            if(rightchild->QueryDoubleAttribute("d6",&r_intrinsic.at<double>(2,0))!=tinyxml2::XML_NO_ERROR)
                                 r_insok = false;
-                            if(rightchild->QueryDoubleAttribute("d7",&r_intrinsic.at<double>(2,1))!=XML_NO_ERROR)
+                            if(rightchild->QueryDoubleAttribute("d7",&r_intrinsic.at<double>(2,1))!=tinyxml2::XML_NO_ERROR)
                                 r_insok = false;
-                            if(rightchild->QueryDoubleAttribute("d8",&r_intrinsic.at<double>(2,2))!=XML_NO_ERROR)
+                            if(rightchild->QueryDoubleAttribute("d8",&r_intrinsic.at<double>(2,2))!=tinyxml2::XML_NO_ERROR)
                                 r_insok = false;
 
                         }else if(strcmp(rightchild->Name(),"distoration")==0){
@@ -136,12 +136,12 @@ bool RTFDocument::read(QString filename){
                             rightchild->QueryDoubleAttribute("d7",&r_distortion.at<double>(7,0));
                         }
                         else if(strcmp(rightchild->Name(),"points")==0){
-                            XMLElement *pointchild = rightchild->FirstChildElement();
+                            tinyxml2::XMLElement *pointchild = rightchild->FirstChildElement();
                             while(pointchild!=NULL){
                                 if(strcmp(pointchild->Name(),"onepic")==0){
                                     vector<Point2f> veci;
                                     vector<Point3f> veco;
-                                    XMLElement *onepicchild = pointchild->FirstChildElement();
+                                    tinyxml2::XMLElement *onepicchild = pointchild->FirstChildElement();
                                     while(onepicchild!=NULL){
                                         Point2f p2;
                                         Point3f p3;
@@ -167,48 +167,48 @@ bool RTFDocument::read(QString filename){
             }
         }
         else if(strcmp(rootchild->Name(),"binocular")==0){
-            XMLElement *binchild = rootchild->FirstChildElement();
+            tinyxml2::XMLElement *binchild = rootchild->FirstChildElement();
             while(binchild!=NULL){
                 if(strcmp(binchild->Name(),"R")==0){
                     this->bin_R_isok = true;
                     bin_R = Mat::zeros(3,3,CV_64F);
-                    if(binchild->QueryDoubleAttribute("d0",&bin_R.at<double>(0,0))!=XML_NO_ERROR)
+                    if(binchild->QueryDoubleAttribute("d0",&bin_R.at<double>(0,0))!=tinyxml2::XML_NO_ERROR)
                         bin_R_isok = false;
-                    if(binchild->QueryDoubleAttribute("d1",&bin_R.at<double>(0,1))!=XML_NO_ERROR)
+                    if(binchild->QueryDoubleAttribute("d1",&bin_R.at<double>(0,1))!=tinyxml2::XML_NO_ERROR)
                         bin_R_isok = false;
-                    if(binchild->QueryDoubleAttribute("d2",&bin_R.at<double>(0,2))!=XML_NO_ERROR)
+                    if(binchild->QueryDoubleAttribute("d2",&bin_R.at<double>(0,2))!=tinyxml2::XML_NO_ERROR)
                         bin_R_isok = false;
-                    if(binchild->QueryDoubleAttribute("d3",&bin_R.at<double>(1,0))!=XML_NO_ERROR)
+                    if(binchild->QueryDoubleAttribute("d3",&bin_R.at<double>(1,0))!=tinyxml2::XML_NO_ERROR)
                         bin_R_isok = false;
-                    if(binchild->QueryDoubleAttribute("d4",&bin_R.at<double>(1,1))!=XML_NO_ERROR)
+                    if(binchild->QueryDoubleAttribute("d4",&bin_R.at<double>(1,1))!=tinyxml2::XML_NO_ERROR)
                         bin_R_isok = false;
-                    if(binchild->QueryDoubleAttribute("d5",&bin_R.at<double>(1,2))!=XML_NO_ERROR)
+                    if(binchild->QueryDoubleAttribute("d5",&bin_R.at<double>(1,2))!=tinyxml2::XML_NO_ERROR)
                         bin_R_isok = false;
-                    if(binchild->QueryDoubleAttribute("d6",&bin_R.at<double>(2,0))!=XML_NO_ERROR)
+                    if(binchild->QueryDoubleAttribute("d6",&bin_R.at<double>(2,0))!=tinyxml2::XML_NO_ERROR)
                         bin_R_isok = false;
-                    if(binchild->QueryDoubleAttribute("d7",&bin_R.at<double>(2,1))!=XML_NO_ERROR)
+                    if(binchild->QueryDoubleAttribute("d7",&bin_R.at<double>(2,1))!=tinyxml2::XML_NO_ERROR)
                         bin_R_isok = false;
-                    if(binchild->QueryDoubleAttribute("d8",&bin_R.at<double>(2,2))!=XML_NO_ERROR)
+                    if(binchild->QueryDoubleAttribute("d8",&bin_R.at<double>(2,2))!=tinyxml2::XML_NO_ERROR)
                         bin_R_isok = false;
                 }
                 else if(strcmp(binchild->Name(),"T")==0){
                     this->bin_T_isok = true;
                     this->bin_T = Mat::zeros(3,1,CV_64F);
-                    if(binchild->QueryDoubleAttribute("d0",&bin_T.at<double>(0,0))!=XML_NO_ERROR){
+                    if(binchild->QueryDoubleAttribute("d0",&bin_T.at<double>(0,0))!=tinyxml2::XML_NO_ERROR){
                         bin_T_isok = false;
                     }
-                    if(binchild->QueryDoubleAttribute("d1",&bin_T.at<double>(1,0))!=XML_NO_ERROR){
+                    if(binchild->QueryDoubleAttribute("d1",&bin_T.at<double>(1,0))!=tinyxml2::XML_NO_ERROR){
                         bin_T_isok = false;
                     }
-                    if(binchild->QueryDoubleAttribute("d2",&bin_T.at<double>(2,0))!=XML_NO_ERROR){
+                    if(binchild->QueryDoubleAttribute("d2",&bin_T.at<double>(2,0))!=tinyxml2::XML_NO_ERROR){
                         bin_T_isok = false;
                     }
                 }
                 else if(strcmp(binchild->Name(),"points")==0){
-                    XMLElement *onepic = binchild->FirstChildElement();
+                    tinyxml2::XMLElement *onepic = binchild->FirstChildElement();
                     while(onepic!=NULL){
                         if(strcmp(onepic->Name(),"onepic")==0){
-                            XMLElement *point = onepic->FirstChildElement();
+                            tinyxml2::XMLElement *point = onepic->FirstChildElement();
                             vector<Point2f> vel;
                             vector<Point2f> ver;
                             vector<Point3f> veo;
@@ -246,20 +246,20 @@ bool RTFDocument::opened(){
 }
 bool RTFDocument::save(){
     tinyxml2::XMLDocument doc;
-    XMLElement *root = doc.NewElement("root");
+    tinyxml2::XMLElement *root = doc.NewElement("root");
     doc.LinkEndChild(root);
     //保存图片大小
-    XMLElement *imgsize = doc.NewElement("imagesize");
+    tinyxml2::XMLElement *imgsize = doc.NewElement("imagesize");
     root->LinkEndChild(imgsize);
     imgsize->SetAttribute("width",this->image_width);
     imgsize->SetAttribute("height",this->image_height);
     //保存单目标定数据
-    XMLElement *single = doc.NewElement("single");
+    tinyxml2::XMLElement *single = doc.NewElement("single");
     root->LinkEndChild(single);
-    XMLElement *singleleft = doc.NewElement("left");
+    tinyxml2::XMLElement *singleleft = doc.NewElement("left");
     single->LinkEndChild(singleleft);
     if(l_insok){
-        XMLElement *singleleftinstrin = doc.NewElement("intrinsic");
+        tinyxml2::XMLElement *singleleftinstrin = doc.NewElement("intrinsic");
         singleleftinstrin->SetAttribute("d0",this->l_intrinsic.at<double>(0,0));
         singleleftinstrin->SetAttribute("d1",this->l_intrinsic.at<double>(0,1));
         singleleftinstrin->SetAttribute("d2",this->l_intrinsic.at<double>(0,2));
@@ -272,7 +272,7 @@ bool RTFDocument::save(){
         singleleft->LinkEndChild(singleleftinstrin);
     }
     if(l_disok){
-        XMLElement *singleleftdis = doc.NewElement("distoration");
+        tinyxml2::XMLElement *singleleftdis = doc.NewElement("distoration");
         singleleftdis->SetAttribute("d0",this->l_distortion.at<double>(0,0));
         singleleftdis->SetAttribute("d1",this->l_distortion.at<double>(1,0));
         singleleftdis->SetAttribute("d2",this->l_distortion.at<double>(2,0));
@@ -280,13 +280,13 @@ bool RTFDocument::save(){
         singleleftdis->SetAttribute("d4",this->l_distortion.at<double>(4,0));
         singleleft->LinkEndChild(singleleftdis);
     }
-    XMLElement *points = doc.NewElement("points");
+    tinyxml2::XMLElement *points = doc.NewElement("points");
     singleleft->LinkEndChild(points);
     for(int i = 0;i<image_point_l.size();i++){
-        XMLElement *pic = doc.NewElement("onepic");//一张图片上的点
+        tinyxml2::XMLElement *pic = doc.NewElement("onepic");//一张图片上的点
         points->LinkEndChild(pic);
         for(int j = 0;j<image_point_l[i].size();j++){
-            XMLElement *pa = doc.NewElement("point");
+            tinyxml2::XMLElement *pa = doc.NewElement("point");
             pic->LinkEndChild(pa);
             pa->SetAttribute("u",this->image_point_l[i][j].x);
             pa->SetAttribute("v",this->image_point_l[i][j].y);
@@ -295,10 +295,10 @@ bool RTFDocument::save(){
             pa->SetAttribute("z",this->object_point_l[i][j].z);
         }
     }
-    XMLElement *singleright = doc.NewElement("right");
+    tinyxml2::XMLElement *singleright = doc.NewElement("right");
     single->LinkEndChild(singleright);
     if(r_insok){
-        XMLElement *singlerightinstrin = doc.NewElement("intrinsic");
+        tinyxml2::XMLElement *singlerightinstrin = doc.NewElement("intrinsic");
         singlerightinstrin->SetAttribute("d0",this->r_intrinsic.at<double>(0,0));
         singlerightinstrin->SetAttribute("d1",this->r_intrinsic.at<double>(0,1));
         singlerightinstrin->SetAttribute("d2",this->r_intrinsic.at<double>(0,2));
@@ -311,7 +311,7 @@ bool RTFDocument::save(){
         singleright->LinkEndChild(singlerightinstrin);
     }
     if(r_disok){
-        XMLElement *singlerightdis = doc.NewElement("distoration");
+        tinyxml2::XMLElement *singlerightdis = doc.NewElement("distoration");
         singlerightdis->SetAttribute("d0",this->r_distortion.at<double>(0,0));
         singlerightdis->SetAttribute("d1",this->r_distortion.at<double>(1,0));
         singlerightdis->SetAttribute("d2",this->r_distortion.at<double>(2,0));
@@ -322,10 +322,10 @@ bool RTFDocument::save(){
     points = doc.NewElement("points");
     singleright->LinkEndChild(points);
     for(int i = 0;i<image_point_r.size();i++){
-        XMLElement *pic = doc.NewElement("onepic");//一张图片上的点
+        tinyxml2::XMLElement *pic = doc.NewElement("onepic");//一张图片上的点
         points->LinkEndChild(pic);
         for(int j = 0;j<image_point_r[i].size();j++){
-            XMLElement *pa = doc.NewElement("point");
+            tinyxml2::XMLElement *pa = doc.NewElement("point");
             pic->LinkEndChild(pa);
             pa->SetAttribute("u",this->image_point_r[i][j].x);
             pa->SetAttribute("v",this->image_point_r[i][j].y);
@@ -336,10 +336,10 @@ bool RTFDocument::save(){
     }
     //保存双目标定数据
 
-    XMLElement *bino = doc.NewElement("binocular");
+    tinyxml2::XMLElement *bino = doc.NewElement("binocular");
     root->LinkEndChild(bino);
     if(this->bin_R_isok){
-        XMLElement *binoR = doc.NewElement("R");
+        tinyxml2::XMLElement *binoR = doc.NewElement("R");
         binoR->SetAttribute("d0",this->bin_R.at<double>(0,0));
         binoR->SetAttribute("d1",this->bin_R.at<double>(0,1));
         binoR->SetAttribute("d2",this->bin_R.at<double>(0,2));
@@ -353,7 +353,7 @@ bool RTFDocument::save(){
     }
 
     if(this->bin_T_isok){
-        XMLElement *binoT = doc.NewElement("T");
+        tinyxml2::XMLElement *binoT = doc.NewElement("T");
         binoT->SetAttribute("d0",this->bin_T.at<double>(0,0));
         binoT->SetAttribute("d1",this->bin_T.at<double>(1,0));
         binoT->SetAttribute("d2",this->bin_T.at<double>(2,0));
@@ -363,10 +363,10 @@ bool RTFDocument::save(){
     points = doc.NewElement("points");
     bino->LinkEndChild(points);
     for(int i = 0;i<bin_image_point_l.size();i++){
-        XMLElement *pic = doc.NewElement("onepic");//一张图片上的点
+        tinyxml2::XMLElement *pic = doc.NewElement("onepic");//一张图片上的点
         points->LinkEndChild(pic);
         for(int j = 0;j<bin_image_point_l[i].size();j++){
-            XMLElement *pa = doc.NewElement("point");
+            tinyxml2::XMLElement *pa = doc.NewElement("point");
             pic->LinkEndChild(pa);
             pa->SetAttribute("u_l",this->bin_image_point_l[i][j].x);
             pa->SetAttribute("v_l",this->bin_image_point_l[i][j].y);

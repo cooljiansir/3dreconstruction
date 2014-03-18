@@ -51,6 +51,8 @@ private slots:
 
     void on_rightUndistored_clicked();
 
+    void on_action3D_reconstruction_triggered();
+
 public:
     void loadCalidUI();
     void setupBinUI();

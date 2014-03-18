@@ -9,6 +9,7 @@
 #include <QKeyEvent>
 #include "photodialog2.h"
 #include "comparedialog.h"
+#include "glwidget.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -408,11 +409,46 @@ void MainWindow::on_actionPolar_Correction_triggered()
             Mat leftmat_,rightmat_;
             remap(leftmat,leftmat_,maplx,maply,INTER_LINEAR);
             remap(rightmat,rightmat_,maprx,mapry,INTER_LINEAR);
-            imshow("pre_left",leftmat);
-            imshow("pre_right",rightmat);
+            //imshow("pre_left",leftmat);
+            //imshow("pre_right",rightmat);
             imshow("now_left",leftmat_);
             imshow("now_right",rightmat_);
-            cvWaitKey(0);
+            StereoBM bm;
+//            bm.init(bm.BASIC_PRESET,128,41);
+
+            //bm.init(bm.BASIC_PRESET,16*2,41);
+//            bm.state->roi1 = roi1;
+//            bm.state->roi2 = roi2;
+            bm.state->preFilterCap = 31;
+//            bm.state->SADWindowSize = SADWindowSize > 0 ? SADWindowSize : 9;
+            bm.state->SADWindowSize = 41;
+            bm.state->minDisparity = 0;
+            bm.state->numberOfDisparities = 128;
+            bm.state->textureThreshold = 10;
+//            bm.state->uniquenessRatio = 15;
+            bm.state->uniquenessRatio = 3;
+            bm.state->speckleWindowSize = 100;
+            bm.state->speckleRange = 32;
+            bm.state->disp12MaxDiff = 1;
+            //findstereo
+            Mat disp;
+            Mat leftgray,rightgray;
+            leftgray.create(leftmat_.size(),CV_8UC1);
+            rightgray.create(rightmat_.size(),CV_8UC1);
+            cvtColor(leftmat_,leftgray,CV_BGR2GRAY);
+            cvtColor(rightmat_,rightgray,CV_BGR2GRAY);
+//            imshow("left_gray",leftgray);
+//            imshow("right_gray",rightgray);
+            bm(leftgray,rightgray,disp,CV_32F);
+            Mat vdisp;
+            //normalize(disp,vdisp,0,256,CV_MINMAX);
+            disp.convertTo(vdisp,CV_8U);
+            imshow("dis",vdisp);
+            Mat img3d;
+            reprojectImageTo3D(disp,img3d,Q,false,CV_32F);
+            //imshow("3dimg",img3d);
+            GLWidget *glw = new GLWidget(img3d,0);
+            glw->showMaximized();
         }
     }
 }
@@ -461,5 +497,26 @@ void MainWindow::on_rightUndistored_clicked()
         remap(mat,mat_,mapx,mapy,INTER_LINEAR);
         CompareDialog dig(mat,mat_,this);
         dig.exec();
+    }
+}
+
+void MainWindow::on_action3D_reconstruction_triggered()
+{
+    QString leftfilename = QFileDialog::getOpenFileName(
+       this,
+       "Binocular Calibration - Open Left Image",
+       QDir::currentPath(),
+       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if (!leftfilename.isNull()) { //用户选择了左图文件
+        QString rightfilename = QFileDialog::getOpenFileName(
+           this,
+           "Binocular Calibration - Open Right Image",
+           QDir::currentPath(),
+           "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+        if (!rightfilename.isNull()) { //用户选择了右图文件
+            //StereoBM bm;
+            //bm.init(bm.BASIC_PRESET,5,41);
+
+        }
     }
 }

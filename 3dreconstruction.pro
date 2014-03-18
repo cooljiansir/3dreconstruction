@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui opengl
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -22,7 +22,8 @@ SOURCES += main.cpp\
     binoculardialog.cpp \
     photodialog2.cpp \
     uti.cpp \
-    comparedialog.cpp
+    comparedialog.cpp \
+    glwidget.cpp
 
 HEADERS  += mainwindow.h \
     photodialog.h \
@@ -33,7 +34,8 @@ HEADERS  += mainwindow.h \
     binoculardialog.h \
     uti.h \
     photodialog2.h \
-    comparedialog.h
+    comparedialog.h \
+    glwidget.h
 
 FORMS    += mainwindow.ui \
     photodialog.ui \

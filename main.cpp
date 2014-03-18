@@ -6,6 +6,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QTextCodec>
+#include "glwidget.h"
 
 using namespace cv;
 
@@ -17,7 +18,9 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     MainWindow w;
     w.showMaximized();
-
+//    Mat mat;
+//    GLWidget gl(mat,0);
+//    gl.showMaximized();
     return a.exec();
 
 }

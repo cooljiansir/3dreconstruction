@@ -10,7 +10,7 @@
 
 using namespace cv;
 using namespace std;
-using namespace tinyxml2;
+//using namespace tinyxml2;
 
 /*
  * 业务模型
