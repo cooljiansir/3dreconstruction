@@ -7,8 +7,56 @@
 #include <QMessageBox>
 #include <QTextCodec>
 #include "glwidget.h"
+#include <iostream>
 
 using namespace cv;
+using namespace std;
+
+
+void testBM(){
+    QString leftfilename = QFileDialog::getOpenFileName(
+       0,
+       "Binocular Calibration - Open Left Image",
+       QDir::currentPath(),
+       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if (!leftfilename.isNull()) { //用户选择了左图文件
+        QString rightfilename = QFileDialog::getOpenFileName(
+           0,
+           "Binocular Calibration - Open Right Image",
+           QDir::currentPath(),
+           "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+        if (!rightfilename.isNull()) { //用户选择了左图文件
+            Mat leftmat = imread(leftfilename.toUtf8().data());
+            Mat rightmat = imread(rightfilename.toUtf8().data());
+            Mat leftgray,rightgray;
+            leftgray.create(leftmat.size(),CV_8UC1);
+            rightgray.create(rightmat.size(),CV_8UC1);
+            cvtColor(leftmat,leftgray,CV_BGR2GRAY);
+            cvtColor(rightmat,rightgray,CV_BGR2GRAY);
+            imshow("left_gray",leftgray);
+            imshow("right_gray",rightgray);
+            StereoBM bm;
+            int SADWindowSize=15;
+            bm.state->preFilterCap = 31;
+            bm.state->SADWindowSize = 15;
+            bm.state->minDisparity = 0;
+            bm.state->numberOfDisparities = 32;
+            bm.state->textureThreshold = 10;
+            bm.state->uniquenessRatio = 15;
+            bm.state->speckleWindowSize = 100;
+            bm.state->speckleRange = 32;
+            bm.state->disp12MaxDiff = 1;
+            Mat disp,vdisp;
+            bm(leftgray,rightgray,disp);//,CV_32F);
+            disp.convertTo(vdisp, CV_8U);//, 255/(32*16.));
+            //normalize(vdisp,vdisp,0,255,CV_MINMAX);
+            imshow("dis",vdisp);
+            //freopen("log.txt","w",stdout);
+            //imwrite("vdisp.png",vdisp);
+            //cout<<vdisp;
+        }
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -16,11 +64,11 @@ int main(int argc, char *argv[])
     QTextCodec::setCodecForLocale(codec);
 
     QApplication a(argc, argv);
+
     MainWindow w;
     w.showMaximized();
-//    Mat mat;
-//    GLWidget gl(mat,0);
-//    gl.showMaximized();
+//    testBM();
+
     return a.exec();
 
 }

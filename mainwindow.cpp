@@ -399,8 +399,9 @@ void MainWindow::on_actionPolar_Correction_triggered()
                 return;
             }
             Mat Rl,Rr,Pl,Pr,Q;
+            Rect roil,roir;
             stereoRectify(l_ins,l_dis,r_ins,r_dis,leftmat.size(),
-                          binR,binT,Rl,Rr,Pl,Pr,Q);
+                          binR,binT,Rl,Rr,Pl,Pr,Q,CALIB_ZERO_DISPARITY,-1,leftmat.size(),&roil,&roir);
             Mat maplx,maply,maprx,mapry;
             //initUndistortRectifyMap(l_ins,l_dis,Rl,l_ins,leftmat.size(),CV_32FC1,maplx,maply);
             //initUndistortRectifyMap(r_ins,r_dis,Rr,r_ins,rightmat.size(),CV_32FC1,maprx,mapry);
@@ -409,45 +410,75 @@ void MainWindow::on_actionPolar_Correction_triggered()
             Mat leftmat_,rightmat_;
             remap(leftmat,leftmat_,maplx,maply,INTER_LINEAR);
             remap(rightmat,rightmat_,maprx,mapry,INTER_LINEAR);
-            //imshow("pre_left",leftmat);
-            //imshow("pre_right",rightmat);
-            imshow("now_left",leftmat_);
-            imshow("now_right",rightmat_);
-            StereoBM bm;
-//            bm.init(bm.BASIC_PRESET,128,41);
+//            imshow("left",leftmat_);
+//            imshow("right",rightmat_);
 
-            //bm.init(bm.BASIC_PRESET,16*2,41);
-//            bm.state->roi1 = roi1;
-//            bm.state->roi2 = roi2;
-            bm.state->preFilterCap = 31;
-//            bm.state->SADWindowSize = SADWindowSize > 0 ? SADWindowSize : 9;
-            bm.state->SADWindowSize = 41;
-            bm.state->minDisparity = 0;
-            bm.state->numberOfDisparities = 128;
-            bm.state->textureThreshold = 10;
-//            bm.state->uniquenessRatio = 15;
-            bm.state->uniquenessRatio = 3;
-            bm.state->speckleWindowSize = 100;
-            bm.state->speckleRange = 32;
-            bm.state->disp12MaxDiff = 1;
-            //findstereo
-            Mat disp;
+            Mat united;
+            united.create(leftmat_.rows,leftmat_.cols+rightmat_.cols,leftmat.type());
+            Mat unitedl = united(Rect(0,0,leftmat_.cols,leftmat_.rows));
+            Mat unitedr = united(Rect(leftmat_.cols,0,rightmat_.cols,united.rows));
+            leftmat_.copyTo(unitedl);
+            rightmat_.copyTo(unitedr);
+            //line(united,Point)
+            for(int i = 0;i<9;i++){
+                line(united,Point(0,united.rows*i/10),Point(united.cols,united.rows*i/10),Scalar(0,0,255));
+            }
+            rectangle(unitedl,roil,Scalar(0,0,255));
+            rectangle(unitedr,roir,Scalar(0,0,255));
+            imshow("united",united);
+
+            imwrite("left_.png",leftmat_);
+            imwrite("right_.png",rightmat_);
+
             Mat leftgray,rightgray;
             leftgray.create(leftmat_.size(),CV_8UC1);
             rightgray.create(rightmat_.size(),CV_8UC1);
             cvtColor(leftmat_,leftgray,CV_BGR2GRAY);
             cvtColor(rightmat_,rightgray,CV_BGR2GRAY);
-//            imshow("left_gray",leftgray);
-//            imshow("right_gray",rightgray);
-            bm(leftgray,rightgray,disp,CV_32F);
-            Mat vdisp;
-            //normalize(disp,vdisp,0,256,CV_MINMAX);
+            Mat disp,vdisp;
+
+            StereoBM bm;
+            bm.state->roi1 = roil;
+            bm.state->roi2 = roir;
+            bm.state->preFilterCap = 31;
+            bm.state->SADWindowSize = 15;
+            bm.state->minDisparity = 0;
+            bm.state->numberOfDisparities = 32;
+            bm.state->textureThreshold = 10;
+            bm.state->uniquenessRatio = 15;
+            bm.state->speckleWindowSize = 100;
+            bm.state->speckleRange = 32;
+            bm.state->disp12MaxDiff = 1;
+            //bm(leftgray,rightgray,disp,CV_32F);
+
+            int SADWindowSize = 15;
+            int numberOfDisparities = 32;
+            StereoSGBM sgbm;
+            sgbm.preFilterCap = 63;
+            sgbm.SADWindowSize = SADWindowSize > 0 ? SADWindowSize : 3;
+
+            int cn = leftgray.channels();
+
+            sgbm.P1 = 8*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
+            sgbm.P2 = 32*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
+            sgbm.minDisparity = 0;
+            sgbm.numberOfDisparities = numberOfDisparities;
+            sgbm.uniquenessRatio = 10;
+            sgbm.speckleWindowSize = bm.state->speckleWindowSize;
+            sgbm.speckleRange = bm.state->speckleRange;
+            sgbm.disp12MaxDiff = 1;
+            sgbm.fullDP = true;
+
+            sgbm(leftgray,rightgray,disp);
+
             disp.convertTo(vdisp,CV_8U);
+            //normalize(disp,vdisp,0,256,CV_MINMAX);
             imshow("dis",vdisp);
+
             Mat img3d;
             reprojectImageTo3D(disp,img3d,Q,false,CV_32F);
             //imshow("3dimg",img3d);
-            GLWidget *glw = new GLWidget(img3d,0);
+            GLWidget *glw = new GLWidget(img3d,leftmat_,0);
             glw->showMaximized();
         }
     }

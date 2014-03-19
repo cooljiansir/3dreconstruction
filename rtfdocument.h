@@ -18,7 +18,7 @@ using namespace std;
  *
  */
 
-#define SERACH_RANGE  7//7个像素搜索范围
+#define SERACH_RANGE  5//7个像素搜索范围
 
 //之前从MFC迁移过来的代码，有CPoint
 struct CPoint{
