@@ -10,6 +10,7 @@
 #include "photodialog2.h"
 #include "comparedialog.h"
 #include "glwidget.h"
+#include "uti.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -161,7 +162,7 @@ void MainWindow::on_actionOpen_file_triggered()
     QString filename = QFileDialog::getOpenFileName(
        this,
        "Open Document",
-       QDir::currentPath(),
+      NULL,// QDir::currentPath(),
                 QString("Document files (*.")+FILE_NAME+");;All files(*.*)");
     if (!filename.isNull()) { //用户选择了文件
           this->setWindowTitle(filename.mid(filename.lastIndexOf("/")+1));
@@ -234,7 +235,7 @@ void MainWindow::on_adddataBut_clicked()
     QString filename = QFileDialog::getOpenFileName(
        this,
        "Open Document",
-       QDir::currentPath(),
+       NULL,//QDir::currentPath(),
        "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
     if (!filename.isNull()) { //用户选择了文件
           //this->doc->selectBegin(filename.toStdString());
@@ -251,7 +252,7 @@ void MainWindow::on_rightAddData_clicked()
     QString filename = QFileDialog::getOpenFileName(
        this,
        "Open Document",
-       QDir::currentPath(),
+       NULL,//QDir::currentPath(),
        "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
     if (!filename.isNull()) { //用户选择了文件
           //this->doc->selectBegin(1,filename.toStdString());
@@ -277,13 +278,13 @@ void MainWindow::on_bincularAddBut_clicked()
     QString leftfilename = QFileDialog::getOpenFileName(
        this,
        "Binocular Calibration - Open Left Image",
-       QDir::currentPath(),
+       NULL,//QDir::currentPath(),
        "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
     if (!leftfilename.isNull()) { //用户选择了左图文件
         QString rightfilename = QFileDialog::getOpenFileName(
            this,
            "Binocular Calibration - Open Right Image",
-           QDir::currentPath(),
+           NULL,//QDir::currentPath(),
            "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
         if (!rightfilename.isNull()) { //用户选择了右图文件
             BinocularDialog dig(leftfilename,rightfilename,this->doc,this);
@@ -371,6 +372,51 @@ void MainWindow::on_actionTake_Photoes_2_triggered()
 
 void MainWindow::on_actionPolar_Correction_triggered()
 {
+
+    if(!this->doc->isPolarOk()){
+        QMessageBox::information(this,"ERROR","You hadn't done binocular calibration yet!");
+        return;
+    }
+    QString leftfilename = QFileDialog::getOpenFileName(
+       this,
+       "Binocular Calibration - Open Left Image",
+       NULL,//QDir::currentPath(),
+       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if (!leftfilename.isNull()) { //用户选择了左图文件
+        QString rightfilename = QFileDialog::getOpenFileName(
+           this,
+           "Binocular Calibration - Open Right Image",
+           NULL,//QDir::currentPath(),
+           "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+        if (!rightfilename.isNull()) { //用户选择了右图文件
+            Mat leftmat = imread(leftfilename.toUtf8().data());
+            Mat rightmat = imread(rightfilename.toUtf8().data());
+            cv::resize(rightmat,rightmat,leftmat.size());
+            Mat maplx,maply,maprx,mapry,Q;
+            this->doc->getPolarParam(maplx,maply,maprx,mapry,Q,leftmat.size());
+            Mat leftmat_,rightmat_;
+            remap(leftmat,leftmat_,maplx,maply,INTER_LINEAR);
+            remap(rightmat,rightmat_,maprx,mapry,INTER_LINEAR);
+            this->polar_left = leftmat_;
+            this->polar_right = rightmat_;
+            Mat united;
+            united.create(leftmat_.rows,leftmat_.cols+rightmat_.cols,leftmat.type());
+            Mat unitedl = united(Rect(0,0,leftmat_.cols,leftmat_.rows));
+            Mat unitedr = united(Rect(leftmat_.cols,0,rightmat_.cols,united.rows));
+            leftmat_.copyTo(unitedl);
+            rightmat_.copyTo(unitedr);
+            for(int i = 0;i<10;i++){
+                int temp = united.rows*i/10;
+                if(temp>=united.rows)temp = united.rows;
+                line(united,Point(0,temp),Point(united.cols,temp),Scalar(0,0,255));
+            }
+
+            this->ui->imgLabel->setPixmap(QPixmap::fromImage(Mat2QImage(united)));
+            ui->stackedWidget->setCurrentIndex(3);
+        }
+    }
+    return;
+    /*
     QString leftfilename = QFileDialog::getOpenFileName(
        this,
        "Binocular Calibration - Open Left Image",
@@ -451,7 +497,7 @@ void MainWindow::on_actionPolar_Correction_triggered()
             bm.state->speckleWindowSize = 100;
             bm.state->speckleRange = 32;
             bm.state->disp12MaxDiff = 1;
-/*
+//
             StereoBM bm;
             int SADWindowSize=15;
             bm.state->preFilterCap = 31;
@@ -466,7 +512,7 @@ void MainWindow::on_actionPolar_Correction_triggered()
             bm.state->speckleWindowSize = 10;
             bm.state->speckleRange = 32;
             bm.state->disp12MaxDiff = 1;
-*/
+///
 //            bm(leftgray,rightgray,disp);//,CV_32F);
 //            bm(rightgray,leftgray,disp);//,CV_32F);
 
@@ -504,7 +550,7 @@ void MainWindow::on_actionPolar_Correction_triggered()
             GLWidget *glw = new GLWidget(img3d,leftmat_,0);
             glw->showMaximized();
         }
-    }
+    }*/
 }
 
 
@@ -518,7 +564,7 @@ void MainWindow::on_leftUndistored_clicked()
     QString leftfilename = QFileDialog::getOpenFileName(
        this,
        "Binocular Calibration - Open Left Image",
-       QDir::currentPath(),
+       NULL,//QDir::currentPath(),
        "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
     if (!leftfilename.isNull()) { //用户选择了左图文件
         Mat mat = imread(leftfilename.toStdString().c_str());
@@ -541,7 +587,7 @@ void MainWindow::on_rightUndistored_clicked()
     QString filename = QFileDialog::getOpenFileName(
        this,
        "Binocular Calibration - Open Right Image",
-       QDir::currentPath(),
+       NULL,//QDir::currentPath(),
        "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
     if (!filename.isNull()) { //用户选择了左图文件
         Mat mat = imread(filename.toStdString().c_str());
@@ -556,21 +602,30 @@ void MainWindow::on_rightUndistored_clicked()
 
 void MainWindow::on_action3D_reconstruction_triggered()
 {
-    QString leftfilename = QFileDialog::getOpenFileName(
-       this,
-       "Binocular Calibration - Open Left Image",
-       QDir::currentPath(),
-       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
-    if (!leftfilename.isNull()) { //用户选择了左图文件
-        QString rightfilename = QFileDialog::getOpenFileName(
-           this,
-           "Binocular Calibration - Open Right Image",
-           QDir::currentPath(),
-           "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
-        if (!rightfilename.isNull()) { //用户选择了右图文件
-            //StereoBM bm;
-            //bm.init(bm.BASIC_PRESET,5,41);
+    this->ui->stackedWidget->setCurrentIndex(5);
+}
 
+void MainWindow::on_savePolarBut_clicked()
+{
+    QString fileNameLeft = QFileDialog::getSaveFileName(
+                this,
+                tr("Save Left File"),
+                NULL,
+                "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if(!fileNameLeft.isNull()){
+        QString fileNameRight = QFileDialog::getSaveFileName(
+                    this,
+                    tr("Save Right File"),
+                    NULL,
+                    "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+        if(!fileNameRight.isNull()){
+            imwrite(fileNameLeft.toUtf8().data(),this->polar_left);
+            imwrite(fileNameRight.toUtf8().data(),this->polar_right);
         }
     }
+}
+
+void MainWindow::on_actionStereoMatch_triggered()
+{
+    this->ui->stackedWidget->setCurrentIndex(4);
 }

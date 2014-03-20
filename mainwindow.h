@@ -53,6 +53,10 @@ private slots:
 
     void on_action3D_reconstruction_triggered();
 
+    void on_savePolarBut_clicked();
+
+    void on_actionStereoMatch_triggered();
+
 public:
     void loadCalidUI();
     void setupBinUI();
@@ -65,6 +69,8 @@ private:
     QStandardItemModel *singal_model_r;
     QStandardItemModel *bin_model;
     bool opened;
+    //极线矫正、左右图像
+    Mat polar_left,polar_right;
 public:
     RTFDocument *doc;
 

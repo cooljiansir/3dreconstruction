@@ -114,6 +114,23 @@ public:
     bool getRdistortion(Mat &distortion);
 
 private:
+    //极线矫正参数
+    Mat maplx,maply,maprx,mapry;
+    Mat Q;
+public:
+    //获取极线矫正参数
+    bool isPolarOk();
+    bool getPolarParam(Mat &maplx, Mat &maply, Mat &maprx, Mat &mapry, Mat &Q, Size imgsize);
+
+public:
+    //立体匹配
+    void stereoMatch(Mat &left,Mat &right,Mat &dis);
+
+public:
+    //3维重建
+    void reproject3D(Mat &disp,Mat &img3D,Mat &Q);
+
+private:
     QString filename;
 public:
     RTFDocument();

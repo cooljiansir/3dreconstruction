@@ -76,13 +76,9 @@ void PhotoDialog2::on_pushButton_clicked()
         delete this->capright;
     }
     VideoCapture *p = new VideoCapture(tl);
-    if(p->isOpened()){
-        this->capleft = p;
-    }
+    this->capleft = p;
     VideoCapture *pr = new VideoCapture(tr);
-    if(pr->isOpened()){
-        this->capright = pr;
-    }
+    this->capright = pr;
     this->isswitch = false;
 }
 
