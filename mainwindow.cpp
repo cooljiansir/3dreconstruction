@@ -467,28 +467,29 @@ void MainWindow::on_actionPolar_Correction_triggered()
             bm.state->speckleRange = 32;
             bm.state->disp12MaxDiff = 1;
 */
-            bm(leftgray,rightgray,disp);//,CV_32F);
+//            bm(leftgray,rightgray,disp);//,CV_32F);
 //            bm(rightgray,leftgray,disp);//,CV_32F);
 
-            int SADWindowSize = 15;
-            int numberOfDisparities = 32;
+            int SADWindowSize = 11;
+            int numberOfDisparities = 16*6;
             StereoSGBM sgbm;
             sgbm.preFilterCap = 63;
             sgbm.SADWindowSize = SADWindowSize > 0 ? SADWindowSize : 3;
 
-            int cn = leftgray.channels();
+            int cn = 1;//leftgray.channels();
 
             sgbm.P1 = 8*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
             sgbm.P2 = 32*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
             sgbm.minDisparity = 0;
             sgbm.numberOfDisparities = numberOfDisparities;
             sgbm.uniquenessRatio = 10;
-            sgbm.speckleWindowSize = bm.state->speckleWindowSize;
-            sgbm.speckleRange = bm.state->speckleRange;
+            sgbm.speckleWindowSize = 100;
+            sgbm.speckleRange = 32;
             sgbm.disp12MaxDiff = 1;
             sgbm.fullDP = true;
 
-//            sgbm(leftgray,rightgray,disp);
+            sgbm(leftgray,rightgray,disp);
+            //sgbm(rightgray,leftgray,disp);
 
             disp.convertTo(vdisp,CV_8U);
             //normalize(disp,vdisp,0,256,CV_MINMAX);

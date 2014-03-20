@@ -60,6 +60,57 @@ void testBM(){
         }
     }
 }
+void testsbm(){
+    QString leftfilename = QFileDialog::getOpenFileName(
+       0,
+       "Binocular Calibration - Open Left Image",
+       QDir::currentPath(),
+       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if (!leftfilename.isNull()) { //用户选择了左图文件
+        QString rightfilename = QFileDialog::getOpenFileName(
+           0,
+           "Binocular Calibration - Open Right Image",
+           QDir::currentPath(),
+           "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+        if (!rightfilename.isNull()) { //用户选择了左图文件
+            Mat leftmat = imread(leftfilename.toUtf8().data());
+            Mat rightmat = imread(rightfilename.toUtf8().data());
+            Mat leftgray,rightgray;
+            leftgray.create(leftmat.size(),CV_8UC1);
+            rightgray.create(rightmat.size(),CV_8UC1);
+            cvtColor(leftmat,leftgray,CV_BGR2GRAY);
+            cvtColor(rightmat,rightgray,CV_BGR2GRAY);
+            imshow("left_gray",leftgray);
+            imshow("right_gray",rightgray);
+
+
+
+            int SADWindowSize = 11;
+            int numberOfDisparities = 16*6;
+            StereoSGBM sgbm;
+            sgbm.preFilterCap = 63;
+            sgbm.SADWindowSize = SADWindowSize > 0 ? SADWindowSize : 3;
+
+            int cn = 1;//leftgray.channels();
+
+            sgbm.P1 = 8*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
+            sgbm.P2 = 32*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
+            sgbm.minDisparity = 0;
+            sgbm.numberOfDisparities = numberOfDisparities;
+            sgbm.uniquenessRatio = 10;
+            sgbm.speckleWindowSize = 100;
+            sgbm.speckleRange = 32;
+            sgbm.disp12MaxDiff = 1;
+            sgbm.fullDP = true;
+
+            Mat disp,vdisp;
+
+            sgbm(leftgray,rightgray,disp);
+            disp.convertTo(vdisp, CV_8U);//, 255/(32*16.));
+            imshow("dis",vdisp);
+        }
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -71,6 +122,7 @@ int main(int argc, char *argv[])
     MainWindow w;
     w.showMaximized();
 //    testBM();
+//    testsbm();
 
     return a.exec();
 

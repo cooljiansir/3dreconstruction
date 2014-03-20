@@ -35,7 +35,7 @@ void GLWidget::paintGL(){
                 if(p.z>0){
                     Vec3b c = this->mattexture.at<Vec3b>(i,j);
                     glColor3f(c[2]/256.0,c[1]/256.0,c[1]/256.0);
-                    glVertex3f(p.x,-p.y,p.z);
+                    glVertex3f(p.x,p.y,p.z);
                 }
             }
         }
@@ -53,7 +53,7 @@ void GLWidget::resizeGL(int width, int height){
 #ifdef QT_OPENGL_ES_1
     glOrthof(-0.5, +0.5, -0.5, +0.5, 4.0, 15.0);
 #else
-    glOrtho(-150.0, +150.0, -150.0, +150.0, -20000.0, 20000.0);
+    glOrtho(-200.0, +200.0, -200.0, +200.0, -20000.0, 20000.0);
 #endif
     glMatrixMode(GL_MODELVIEW);
 }
