@@ -36,16 +36,19 @@ void testBM(){
             imshow("left_gray",leftgray);
             imshow("right_gray",rightgray);
             StereoBM bm;
-            int SADWindowSize=15;
+
+           // bm.state->roi1 = roil;
+            //bm.state->roi2 = roir;
             bm.state->preFilterCap = 31;
-            bm.state->SADWindowSize = 15;
+            bm.state->SADWindowSize = 11;
             bm.state->minDisparity = 0;
-            bm.state->numberOfDisparities = 32;
+            bm.state->numberOfDisparities = 16*6;
             bm.state->textureThreshold = 10;
             bm.state->uniquenessRatio = 15;
             bm.state->speckleWindowSize = 100;
             bm.state->speckleRange = 32;
             bm.state->disp12MaxDiff = 1;
+
             Mat disp,vdisp;
             bm(leftgray,rightgray,disp);//,CV_32F);
             disp.convertTo(vdisp, CV_8U);//, 255/(32*16.));

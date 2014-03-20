@@ -405,8 +405,10 @@ void MainWindow::on_actionPolar_Correction_triggered()
             Mat maplx,maply,maprx,mapry;
             //initUndistortRectifyMap(l_ins,l_dis,Rl,l_ins,leftmat.size(),CV_32FC1,maplx,maply);
             //initUndistortRectifyMap(r_ins,r_dis,Rr,r_ins,rightmat.size(),CV_32FC1,maprx,mapry);
-            initUndistortRectifyMap(l_ins,l_dis,Rl,Pl,leftmat.size(),CV_32FC1,maplx,maply);
-            initUndistortRectifyMap(r_ins,r_dis,Rr,Pr,rightmat.size(),CV_32FC1,maprx,mapry);
+//            initUndistortRectifyMap(l_ins,l_dis,Rl,Pl,leftmat.size(),CV_32FC1,maplx,maply);
+//            initUndistortRectifyMap(r_ins,r_dis,Rr,Pr,rightmat.size(),CV_32FC1,maprx,mapry);
+            initUndistortRectifyMap(l_ins,l_dis,Rl,Pl,leftmat.size(),CV_16SC2,maplx,maply);
+            initUndistortRectifyMap(r_ins,r_dis,Rr,Pr,rightmat.size(),CV_16SC2,maprx,mapry);
             Mat leftmat_,rightmat_;
             remap(leftmat,leftmat_,maplx,maply,INTER_LINEAR);
             remap(rightmat,rightmat_,maprx,mapry,INTER_LINEAR);
@@ -441,15 +443,32 @@ void MainWindow::on_actionPolar_Correction_triggered()
             bm.state->roi1 = roil;
             bm.state->roi2 = roir;
             bm.state->preFilterCap = 31;
-            bm.state->SADWindowSize = 15;
+            bm.state->SADWindowSize = 11;
             bm.state->minDisparity = 0;
-            bm.state->numberOfDisparities = 32;
+            bm.state->numberOfDisparities = 16*6;
             bm.state->textureThreshold = 10;
             bm.state->uniquenessRatio = 15;
             bm.state->speckleWindowSize = 100;
             bm.state->speckleRange = 32;
             bm.state->disp12MaxDiff = 1;
-            //bm(leftgray,rightgray,disp,CV_32F);
+/*
+            StereoBM bm;
+            int SADWindowSize=15;
+            bm.state->preFilterCap = 31;
+            bm.state->SADWindowSize = SADWindowSize;
+            bm.state->minDisparity = 0;
+            bm.state->numberOfDisparities = 16*6;
+//            bm.state->textureThreshold = 10;
+            bm.state->textureThreshold = 3;
+//            bm.state->uniquenessRatio = 15;
+            bm.state->uniquenessRatio = 3;
+//            bm.state->speckleWindowSize = 100;
+            bm.state->speckleWindowSize = 10;
+            bm.state->speckleRange = 32;
+            bm.state->disp12MaxDiff = 1;
+*/
+            bm(leftgray,rightgray,disp);//,CV_32F);
+//            bm(rightgray,leftgray,disp);//,CV_32F);
 
             int SADWindowSize = 15;
             int numberOfDisparities = 32;
@@ -469,14 +488,17 @@ void MainWindow::on_actionPolar_Correction_triggered()
             sgbm.disp12MaxDiff = 1;
             sgbm.fullDP = true;
 
-            sgbm(leftgray,rightgray,disp);
+//            sgbm(leftgray,rightgray,disp);
 
             disp.convertTo(vdisp,CV_8U);
             //normalize(disp,vdisp,0,256,CV_MINMAX);
             imshow("dis",vdisp);
+//            freopen("log.txt","w",stdout);
+
 
             Mat img3d;
             reprojectImageTo3D(disp,img3d,Q,false,CV_32F);
+//            cout<<img3d;
             //imshow("3dimg",img3d);
             GLWidget *glw = new GLWidget(img3d,leftmat_,0);
             glw->showMaximized();
