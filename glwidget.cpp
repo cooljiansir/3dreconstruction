@@ -31,11 +31,13 @@ void GLWidget::paintGL(){
         //glVertex3f(0.0,0.0,0.0);
         for(int i = 0;i<this->mat3d.rows;i++){
             for(int j = 0;j<this->mat3d.cols;j++){
-                Point3f p = this->mat3d.at<Point3f>(i,j);
-                if(p.z>0){
-                    Vec3b c = this->mattexture.at<Vec3b>(i,j);
-                    glColor3f(c[2]/256.0,c[1]/256.0,c[1]/256.0);
-                    glVertex3f(p.x,p.y,p.z);
+                //Point3f p = this->mat3d.at<Point3f>(i,j);
+                Point3f *p = (Point3f *)this->mat3d.ptr(i,j);
+                if(p->z>0){
+//                    Vec3b c = this->mattexture.at<Vec3b>(i,j);
+                    Vec3b *c = (Vec3b *)this->mattexture.ptr(i,j);
+                    glColor3f((*c)[2]/256.0,(*c)[1]/256.0,(*c)[1]/256.0);
+                    glVertex3f(p->x,-p->y,-p->z);
                 }
             }
         }
@@ -45,15 +47,18 @@ void GLWidget::paintGL(){
 
 
 void GLWidget::resizeGL(int width, int height){
-    int side = qMin(width, height);
-    glViewport((width - side) / 2, (height - side) / 2, side, side);
+    //int side = qMin(width, height);
+    //glViewport((width - side) / 2, (height - side) / 2, side, side);
+    if(height==0)
+        height = 1;
+    glViewport(0,0,width,height);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 #ifdef QT_OPENGL_ES_1
     glOrthof(-0.5, +0.5, -0.5, +0.5, 4.0, 15.0);
 #else
-    glOrtho(-200.0, +200.0, -200.0, +200.0, -20000.0, 20000.0);
+    glOrtho(-200.0*width/height, +200.0*width/height, -200.0, +200.0, -20000.0, 20000.0);
 #endif
     glMatrixMode(GL_MODELVIEW);
 }

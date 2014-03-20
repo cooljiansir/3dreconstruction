@@ -85,7 +85,7 @@ void testsbm(){
 
 
 
-            int SADWindowSize = 11;
+            int SADWindowSize = 9;
             int numberOfDisparities = 16*6;
             StereoSGBM sgbm;
             sgbm.preFilterCap = 63;
