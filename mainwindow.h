@@ -57,6 +57,8 @@ private slots:
 
     void on_actionStereoMatch_triggered();
 
+    void on_stereoMatchLoadBut_clicked();
+
 public:
     void loadCalidUI();
     void setupBinUI();

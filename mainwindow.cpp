@@ -629,3 +629,30 @@ void MainWindow::on_actionStereoMatch_triggered()
 {
     this->ui->stackedWidget->setCurrentIndex(4);
 }
+
+void MainWindow::on_stereoMatchLoadBut_clicked()
+{
+    QString fileNameLeft = QFileDialog::getOpenFileName(
+                this,
+                tr("Open Left File"),
+                NULL,
+                "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if(!fileNameLeft.isNull()){
+        QString fileNameRight = QFileDialog::getOpenFileName(
+                    this,
+                    tr("Open Right File"),
+                    NULL,
+                    "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+        if(!fileNameRight.isNull()){
+            ui->stereoMatchLeftLabel->setPixmap(QPixmap(fileNameLeft));
+            ui->stereoMatchRightLabel->setPixmap(QPixmap(fileNameRight));
+            Mat leftM = imread(fileNameLeft.toUtf8().data());
+            Mat rightM = imread(fileNameRight.toUtf8().data());
+            Mat disp,vdisp,vdisp3;
+            this->doc->stereoMatch(leftM,rightM,disp);
+            disp.convertTo(vdisp,CV_8U);
+            cvtColor(vdisp,vdisp3,CV_GRAY2BGR);
+            ui->stereoMatchResultLabel->setPixmap(QPixmap::fromImage(Mat2QImage(vdisp3)));
+        }
+    }
+}
