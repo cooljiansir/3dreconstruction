@@ -1,11 +1,15 @@
 #include "glwidget.h"
 #include <QDebug>
 
-GLWidget::GLWidget(Mat &mat3d, Mat &texture, QWidget *parent) :
+GLWidget::GLWidget(QWidget *parent) :
     QGLWidget(parent)
 {
+    //this->mat3d = mat3d;
+    //this->mattexture = texture;
+}
+void GLWidget::setMat(Mat &mat3d, Mat &mattexture){
     this->mat3d = mat3d;
-    this->mattexture = texture;
+    this->mattexture = mattexture;
 }
 
 void GLWidget::initializeGL(){

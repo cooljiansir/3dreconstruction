@@ -6,6 +6,7 @@
 #include "rtfdocument.h"
 #include <QFile>
 #include <QStandardItemModel>
+#include "glwidget.h"
 
 #define FILE_NAME   "dre"   //文件后缀名
 
@@ -59,6 +60,8 @@ private slots:
 
     void on_stereoMatchLoadBut_clicked();
 
+    void on_polar_Open_clicked();
+
 public:
     void loadCalidUI();
     void setupBinUI();
@@ -73,6 +76,10 @@ private:
     bool opened;
     //极线矫正、左右图像
     Mat polar_left,polar_right;
+    bool polar_finished;
+    Mat dispMat;//差视图
+    bool disOk;//
+    Mat Q;//Q矩阵
 public:
     RTFDocument *doc;
 

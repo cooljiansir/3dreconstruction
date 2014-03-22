@@ -20,7 +20,8 @@ protected:
     void mouseMoveEvent(QMouseEvent *);
 
 public:
-    explicit GLWidget(Mat &mat3d,Mat &texture,QWidget *parent = 0);
+    explicit GLWidget(QWidget *parent = 0);
+    void setMat(Mat &mat3d,Mat &mattexture);
     
     void rotateBy(int xAngle, int yAngle, int zAngle);
 signals:

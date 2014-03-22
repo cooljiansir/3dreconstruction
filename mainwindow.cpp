@@ -19,6 +19,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     this->doc = new RTFDocument();
     this->opened = false;
+    this->disOk = false;
+    this->polar_finished = false;
     ui->actionSave->setEnabled(false);
     ui->actionNew->setEnabled(true);
     ui->actionOpen_file->setEnabled(true);
@@ -372,185 +374,7 @@ void MainWindow::on_actionTake_Photoes_2_triggered()
 
 void MainWindow::on_actionPolar_Correction_triggered()
 {
-
-    if(!this->doc->isPolarOk()){
-        QMessageBox::information(this,"ERROR","You hadn't done binocular calibration yet!");
-        return;
-    }
-    QString leftfilename = QFileDialog::getOpenFileName(
-       this,
-       "Binocular Calibration - Open Left Image",
-       NULL,//QDir::currentPath(),
-       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
-    if (!leftfilename.isNull()) { //用户选择了左图文件
-        QString rightfilename = QFileDialog::getOpenFileName(
-           this,
-           "Binocular Calibration - Open Right Image",
-           NULL,//QDir::currentPath(),
-           "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
-        if (!rightfilename.isNull()) { //用户选择了右图文件
-            Mat leftmat = imread(leftfilename.toUtf8().data());
-            Mat rightmat = imread(rightfilename.toUtf8().data());
-            cv::resize(rightmat,rightmat,leftmat.size());
-            Mat maplx,maply,maprx,mapry,Q;
-            this->doc->getPolarParam(maplx,maply,maprx,mapry,Q,leftmat.size());
-            Mat leftmat_,rightmat_;
-            remap(leftmat,leftmat_,maplx,maply,INTER_LINEAR);
-            remap(rightmat,rightmat_,maprx,mapry,INTER_LINEAR);
-            this->polar_left = leftmat_;
-            this->polar_right = rightmat_;
-            Mat united;
-            united.create(leftmat_.rows,leftmat_.cols+rightmat_.cols,leftmat.type());
-            Mat unitedl = united(Rect(0,0,leftmat_.cols,leftmat_.rows));
-            Mat unitedr = united(Rect(leftmat_.cols,0,rightmat_.cols,united.rows));
-            leftmat_.copyTo(unitedl);
-            rightmat_.copyTo(unitedr);
-            for(int i = 0;i<10;i++){
-                int temp = united.rows*i/10;
-                if(temp>=united.rows)temp = united.rows;
-                line(united,Point(0,temp),Point(united.cols,temp),Scalar(0,0,255));
-            }
-
-            this->ui->imgLabel->setPixmap(QPixmap::fromImage(Mat2QImage(united)));
-            ui->stackedWidget->setCurrentIndex(3);
-        }
-    }
-    return;
-    /*
-    QString leftfilename = QFileDialog::getOpenFileName(
-       this,
-       "Binocular Calibration - Open Left Image",
-       QDir::currentPath(),
-       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
-    if (!leftfilename.isNull()) { //用户选择了左图文件
-        QString rightfilename = QFileDialog::getOpenFileName(
-           this,
-           "Binocular Calibration - Open Right Image",
-           QDir::currentPath(),
-           "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
-        if (!rightfilename.isNull()) { //用户选择了左图文件
-            Mat leftmat = imread(leftfilename.toStdString().c_str());
-            Mat rightmat = imread(rightfilename.toStdString().c_str());
-            Mat l_ins,l_dis,r_ins,r_dis,binR,binT;
-            if(!this->doc->getLdistortion(l_dis)||!this->doc->getLintrisic(l_ins)){
-                QMessageBox::information(this,"Error","Left camera hasn't calibrated yet!");
-                return;
-            }
-            if(!this->doc->getRdistortion(r_dis)||!this->doc->getRintrinsic(r_ins)){
-                QMessageBox::information(this,"Error","Right camera hasn't calibrated yet!");
-                return;
-            }
-            if(!this->doc->getBinR(binR)||!this->doc->getBinT(binT)){
-                QMessageBox::information(this,"Error","You should do binocular calibration first");
-                return;
-            }
-            Mat Rl,Rr,Pl,Pr,Q;
-            Rect roil,roir;
-            stereoRectify(l_ins,l_dis,r_ins,r_dis,leftmat.size(),
-                          binR,binT,Rl,Rr,Pl,Pr,Q,CALIB_ZERO_DISPARITY,-1,leftmat.size(),&roil,&roir);
-            Mat maplx,maply,maprx,mapry;
-            //initUndistortRectifyMap(l_ins,l_dis,Rl,l_ins,leftmat.size(),CV_32FC1,maplx,maply);
-            //initUndistortRectifyMap(r_ins,r_dis,Rr,r_ins,rightmat.size(),CV_32FC1,maprx,mapry);
-//            initUndistortRectifyMap(l_ins,l_dis,Rl,Pl,leftmat.size(),CV_32FC1,maplx,maply);
-//            initUndistortRectifyMap(r_ins,r_dis,Rr,Pr,rightmat.size(),CV_32FC1,maprx,mapry);
-            initUndistortRectifyMap(l_ins,l_dis,Rl,Pl,leftmat.size(),CV_16SC2,maplx,maply);
-            initUndistortRectifyMap(r_ins,r_dis,Rr,Pr,rightmat.size(),CV_16SC2,maprx,mapry);
-            Mat leftmat_,rightmat_;
-            remap(leftmat,leftmat_,maplx,maply,INTER_LINEAR);
-            remap(rightmat,rightmat_,maprx,mapry,INTER_LINEAR);
-//            imshow("left",leftmat_);
-//            imshow("right",rightmat_);
-
-            Mat united;
-            united.create(leftmat_.rows,leftmat_.cols+rightmat_.cols,leftmat.type());
-            Mat unitedl = united(Rect(0,0,leftmat_.cols,leftmat_.rows));
-            Mat unitedr = united(Rect(leftmat_.cols,0,rightmat_.cols,united.rows));
-            leftmat_.copyTo(unitedl);
-            rightmat_.copyTo(unitedr);
-            //line(united,Point)
-            for(int i = 0;i<9;i++){
-                line(united,Point(0,united.rows*i/10),Point(united.cols,united.rows*i/10),Scalar(0,0,255));
-            }
-            rectangle(unitedl,roil,Scalar(0,0,255));
-            rectangle(unitedr,roir,Scalar(0,0,255));
-            imshow("united",united);
-
-            imwrite("left_.png",leftmat_);
-            imwrite("right_.png",rightmat_);
-
-            Mat leftgray,rightgray;
-            leftgray.create(leftmat_.size(),CV_8UC1);
-            rightgray.create(rightmat_.size(),CV_8UC1);
-            cvtColor(leftmat_,leftgray,CV_BGR2GRAY);
-            cvtColor(rightmat_,rightgray,CV_BGR2GRAY);
-            Mat disp,vdisp;
-
-            StereoBM bm;
-            bm.state->roi1 = roil;
-            bm.state->roi2 = roir;
-            bm.state->preFilterCap = 31;
-            bm.state->SADWindowSize = 11;
-            bm.state->minDisparity = 0;
-            bm.state->numberOfDisparities = 16*6;
-            bm.state->textureThreshold = 10;
-            bm.state->uniquenessRatio = 15;
-            bm.state->speckleWindowSize = 100;
-            bm.state->speckleRange = 32;
-            bm.state->disp12MaxDiff = 1;
-//
-            StereoBM bm;
-            int SADWindowSize=15;
-            bm.state->preFilterCap = 31;
-            bm.state->SADWindowSize = SADWindowSize;
-            bm.state->minDisparity = 0;
-            bm.state->numberOfDisparities = 16*6;
-//            bm.state->textureThreshold = 10;
-            bm.state->textureThreshold = 3;
-//            bm.state->uniquenessRatio = 15;
-            bm.state->uniquenessRatio = 3;
-//            bm.state->speckleWindowSize = 100;
-            bm.state->speckleWindowSize = 10;
-            bm.state->speckleRange = 32;
-            bm.state->disp12MaxDiff = 1;
-///
-//            bm(leftgray,rightgray,disp);//,CV_32F);
-//            bm(rightgray,leftgray,disp);//,CV_32F);
-
-            int SADWindowSize = 11;
-            int numberOfDisparities = 16*6;
-            StereoSGBM sgbm;
-            sgbm.preFilterCap = 63;
-            sgbm.SADWindowSize = SADWindowSize > 0 ? SADWindowSize : 3;
-
-            int cn = 1;//leftgray.channels();
-
-            sgbm.P1 = 8*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
-            sgbm.P2 = 32*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
-            sgbm.minDisparity = 0;
-            sgbm.numberOfDisparities = numberOfDisparities;
-            sgbm.uniquenessRatio = 10;
-            sgbm.speckleWindowSize = 100;
-            sgbm.speckleRange = 32;
-            sgbm.disp12MaxDiff = 1;
-            sgbm.fullDP = true;
-
-            sgbm(leftgray,rightgray,disp);
-            //sgbm(rightgray,leftgray,disp);
-
-            disp.convertTo(vdisp,CV_8U);
-            //normalize(disp,vdisp,0,256,CV_MINMAX);
-            imshow("dis",vdisp);
-//            freopen("log.txt","w",stdout);
-
-
-            Mat img3d;
-            reprojectImageTo3D(disp,img3d,Q,false,CV_32F);
-//            cout<<img3d;
-            //imshow("3dimg",img3d);
-            GLWidget *glw = new GLWidget(img3d,leftmat_,0);
-            glw->showMaximized();
-        }
-    }*/
+    ui->stackedWidget->setCurrentIndex(3);
 }
 
 
@@ -602,6 +426,17 @@ void MainWindow::on_rightUndistored_clicked()
 
 void MainWindow::on_action3D_reconstruction_triggered()
 {
+    if(!this->doc->isPolarOk()){
+        QMessageBox::information(this,"ERROR","You hadn't done binocular calibration yet!");
+        return;
+    }
+    if(!this->disOk){
+        QMessageBox::information(this,"ERROR","Please Select two images in Stereo Match Menu");
+        return;
+    }
+    Mat img3D;
+    this->doc->reproject3D(this->dispMat,img3D,this->Q);
+    this->ui->glWidget->setMat(img3D,this->polar_left);
     this->ui->stackedWidget->setCurrentIndex(5);
 }
 
@@ -628,31 +463,73 @@ void MainWindow::on_savePolarBut_clicked()
 void MainWindow::on_actionStereoMatch_triggered()
 {
     this->ui->stackedWidget->setCurrentIndex(4);
+    on_stereoMatchLoadBut_clicked();
 }
 
 void MainWindow::on_stereoMatchLoadBut_clicked()
 {
-    QString fileNameLeft = QFileDialog::getOpenFileName(
-                this,
-                tr("Open Left File"),
-                NULL,
-                "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
-    if(!fileNameLeft.isNull()){
-        QString fileNameRight = QFileDialog::getOpenFileName(
-                    this,
-                    tr("Open Right File"),
-                    NULL,
-                    "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
-        if(!fileNameRight.isNull()){
-            ui->stereoMatchLeftLabel->setPixmap(QPixmap(fileNameLeft));
-            ui->stereoMatchRightLabel->setPixmap(QPixmap(fileNameRight));
-            Mat leftM = imread(fileNameLeft.toUtf8().data());
-            Mat rightM = imread(fileNameRight.toUtf8().data());
-            Mat disp,vdisp,vdisp3;
-            this->doc->stereoMatch(leftM,rightM,disp);
-            disp.convertTo(vdisp,CV_8U);
-            cvtColor(vdisp,vdisp3,CV_GRAY2BGR);
-            ui->stereoMatchResultLabel->setPixmap(QPixmap::fromImage(Mat2QImage(vdisp3)));
+    if(!this->polar_finished){
+        QMessageBox::information(this,"ERROR","Please Select two images in Polar Correction Menu");
+        return;
+    }
+
+    QPixmap left = QPixmap::fromImage(Mat2QImage(this->polar_left));
+    QPixmap right = QPixmap::fromImage(Mat2QImage(this->polar_right));
+    ui->stereoMatchLeftLabel->setPixmap(left.scaled(ui->stereoMatchLeftLabel->width()
+                                                    ,ui->stereoMatchLeftLabel->height()));
+
+    ui->stereoMatchRightLabel->setPixmap(right.scaled(ui->stereoMatchRightLabel->width()
+                                                      ,ui->stereoMatchRightLabel->height()));
+    //Mat leftM = imread(fileNameLeft.toUtf8().data());
+    //Mat rightM = imread(fileNameRight.toUtf8().data());
+    Mat vdisp,vdisp3;
+    this->doc->stereoMatch(this->polar_left,this->polar_right,this->dispMat);
+    this->disOk = true;
+    this->dispMat.convertTo(vdisp,CV_8U);
+    cvtColor(vdisp,vdisp3,CV_GRAY2BGR);
+    QPixmap re = QPixmap::fromImage(Mat2QImage(vdisp3));
+    ui->stereoMatchResultLabel->setPixmap(re.scaled(ui->stereoMatchResultLabel->width()
+                                                    ,ui->stereoMatchResultLabel->height()));
+}
+
+void MainWindow::on_polar_Open_clicked()
+{
+    QString leftfilename = QFileDialog::getOpenFileName(
+       this,
+       "Binocular Calibration - Open Left Image",
+       NULL,//QDir::currentPath(),
+       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if (!leftfilename.isNull()) { //用户选择了左图文件
+        QString rightfilename = QFileDialog::getOpenFileName(
+           this,
+           "Binocular Calibration - Open Right Image",
+           NULL,//QDir::currentPath(),
+           "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+        if (!rightfilename.isNull()) { //用户选择了右图文件
+            Mat leftmat = imread(leftfilename.toUtf8().data());
+            Mat rightmat = imread(rightfilename.toUtf8().data());
+            cv::resize(rightmat,rightmat,leftmat.size());
+            Mat maplx,maply,maprx,mapry;
+            this->doc->getPolarParam(maplx,maply,maprx,mapry,Q,leftmat.size());
+            Mat leftmat_,rightmat_;
+            remap(leftmat,leftmat_,maplx,maply,INTER_LINEAR);
+            remap(rightmat,rightmat_,maprx,mapry,INTER_LINEAR);
+            this->polar_left = leftmat_;
+            this->polar_right = rightmat_;
+            this->polar_finished = true;
+            Mat united;
+            united.create(leftmat_.rows,leftmat_.cols+rightmat_.cols,leftmat.type());
+            Mat unitedl = united(Rect(0,0,leftmat_.cols,leftmat_.rows));
+            Mat unitedr = united(Rect(leftmat_.cols,0,rightmat_.cols,united.rows));
+            leftmat_.copyTo(unitedl);
+            rightmat_.copyTo(unitedr);
+            for(int i = 0;i<10;i++){
+                int temp = united.rows*i/10;
+                if(temp>=united.rows)temp = united.rows;
+                line(united,Point(0,temp),Point(united.cols,temp),Scalar(0,0,255));
+            }
+            this->ui->imgLabel->setPixmap(QPixmap::fromImage(Mat2QImage(united)));
         }
     }
+    return;
 }
