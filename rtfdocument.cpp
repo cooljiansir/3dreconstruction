@@ -15,6 +15,7 @@ RTFDocument::RTFDocument(){
 
     //各种匹配方法添加
     this->stereoMatchMethods.push_back(new StereoMatchOpencvSBM());
+    this->stereoMatchMethods.push_back(new StereoMatchOpencvBM());
 }
 RTFDocument::~RTFDocument(){
     for(int i = 0;i<this->stereoMatchMethods.size();i++){
