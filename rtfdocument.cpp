@@ -1,6 +1,7 @@
 #include "rtfdocument.h"
 #include <highgui.h>
 #include <QDebug>
+#include "stereomatch.h"
 
 #define ZERO 0.000000001
 
@@ -11,9 +12,14 @@ RTFDocument::RTFDocument(){
     this->bin_R_isok = this->bin_T_isok = false;
     this->image_width = -1;
     this->image_height = -1;
+
+    //各种匹配方法添加
+    this->stereoMatchMethods.push_back(new StereoMatchOpencvSBM());
 }
 RTFDocument::~RTFDocument(){
-
+    for(int i = 0;i<this->stereoMatchMethods.size();i++){
+        delete this->stereoMatchMethods[i];
+    }
 }
 bool RTFDocument::read(QString filename){
     this->fileopen = true;
@@ -607,39 +613,7 @@ bool RTFDocument::getPolarParam(Mat &maplx, Mat &maply, Mat &maprx, Mat &mapry, 
     initUndistortRectifyMap(this->r_intrinsic,this->r_distortion,Rr,Pr,imgsize,CV_16SC2,maprx,mapry);
 }
 
-/***********************************************************************
- *立体匹配（核心算法）
- *
- *
- *
-***********************************************************************/
-void RTFDocument::stereoMatch(Mat &left, Mat &right, Mat &dis){
-    Mat leftgray,rightgray;
-    leftgray.create(left.size(),CV_8UC1);
-    rightgray.create(right.size(),CV_8UC1);
-    cvtColor(left,leftgray,CV_BGR2GRAY);
-    cvtColor(right,rightgray,CV_BGR2GRAY);
 
-    int SADWindowSize = 11;
-    int numberOfDisparities = 16*6;
-    StereoSGBM sgbm;
-    sgbm.preFilterCap = 63;
-    sgbm.SADWindowSize = SADWindowSize > 0 ? SADWindowSize : 3;
-
-    int cn = 1;//leftgray.channels();
-
-    sgbm.P1 = 8*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
-    sgbm.P2 = 32*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
-    sgbm.minDisparity = 0;
-    sgbm.numberOfDisparities = numberOfDisparities;
-    sgbm.uniquenessRatio = 10;
-    sgbm.speckleWindowSize = 100;
-    sgbm.speckleRange = 32;
-    sgbm.disp12MaxDiff = 1;
-    sgbm.fullDP = true;
-
-    sgbm(leftgray,rightgray,dis);
-}
 void RTFDocument::reproject3D(Mat &disp, Mat &img3D, Mat &Q){
     reprojectImageTo3D(disp,img3D,Q,false,CV_32F);
 }

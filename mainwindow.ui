@@ -18,7 +18,7 @@
     <item>
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>3</number>
+       <number>4</number>
       </property>
       <widget class="QWidget" name="page">
        <layout class="QHBoxLayout" name="horizontalLayout_13">
@@ -385,37 +385,90 @@
               <item>
                <layout class="QHBoxLayout" name="horizontalLayout_23">
                 <item alignment="Qt::AlignHCenter">
-                 <widget class="QRadioButton" name="radioButton_2">
+                 <widget class="QRadioButton" name="stereoRadio0">
                   <property name="text">
-                   <string>BM</string>
+                   <string/>
                   </property>
                  </widget>
                 </item>
                 <item alignment="Qt::AlignHCenter">
-                 <widget class="QRadioButton" name="radioButton">
+                 <widget class="QRadioButton" name="stereoRadio1">
                   <property name="text">
-                   <string>SBM</string>
+                   <string/>
                   </property>
                  </widget>
                 </item>
                 <item alignment="Qt::AlignHCenter">
-                 <widget class="QRadioButton" name="radioButton_3">
+                 <widget class="QRadioButton" name="stereoRadio2">
                   <property name="text">
-                   <string>zhijian</string>
+                   <string/>
                   </property>
                  </widget>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="stereoMatchLoadBut">
+                 <widget class="QRadioButton" name="stereoRadio3">
                   <property name="text">
-                   <string>Fresh</string>
+                   <string/>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QRadioButton" name="stereoRadio4">
+                  <property name="text">
+                   <string/>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QRadioButton" name="stereoRadio5">
+                  <property name="text">
+                   <string/>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QRadioButton" name="stereoRadio6">
+                  <property name="text">
+                   <string/>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QRadioButton" name="stereoRadio7">
+                  <property name="text">
+                   <string/>
                   </property>
                  </widget>
                 </item>
                </layout>
               </item>
               <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_25">
+               <layout class="QHBoxLayout" name="stereoParam0_2">
+                <item>
+                 <widget class="QLabel" name="sliderLabel0">
+                  <property name="text">
+                   <string>TextLabel</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSlider" name="slider0">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="sliderLabel0v">
+                  <property name="text">
+                   <string>TextLabel</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="stereoParam1_2">
                 <item>
                  <widget class="QLabel" name="sliderLabel1">
                   <property name="text">
@@ -424,7 +477,7 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QSlider" name="horizontalSlider">
+                 <widget class="QSlider" name="slider1">
                   <property name="orientation">
                    <enum>Qt::Horizontal</enum>
                   </property>
@@ -440,7 +493,7 @@
                </layout>
               </item>
               <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_27">
+               <layout class="QHBoxLayout" name="stereoParam1">
                 <item>
                  <widget class="QLabel" name="sliderLabel2">
                   <property name="text">
@@ -449,7 +502,7 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QSlider" name="horizontalSlider_2">
+                 <widget class="QSlider" name="slider2">
                   <property name="orientation">
                    <enum>Qt::Horizontal</enum>
                   </property>
@@ -465,16 +518,16 @@
                </layout>
               </item>
               <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_28">
+               <layout class="QHBoxLayout" name="stereoParam2">
                 <item>
-                 <widget class="QLabel" name="slideLabel3">
+                 <widget class="QLabel" name="sliderLabel3">
                   <property name="text">
                    <string>TextLabel</string>
                   </property>
                  </widget>
                 </item>
                 <item>
-                 <widget class="QSlider" name="horizontalSlider_3">
+                 <widget class="QSlider" name="slider3">
                   <property name="orientation">
                    <enum>Qt::Horizontal</enum>
                   </property>
@@ -490,7 +543,7 @@
                </layout>
               </item>
               <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_29">
+               <layout class="QHBoxLayout" name="stereoParam3">
                 <item>
                  <widget class="QLabel" name="sliderLabel4">
                   <property name="text">
@@ -499,7 +552,7 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QSlider" name="horizontalSlider_4">
+                 <widget class="QSlider" name="slider4">
                   <property name="orientation">
                    <enum>Qt::Horizontal</enum>
                   </property>
@@ -507,6 +560,31 @@
                 </item>
                 <item>
                  <widget class="QLabel" name="sliderLabel4v">
+                  <property name="text">
+                   <string>TextLabel</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="stereoParam4">
+                <item>
+                 <widget class="QLabel" name="sliderLabel5">
+                  <property name="text">
+                   <string>TextLabel</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSlider" name="slider5">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="sliderLabel5v">
                   <property name="text">
                    <string>TextLabel</string>
                   </property>

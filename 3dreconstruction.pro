@@ -23,7 +23,8 @@ SOURCES += main.cpp\
     photodialog2.cpp \
     uti.cpp \
     comparedialog.cpp \
-    glwidget.cpp
+    glwidget.cpp \
+    stereomatch.cpp
 
 HEADERS  += mainwindow.h \
     photodialog.h \
@@ -35,7 +36,8 @@ HEADERS  += mainwindow.h \
     uti.h \
     photodialog2.h \
     comparedialog.h \
-    glwidget.h
+    glwidget.h \
+    stereomatch.h
 
 FORMS    += mainwindow.ui \
     photodialog.ui \

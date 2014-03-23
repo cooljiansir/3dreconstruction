@@ -7,6 +7,7 @@
 #include "tinyxml2.h"
 #include <cv.h>
 #include <QString>
+#include "stereomatch.h"
 
 using namespace cv;
 using namespace std;
@@ -19,6 +20,7 @@ using namespace std;
  */
 
 #define SERACH_RANGE  5//7个像素搜索范围
+#define MAX_MATCH_KIND 30//最多30种匹配方法
 
 //之前从MFC迁移过来的代码，有CPoint
 struct CPoint{
@@ -122,9 +124,11 @@ public:
     bool isPolarOk();
     bool getPolarParam(Mat &maplx, Mat &maply, Mat &maprx, Mat &mapry, Mat &Q, Size imgsize);
 
+
 public:
     //立体匹配
-    void stereoMatch(Mat &left,Mat &right,Mat &dis);
+    //void stereoMatch(Mat &left,Mat &right,Mat &dis);
+    vector<StereoMatch*> stereoMatchMethods;//各种匹配方法
 
 public:
     //3维重建

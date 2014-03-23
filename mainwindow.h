@@ -23,6 +23,8 @@ public:
     ~MainWindow();
 
     void setupCalibUI();
+
+    void setupStereoUI();
     
 private slots:
     void on_actionTake_Photoes_triggered();
@@ -57,7 +59,9 @@ private slots:
     void on_savePolarBut_clicked();
 
     void on_actionStereoMatch_triggered();
-
+private:
+    bool isStereoLoading;//互斥信号量
+public slots:
     void on_stereoMatchLoadBut_clicked();
 
     void on_polar_Open_clicked();
@@ -66,8 +70,9 @@ public:
     void loadCalidUI();
     void setupBinUI();
     void loadBinUI();
-
     void keyPressEvent(QKeyEvent *);
+
+    void loadStereoParam(int kind);//根据所选匹配算法加载参数
 private:
     Ui::MainWindow *ui;
     QStandardItemModel *singal_model;

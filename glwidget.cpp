@@ -41,7 +41,7 @@ void GLWidget::paintGL(){
 //                    Vec3b c = this->mattexture.at<Vec3b>(i,j);
                     Vec3b *c = (Vec3b *)this->mattexture.ptr(i,j);
                     glColor3f((*c)[2]/256.0,(*c)[1]/256.0,(*c)[1]/256.0);
-                    glVertex3f(p->x,-p->y,-p->z);
+                    glVertex3f(p->x,p->y,p->z);
                 }
             }
         }
