@@ -6,6 +6,9 @@ GLWidget::GLWidget(QWidget *parent) :
 {
     //this->mat3d = mat3d;
     //this->mattexture = texture;
+    this->scale = 400;
+    this->xRot = this->yRot = this->zRot = 0;
+    this->xTr = this->yTr = this->zTr = 0;
 }
 void GLWidget::setMat(Mat &mat3d, Mat &mattexture){
     this->mat3d = mat3d;
@@ -27,10 +30,33 @@ void GLWidget::paintGL(){
     glPointSize(2.0);
     glColor3f(1.0,0.0,0.0);
     float mmax = 0,mmay=0,mmaz=0;
-
     glRotatef(xRot / 16.0f, 1.0f, 0.0f, 0.0f);
     glRotatef(yRot / 16.0f, 0.0f, 1.0f, 0.0f);
     glRotatef(zRot / 16.0f, 0.0f, 0.0f, 1.0f);
+
+    glPointSize(1.0);
+    //画坐标轴
+    //x轴
+    glBegin(GL_LINES);
+    glColor3f(1.0,0,0);
+    glVertex3f(0,0,0);
+    glVertex3f(this->scale,0,0);
+    glEnd();
+    //y轴
+    glBegin(GL_LINES);
+    glColor3f(0.0,1.0,0);
+    glVertex3f(0,0,0);
+    glVertex3f(0,this->scale,0);
+    glEnd();
+    //z轴
+    glBegin(GL_LINES);
+    glColor3f(0,0,1.0);
+    glVertex3f(0,0,0);
+    glVertex3f(0,0,this->scale);
+    glEnd();
+
+    glTranslatef(this->xTr,this->yTr,this->zTr);
+    glPointSize(1.2);
     glBegin(GL_POINTS);
         //glVertex3f(0.0,0.0,0.0);
         for(int i = 0;i<this->mat3d.rows;i++){
@@ -41,7 +67,7 @@ void GLWidget::paintGL(){
 //                    Vec3b c = this->mattexture.at<Vec3b>(i,j);
                     Vec3b *c = (Vec3b *)this->mattexture.ptr(i,j);
                     glColor3f((*c)[2]/256.0,(*c)[1]/256.0,(*c)[1]/256.0);
-                    glVertex3f(p->x,p->y,p->z);
+                    glVertex3f(p->x,-p->y,p->z);
                 }
             }
         }
@@ -62,7 +88,7 @@ void GLWidget::resizeGL(int width, int height){
 #ifdef QT_OPENGL_ES_1
     glOrthof(-0.5, +0.5, -0.5, +0.5, 4.0, 15.0);
 #else
-    glOrtho(-200.0*width/height, +200.0*width/height, -200.0, +200.0, -20000.0, 20000.0);
+    glOrtho(-this->scale*width/height, +this->scale*width/height, -this->scale, +this->scale, -20000.0, 20000.0);
 #endif
     glMatrixMode(GL_MODELVIEW);
 }
@@ -84,5 +110,18 @@ void GLWidget::rotateBy(int xAngle, int yAngle, int zAngle){
     xRot += xAngle;
     yRot += yAngle;
     zRot += zAngle;
+    updateGL();
+}
+void GLWidget::scaledBy(double scale){
+    this->scale *= scale;
+    if(this->scale<=1)
+        this->scale = 1;
+    this->resizeGL(this->width(),this->height());
+    updateGL();
+}
+void GLWidget::translateBy(int x, int y, int z){
+    this->xTr += x;
+    this->yTr += y;
+    this->zTr += z;
     updateGL();
 }

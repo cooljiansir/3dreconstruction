@@ -664,3 +664,43 @@ void MainWindow::loadStereoParam(int k){
     this->ui->slider5->setVisible(kind>5);
     this->ui->sliderLabel5v->setVisible(kind>5);
 }
+
+void MainWindow::on_reproject_AddBut_clicked()
+{
+    this->ui->glWidget->scaledBy(0.9);
+}
+
+void MainWindow::on_reproject_SubBut_clicked()
+{
+    this->ui->glWidget->scaledBy(1.1);
+}
+
+void MainWindow::on_reproject_XAdd_clicked()
+{
+    ui->glWidget->translateBy(5,0,0);
+}
+
+void MainWindow::on_reproject_XSub_clicked()
+{
+    ui->glWidget->translateBy(-5,0,0);
+}
+
+void MainWindow::on_reproject_YSub_clicked()
+{
+    ui->glWidget->translateBy(0,-5,0);
+}
+
+void MainWindow::on_reproject_YAdd_clicked()
+{
+    ui->glWidget->translateBy(0,5,0);
+}
+
+void MainWindow::on_reproject_ZSub_clicked()
+{
+    ui->glWidget->translateBy(0,0,-5);
+}
+
+void MainWindow::on_reproject_ZAdd_clicked()
+{
+    ui->glWidget->translateBy(0,0,5);
+}

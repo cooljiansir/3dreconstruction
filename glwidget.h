@@ -24,6 +24,9 @@ public:
     void setMat(Mat &mat3d,Mat &mattexture);
     
     void rotateBy(int xAngle, int yAngle, int zAngle);
+
+    void translateBy(int x,int y,int z);
+    void scaledBy(double scale);
 signals:
     
 public slots:
@@ -34,6 +37,10 @@ private:
     int xRot;
     int yRot;
     int zRot;
+    int xTr;
+    int yTr;
+    int zTr;
+    double scale;
 };
 
 #endif // GLWIDGET_H

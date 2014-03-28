@@ -59,6 +59,22 @@ private slots:
     void on_savePolarBut_clicked();
 
     void on_actionStereoMatch_triggered();
+    void on_reproject_AddBut_clicked();
+
+    void on_reproject_SubBut_clicked();
+
+    void on_reproject_XAdd_clicked();
+
+    void on_reproject_XSub_clicked();
+
+    void on_reproject_YSub_clicked();
+
+    void on_reproject_YAdd_clicked();
+
+    void on_reproject_ZSub_clicked();
+
+    void on_reproject_ZAdd_clicked();
+
 private:
     bool isStereoLoading;//互斥信号量
 public slots:
