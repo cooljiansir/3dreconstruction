@@ -12,6 +12,7 @@
 #include "comparedialog.h"
 #include "glwidget.h"
 #include "uti.h"
+#include "stereomatch.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -549,7 +550,7 @@ void MainWindow::on_stereoMatchLoadBut_clicked()
     if(ui->stereoRadio5->isChecked())kind = 5;
     if(ui->stereoRadio6->isChecked())kind = 6;
 
-    StereoMatchOpencvSBM *st = (StereoMatchOpencvSBM*)this->doc->stereoMatchMethods[kind];
+    StereoMatchOpencvSGBM *st = (StereoMatchOpencvSGBM*)this->doc->stereoMatchMethods[kind];
 
 
     st->setParamValue(0,ui->slider0->value());

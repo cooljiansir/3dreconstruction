@@ -1,35 +1,36 @@
 #include "stereomatch.h"
 
-StereoMatchOpencvSBM::StereoMatchOpencvSBM(){
+StereoMatchOpencvSGBM::StereoMatchOpencvSGBM(){
     this->paramCount = 3;
     this->param[0] = 11;
     this->param[1] = 6*16;
     this->param[2] = 0;
 }
 
-string StereoMatchOpencvSBM::getKindName(){
-    return "cv_SBM";
+string StereoMatchOpencvSGBM::getKindName(){
+    return "cvSGBM";
 }
-int StereoMatchOpencvSBM::getParamCount(){
+int StereoMatchOpencvSGBM::getParamCount(){
     return this->paramCount;
 }
-string StereoMatchOpencvSBM::getParamName(int index){
+string StereoMatchOpencvSGBM::getParamName(int index){
     char name[3][100] = {"SADwinSize","ndisparities","mindisparity"};
     return name[index];
 }
-int StereoMatchOpencvSBM::getParamValue(int index){
+int StereoMatchOpencvSGBM::getParamValue(int index){
     return this->param[index];
 }
-int StereoMatchOpencvSBM::getParamMax(int index){
+int StereoMatchOpencvSGBM::getParamMax(int index){
     int mmax[3]={41,16*25,40};
     return mmax[index];
 }
-int StereoMatchOpencvSBM::getParamMin(int index){
+int StereoMatchOpencvSGBM::getParamMin(int index){
     int mmin[3]={3,16,0};
     return mmin[index];
 }
 
-void StereoMatchOpencvSBM::setParamValue(int index, int value){
+void StereoMatchOpencvSGBM::setParamValue(int index, int value){
+    if(index>=this->paramCount)return;
     if(index==0){//参数矫正
         if((value&1)==0)value+=1;//若是偶数变为奇数
     }else if(index==1){
@@ -40,7 +41,7 @@ void StereoMatchOpencvSBM::setParamValue(int index, int value){
     }
     this->param[index] = value;
 }
-void StereoMatchOpencvSBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
+void StereoMatchOpencvSGBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
     Mat leftgray,rightgray;
     leftgray.create(left.size(),CV_8UC1);
     rightgray.create(right.size(),CV_8UC1);
@@ -99,6 +100,7 @@ int StereoMatchOpencvBM::getParamMin(int index){
     return mmin[index];
 }
 void StereoMatchOpencvBM::setParamValue(int index, int value){
+    if(index>=this->paramCount)return;
     if(index==0){//参数矫正
         if((value&1)==0)value+=1;//若是偶数变为奇数
     }else if(index==1){
@@ -132,3 +134,61 @@ void StereoMatchOpencvBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
     bm.state->disp12MaxDiff = 1;
     bm(leftgray,rightgray,dis);
 }
+/*
+StereoMatchOpencvVar::StereoMatchOpencvVar(){
+    this->paramCount = 1;
+    this->param[0] = 6*16;
+}
+
+string StereoMatchOpencvVar::getKindName(){
+    return "cvVar";
+}
+int StereoMatchOpencvVar::getParamCount(){
+    return this->paramCount;
+}
+string StereoMatchOpencvVar::getParamName(int index){
+    char name[1][100] = {"ndisparities"};
+    return name[index];
+}
+int StereoMatchOpencvVar::getParamValue(int index){
+    return this->param[index];
+}
+int StereoMatchOpencvVar::getParamMax(int index){
+    int mmax[1]={16*25};
+    return mmax[index];
+}
+int StereoMatchOpencvVar::getParamMin(int index){
+    int mmin[1]={16};
+    return mmin[index];
+}
+void StereoMatchOpencvVar::setParamValue(int index, int value){
+    if(index>=this->paramCount)return;
+    if(index==0){
+        if(value%16!=0)
+            value = (value/16)*16;
+    }
+    this->param[index] = value;
+}
+void StereoMatchOpencvVar::stereoMatch(Mat &left, Mat &right, Mat &dis){
+    Mat leftgray,rightgray;
+    leftgray.create(left.size(),CV_8UC1);
+    rightgray.create(right.size(),CV_8UC1);
+    cvtColor(left,leftgray,CV_BGR2GRAY);
+    cvtColor(right,rightgray,CV_BGR2GRAY);
+
+    StereoVar var;
+    var.levels = 3;                                 // ignored with USE_AUTO_PARAMS
+    var.pyrScale = 0.5;                             // ignored with USE_AUTO_PARAMS
+    var.nIt = 25;
+    var.minDisp = -numberOfDisparities;
+    var.maxDisp = 0;
+    var.poly_n = 3;
+    var.poly_sigma = 0.0;
+    var.fi = 15.0f;
+    var.lambda = 0.03f;
+    var.penalization = var.PENALIZATION_TICHONOV;   // ignored with USE_AUTO_PARAMS
+    var.cycle = var.CYCLE_V;                        // ignored with USE_AUTO_PARAMS
+    var.flags = var.USE_SMART_ID | var.USE_AUTO_PARAMS | var.USE_INITIAL_DISPARITY | var.USE_MEDIAN_FILTERING ;
+    var(leftgray,rightgray,dis);
+}
+*/

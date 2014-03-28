@@ -19,7 +19,7 @@ using namespace std;
  *
  */
 
-#define SERACH_RANGE  5//7个像素搜索范围
+#define SERACH_RANGE  3//7个像素搜索范围
 #define MAX_MATCH_KIND 30//最多30种匹配方法
 
 //之前从MFC迁移过来的代码，有CPoint
@@ -66,7 +66,7 @@ public:
     void getCorner(int isright,vector<vector<Point2f> > &image_point,vector<vector<Point3f> > &object_point);
 
     //获取各种参数
-    void calParams(Mat &selectimg);
+    void calParams(int isright, Mat &selectimg);
 private:
 
     //左摄像机内参

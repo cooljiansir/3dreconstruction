@@ -40,7 +40,7 @@ void testBM(){
            // bm.state->roi1 = roil;
             //bm.state->roi2 = roir;
             bm.state->preFilterCap = 31;
-            bm.state->SADWindowSize = 11;
+            bm.state->SADWindowSize = 7;
             bm.state->minDisparity = 0;
             bm.state->numberOfDisparities = 16*6;
             bm.state->textureThreshold = 10;
@@ -85,7 +85,7 @@ void testsbm(){
 
 
 
-            int SADWindowSize = 9;
+            int SADWindowSize = 7;
             int numberOfDisparities = 16*6;
             StereoSGBM sgbm;
             sgbm.preFilterCap = 63;

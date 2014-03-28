@@ -76,7 +76,7 @@ void PhotoDialog::on_printBut_clicked()
         QString fileName = QFileDialog::getSaveFileName(
                     this,
                     tr("Save File"),
-                    QDir::currentPath(),
+                    NULL,
                     "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
         if(!fileName.isNull()){
             imwrite(fileName.toStdString().c_str(),this->imagemat);

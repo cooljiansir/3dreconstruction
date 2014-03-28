@@ -13,7 +13,7 @@ PhotoDialog2::PhotoDialog2(QWidget *parent) :
     this->isshot = false;
     this->capleft = this->capright = 0;
     this->isswitch = false;
-    ui->leftEdit->setText("0");
+    ui->leftEdit->setText("2");
     ui->rightEdit->setText("1");
     this->on_pushButton_clicked();
     this->startTimer(30);
@@ -102,13 +102,13 @@ void PhotoDialog2::on_printBut_clicked()
         QString fileNamel = QFileDialog::getSaveFileName(
                     this,
                     tr("Save Left Image"),
-                    QDir::currentPath(),
+                    NULL,
                     "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
         if(!fileNamel.isNull()){
             QString fileNamer = QFileDialog::getSaveFileName(
                         this,
                         tr("Save Right Image"),
-                        QDir::currentPath(),
+                        NULL,
                         "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
             if(!fileNamer.isNull()){
                 imwrite(fileNamel.toStdString().c_str(),this->leftMat);

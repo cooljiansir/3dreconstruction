@@ -14,7 +14,7 @@ RTFDocument::RTFDocument(){
     this->image_height = -1;
 
     //各种匹配方法添加
-    this->stereoMatchMethods.push_back(new StereoMatchOpencvSBM());
+    this->stereoMatchMethods.push_back(new StereoMatchOpencvSGBM());
     this->stereoMatchMethods.push_back(new StereoMatchOpencvBM());
 }
 RTFDocument::~RTFDocument(){
@@ -447,7 +447,7 @@ void RTFDocument::addCorner(int isright, Mat &selectimg,vector<vector<Point2f> >
         image_point_r.push_back(img_vec);
         object_point_r.push_back(obj_vec);
     }
-    this->calParams(selectimg);
+    this->calParams(isright,selectimg);
     if(this->image_height==-1||this->image_width==-1){
         this->image_width = selectimg.cols;
         this->image_height = selectimg.rows;
@@ -462,8 +462,8 @@ void RTFDocument::getCorner(int isr,vector<vector<Point2f> > &image_point, vecto
         object_point = this->object_point_r;
     }
 }
-void RTFDocument::calParams(Mat &selectimg){
-    if(this->image_point_l.size()>0){
+void RTFDocument::calParams(int isright,Mat &selectimg){
+    if(isright==0&&this->image_point_l.size()>0){
         this->l_disok = this->l_insok = true;
         vector<Mat> R_vec;
         vector<Mat> T_vec;
@@ -479,7 +479,7 @@ void RTFDocument::calParams(Mat &selectimg){
                         CV_CALIB_FIX_K3
                         );
     }
-    if(this->image_point_r.size()>0){
+    if(isright==1&&this->image_point_r.size()>0){
         this->r_disok = this->r_insok = true;
         vector<Mat> R_vec;
         vector<Mat> T_vec;
