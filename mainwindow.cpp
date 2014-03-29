@@ -23,7 +23,7 @@ MainWindow::MainWindow(QWidget *parent) :
     this->opened = false;
     this->disOk = false;
     this->polar_finished = false;
-    this->isStereoLoading = false;
+    //this->isStereoLoading = false;
     ui->actionSave->setEnabled(false);
     ui->actionNew->setEnabled(true);
     ui->actionOpen_file->setEnabled(true);
@@ -409,14 +409,14 @@ void MainWindow::setupStereoUI(){
     if(nkind>7)
         ui->stereoRadio7->setText(QString::fromStdString(this->doc->stereoMatchMethods[7]->getKindName()));
     this->loadStereoParam(0);
-    connect(ui->stereoRadio0,SIGNAL(clicked()),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->stereoRadio1,SIGNAL(clicked()),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->stereoRadio2,SIGNAL(clicked()),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->stereoRadio3,SIGNAL(clicked()),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->stereoRadio4,SIGNAL(clicked()),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->stereoRadio5,SIGNAL(clicked()),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->stereoRadio6,SIGNAL(clicked()),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->stereoRadio7,SIGNAL(clicked()),this,SLOT(on_stereoMatchLoadBut_clicked()));
+    connect(ui->stereoRadio0,SIGNAL(clicked()),this,SLOT(on_stereoMatchRadio_clicked()));
+    connect(ui->stereoRadio1,SIGNAL(clicked()),this,SLOT(on_stereoMatchRadio_clicked()));
+    connect(ui->stereoRadio2,SIGNAL(clicked()),this,SLOT(on_stereoMatchRadio_clicked()));
+    connect(ui->stereoRadio3,SIGNAL(clicked()),this,SLOT(on_stereoMatchRadio_clicked()));
+    connect(ui->stereoRadio4,SIGNAL(clicked()),this,SLOT(on_stereoMatchRadio_clicked()));
+    connect(ui->stereoRadio5,SIGNAL(clicked()),this,SLOT(on_stereoMatchRadio_clicked()));
+    connect(ui->stereoRadio6,SIGNAL(clicked()),this,SLOT(on_stereoMatchRadio_clicked()));
+    connect(ui->stereoRadio7,SIGNAL(clicked()),this,SLOT(on_stereoMatchRadio_clicked()));
     connect(ui->slider0,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
     connect(ui->slider1,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
     connect(ui->slider2,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
@@ -518,18 +518,13 @@ void MainWindow::on_stereoMatchLoadBut_clicked()
 {
     if(this->doc->stereoMatchMethods.size()==0)
         return;
-    qDebug()<<"调用"<<endl;
-    if(this->isStereoLoading){
-        qDebug()<<"互斥退出"<<endl;
-        return;
-    }
-    qDebug()<<"进入"<<endl;
-    this->isStereoLoading = true;
     if(!this->polar_finished){
         QMessageBox::information(this,"ERROR","Please Select two images in Polar Correction Menu");
-        this->isStereoLoading = false;
         return;
     }
+    qDebug()<<"调用"<<endl;
+    this->mutex.lock();
+    qDebug()<<"进入"<<endl;
 
     QPixmap left = QPixmap::fromImage(Mat2QImage(this->polar_left));
     QPixmap right = QPixmap::fromImage(Mat2QImage(this->polar_right));
@@ -561,7 +556,11 @@ void MainWindow::on_stereoMatchLoadBut_clicked()
     st->setParamValue(5,ui->slider5->value());
     this->loadStereoParam(kind);
 
-    st->stereoMatch(this->polar_left,this->polar_right,this->dispMat);
+    Mat disp;
+    qDebug()<<"计算"<<endl;
+    st->stereoMatch(this->polar_left,this->polar_right,disp);
+    qDebug()<<"计算完成"<<endl;
+    this->dispMat = disp;
 //    StereoMatch *st = new StereoMatchOpencvSBM();// st;
 //    st->stereoMatch(this->polar_left,this->polar_right,this->dispMat);
 
@@ -571,7 +570,8 @@ void MainWindow::on_stereoMatchLoadBut_clicked()
     QPixmap re = QPixmap::fromImage(Mat2QImage(vdisp3));
     ui->stereoMatchResultLabel->setPixmap(re.scaled(ui->stereoMatchResultLabel->width()
                                                     ,ui->stereoMatchResultLabel->height()));
-    this->isStereoLoading = false;
+    //this->isStereoLoading = false;
+    this->mutex.unlock();
     qDebug()<<"正常退出"<<endl;
 }
 
@@ -618,6 +618,14 @@ void MainWindow::on_polar_Open_clicked()
 }
 
 void MainWindow::loadStereoParam(int k){
+    disconnect(ui->slider0,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
+    disconnect(ui->slider1,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
+    disconnect(ui->slider2,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
+    disconnect(ui->slider3,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
+    disconnect(ui->slider4,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
+    disconnect(ui->slider5,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
+
+
     StereoMatch *st = this->doc->stereoMatchMethods[k];
     int kind = st->getParamCount();
     this->ui->sliderLabel0->setVisible(kind>0);
@@ -663,6 +671,14 @@ void MainWindow::loadStereoParam(int k){
     this->ui->sliderLabel5->setVisible(kind>5);
     this->ui->slider5->setVisible(kind>5);
     this->ui->sliderLabel5v->setVisible(kind>5);
+
+
+    connect(ui->slider0,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
+    connect(ui->slider1,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
+    connect(ui->slider2,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
+    connect(ui->slider3,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
+    connect(ui->slider4,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
+    connect(ui->slider5,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
 }
 
 void MainWindow::on_reproject_AddBut_clicked()
@@ -703,4 +719,16 @@ void MainWindow::on_reproject_ZSub_clicked()
 void MainWindow::on_reproject_ZAdd_clicked()
 {
     ui->glWidget->translateBy(0,0,5);
+}
+void MainWindow::on_stereoMatchRadio_clicked(){
+    int kind = -1;
+    if(ui->stereoRadio0->isChecked())kind = 0;
+    if(ui->stereoRadio1->isChecked())kind = 1;
+    if(ui->stereoRadio2->isChecked())kind = 2;
+    if(ui->stereoRadio3->isChecked())kind = 3;
+    if(ui->stereoRadio4->isChecked())kind = 4;
+    if(ui->stereoRadio5->isChecked())kind = 5;
+    if(ui->stereoRadio6->isChecked())kind = 6;
+    this->loadStereoParam(kind);
+    this->on_stereoMatchLoadBut_clicked();
 }

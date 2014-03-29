@@ -5,6 +5,7 @@
 #include "photodialog.h"
 #include "rtfdocument.h"
 #include <QFile>
+#include <QMutex>
 #include <QStandardItemModel>
 #include "glwidget.h"
 
@@ -76,11 +77,14 @@ private slots:
     void on_reproject_ZAdd_clicked();
 
 private:
-    bool isStereoLoading;//互斥信号量
+    //bool isStereoLoading;//互斥信号量
+    QMutex mutex;
 public slots:
     void on_stereoMatchLoadBut_clicked();
 
     void on_polar_Open_clicked();
+
+    void on_stereoMatchRadio_clicked();
 
 public:
     void loadCalidUI();

@@ -2,6 +2,10 @@
 #define STEREOMATCH_H
 
 #include <string>
+#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/contrib/contrib.hpp"
 #include "cv.h"
 
 using namespace cv;
@@ -58,7 +62,7 @@ private:
     int paramCount;
     int param[3];//可调参数
 };
-/*
+
 class StereoMatchOpencvVar:public StereoMatch{
 public:
     StereoMatchOpencvVar();
@@ -75,5 +79,5 @@ private:
     int paramCount;
     int param[1];//可调参数
 };
-*/
+
 #endif // STEREOMATCH_H

@@ -1,4 +1,12 @@
 #include "stereomatch.h"
+#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/contrib/contrib.hpp"
+#include "cv.h"
+#include <QDebug>
+
+using namespace cv;
 
 StereoMatchOpencvSGBM::StereoMatchOpencvSGBM(){
     this->paramCount = 3;
@@ -134,10 +142,11 @@ void StereoMatchOpencvBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
     bm.state->disp12MaxDiff = 1;
     bm(leftgray,rightgray,dis);
 }
-/*
+
 StereoMatchOpencvVar::StereoMatchOpencvVar(){
     this->paramCount = 1;
-    this->param[0] = 6*16;
+    this->param[0] = 5*16;
+    qDebug()<<"设置初始值为"<<this->param[0]<<endl;
 }
 
 string StereoMatchOpencvVar::getKindName(){
@@ -151,6 +160,7 @@ string StereoMatchOpencvVar::getParamName(int index){
     return name[index];
 }
 int StereoMatchOpencvVar::getParamValue(int index){
+    qDebug()<<"返回param"<<index<<":"<<this->param[index]<<endl;
     return this->param[index];
 }
 int StereoMatchOpencvVar::getParamMax(int index){
@@ -176,6 +186,8 @@ void StereoMatchOpencvVar::stereoMatch(Mat &left, Mat &right, Mat &dis){
     cvtColor(left,leftgray,CV_BGR2GRAY);
     cvtColor(right,rightgray,CV_BGR2GRAY);
 
+    int numberOfDisparities = this->param[0];
+
     StereoVar var;
     var.levels = 3;                                 // ignored with USE_AUTO_PARAMS
     var.pyrScale = 0.5;                             // ignored with USE_AUTO_PARAMS
@@ -191,4 +203,3 @@ void StereoMatchOpencvVar::stereoMatch(Mat &left, Mat &right, Mat &dis){
     var.flags = var.USE_SMART_ID | var.USE_AUTO_PARAMS | var.USE_INITIAL_DISPARITY | var.USE_MEDIAN_FILTERING ;
     var(leftgray,rightgray,dis);
 }
-*/
