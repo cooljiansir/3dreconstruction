@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <cv.h>
+#include <QTimer>
 #include <highgui.h>
 
 using namespace cv;
@@ -28,6 +29,8 @@ private slots:
 
     void on_printBut_clicked();
 
+    void on_save();
+
 private:
     Ui::PhotoDialog2 *ui;
     int timerInt;
@@ -39,6 +42,7 @@ private:
     int capr;
     bool isswitch;
     bool isshot;
+    QTimer *timer;
 };
 
 #endif // PHOTODIALOG2_H

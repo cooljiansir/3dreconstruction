@@ -23,6 +23,8 @@ PhotoDialog2::PhotoDialog2(QWidget *parent) :
                          |Qt::WindowCloseButtonHint);
     this->setWindowTitle("Take Photos");
     this->showMaximized();
+    this->timer = new QTimer(this);
+    connect(this->timer,SIGNAL(timeout()),this,SLOT(on_save()));
 }
 
 PhotoDialog2::~PhotoDialog2()
@@ -93,11 +95,16 @@ void PhotoDialog2::on_cancelBut_clicked()
     }
 }
 
+void PhotoDialog2::on_save(){
+    this->timer->stop();
+    this->isshot = true;
+    ui->printBut->setText("Save");
+}
 void PhotoDialog2::on_printBut_clicked()
 {
     if(!this->isshot){
-        this->isshot = true;
-        ui->printBut->setText("Save");
+        int t = ui->timeEdit->text().toInt();
+        this->timer->start(t*1000);
     }else{
         QString fileNamel = QFileDialog::getSaveFileName(
                     this,

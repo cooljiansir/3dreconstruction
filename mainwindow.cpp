@@ -549,6 +549,8 @@ void MainWindow::on_stereoMatchLoadBut_clicked()
 
 
     st->setParamValue(0,ui->slider0->value());
+    qDebug()<<"set param "<<ui->slider0->value()<<endl;
+
     st->setParamValue(1,ui->slider1->value());
     st->setParamValue(2,ui->slider2->value());
     st->setParamValue(3,ui->slider3->value());
@@ -633,9 +635,12 @@ void MainWindow::loadStereoParam(int k){
     this->ui->sliderLabel0v->setVisible(kind>0);
     if(kind>0){
         ui->sliderLabel0->setText(QString::fromStdString(st->getParamName(0)));
-        ui->slider0->setValue(st->getParamValue(0));
         ui->slider0->setMinimum(st->getParamMin(0));
         ui->slider0->setMaximum(st->getParamMax(0));
+        ui->slider0->setValue(st->getParamValue(0));
+        qDebug()<<"set slider"<<st->getParamValue(0)<<endl;
+        qDebug()<<"get slider"<<ui->slider0->value()<<endl;
+
         ui->sliderLabel0v->setText(QString::number(st->getParamValue(0)));
     }
     this->ui->sliderLabel1->setVisible(kind>1);

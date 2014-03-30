@@ -56,7 +56,7 @@
      <property name="title">
       <string>Options</string>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout" stretch="10,1,1,1,1,1,1,1">
+     <layout class="QHBoxLayout" name="horizontalLayout" stretch="10,1,1,1,1,1,1,1,1,1">
       <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
@@ -89,6 +89,20 @@
       </item>
       <item>
        <widget class="QLineEdit" name="rightEdit"/>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>time</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="timeEdit">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QPushButton" name="pushButton">
