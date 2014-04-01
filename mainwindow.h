@@ -19,7 +19,9 @@ public slots:
     void on_pressed(int x,int y);
 private:
     Ui::MainWindow *ui;
-    cv::Mat imgmat;
+    cv::Mat matLeft;
+    cv::Mat matRight;
+    cv::Mat uninMat;
 };
 
 #endif // MAINWINDOW_H

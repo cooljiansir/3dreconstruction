@@ -14,10 +14,12 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    clicklabel.cpp
+    clicklabel.cpp \
+    uti.cpp
 
 HEADERS  += mainwindow.h \
-    clicklabel.h
+    clicklabel.h \
+    uti.h
 
 FORMS    += mainwindow.ui \
     clicklabel.ui

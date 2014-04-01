@@ -141,8 +141,8 @@ double subPix(double v[MAXS],double mindis){
     //if(mmindex==-1)return -1;
     //return v[mmindex];
     //
-    if(mmindex!=-1&&v[mmindex]>mindis)
-        return -1;
+//    if(mmindex!=-1&&v[mmindex]>mindis)
+//        return -1;
     return mmindex;
 }
 void StereoMatch1(Mat &left,Mat &right,Mat &dis,int size,double mindis){
@@ -187,7 +187,7 @@ void testMine(){
             imshow("right_gray",rightgray);
 
             Mat dis,vdisp;
-            StereoMatch1(leftgray,rightgray,dis,9,16*1000);
+            StereoMatch1(leftgray,rightgray,dis,0,16*1000);
             dis.convertTo(vdisp,CV_8U);
             normalize(vdisp,vdisp,0,255,CV_MINMAX);
             imshow("mine disp",vdisp);
@@ -195,6 +195,72 @@ void testMine(){
     }
 }
 
+//可变窗口
+int mode[100][100];
+
+//sad值函数
+double sadValue2(int x1,int y1,Mat &left,int x2,int y2,Mat &right,int size){
+    double sum = 0;
+    double thre = 500;
+    int x_1,y_1,x_2,y_2;
+    Vec3b p0 = left.at<Vec3b>(y1,x1);
+    for(int i = -size;i<=size;i++){
+        for(int j = -size;j<=size;j++){
+            mode[50+i][50+j] = 0;
+            y_1 = y1 + i;
+            x_1 = x1 + j;
+            if(x_1>=0&&x_1<left.cols&&y_1>=0&&y_1<left.rows){
+                Vec3b *p = left.ptr<Vec3b>(y_1,x_1);
+                double di = ((*p)[0] - p0[0])*((*p)[0] - p0[0])
+                        + ((*p)[1] - p0[1])*((*p)[1] - p0[1])
+                        + ((*p)[2] - p0[2])*((*p)[2] - p0[2]);
+                if(di<thre){
+                    mode[50+i][50+j] = 1;
+                }
+            }
+        }
+    }
+
+
+
+    for(int i = -size;i<=size;i++){
+        for(int j = -size;j<=size;j++){
+            y_1 = y1 + i;
+            x_1 = x1 + j;
+            y_2 = y2 + i;
+            x_2 = x2 + j;
+            if(x_1>=0&&x_1<left.cols&&y_1>=0&&y_1<left.rows&&
+                    x_2>=0&&x_2<right.cols&&y_2>=0&&y_2<right.rows
+                    &&mode[50+i][50+j]){
+                //sum += fabs(left.at<unsigned char>(y_1,x_1) - right.at<unsigned char>(y_2,x_2));
+                Vec3b *p1 = left.ptr<Vec3b>(y_1,x_1);
+                Vec3b *p2 = right.ptr<Vec3b>(y_2,x_2);
+                sum += ((*p1)[0] - (*p2)[0])*((*p1)[0] - (*p2)[0])
+                        +((*p1)[1] - (*p2)[1])*((*p1)[1] - (*p2)[1])
+                        +((*p1)[2] - (*p2)[2])*((*p1)[2] - (*p2)[2]);
+            }
+        }
+    }
+    return sum;
+}
+
+void StereoMatch2(Mat &left,Mat &right,Mat &dis,int size,double mindis){
+    dis.create(left.size(),CV_32F);
+    double value[MAXS];
+    for(int i = 0;i<left.rows;i++){
+        for(int j = 0;j<left.cols;j++){
+            for(int k = 0;k<MAXS;k++){
+                value[k] = -1;
+                if(j>=k){
+                    value[k] = sadValue2(j,i,left,j-k,i,right,size);
+                }
+            }
+            //dis.at<float>(i,j) = subPix(value,mindis);
+            float *f = dis.ptr<float>(i,j);
+            *f = subPix(value,mindis);
+        }
+    }
+}
 
 void testRealTime(){
     QString leftfilename = QFileDialog::getOpenFileName(
@@ -211,19 +277,24 @@ void testRealTime(){
         if (!rightfilename.isNull()) { //用户选择了左图文件
             Mat leftmat = imread(leftfilename.toUtf8().data());
             Mat rightmat = imread(rightfilename.toUtf8().data());
+
+            Mat dis,vdisp;
+            StereoMatch2(leftmat,rightmat,dis,0,16*100000);
+            dis.convertTo(vdisp,CV_8U);
+            normalize(vdisp,vdisp,0,255,CV_MINMAX);
+            imshow("real time disp",vdisp);
         }
     }
 }
 
-
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-//    MainWindow w;
-//    w.show();
+    MainWindow w;
+    w.show();
     //cvNamedWindow("test");
 //    testBM();
-    testMine();
+//    testMine();
 //    testRealTime();
     
     return a.exec();
