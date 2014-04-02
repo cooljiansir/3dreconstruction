@@ -3,11 +3,12 @@
 #include "cv.h"
 #include "highgui.h"
 #include <QFileDialog>
+#include <algorithm>
 
 using namespace cv;
 using namespace std;
 
-#define MAXS 15 //最大搜索视差
+#define MAXS 30 //最大搜索视差
 
 
 void testBM(){
@@ -129,7 +130,7 @@ double sadValue(int x1,int y1,Mat &left,int x2,int y2,Mat &right,int size){
     }
     return sum;
 }
-double subPix(double v[MAXS],double mindis){
+double subPix(double v[MAXS]){
     int mmindex = -1;
     for(int i = 0;i<MAXS;i++){
         if(v[i]!=-1){
@@ -138,14 +139,23 @@ double subPix(double v[MAXS],double mindis){
             }
         }
     }
-    //if(mmindex==-1)return -1;
-    //return v[mmindex];
-    //
-//    if(mmindex!=-1&&v[mmindex]>mindis)
-//        return -1;
     return mmindex;
 }
-void StereoMatch1(Mat &left,Mat &right,Mat &dis,int size,double mindis){
+double conf(double v[MAXS]){
+    int mmindex = -1;
+    int mmindex2 = -1;
+    for(int i = 0;i<MAXS;i++){
+        if(v[i]!=-1){
+            if(mmindex==-1||v[i]<v[mmindex]){
+                mmindex2 = mmindex;
+                mmindex = i;
+            }
+        }
+    }
+    return (1 - v[mmindex]/(v[mmindex2]+0.00001))*100;
+}
+
+void StereoMatch1(Mat &left,Mat &right,Mat &dis,int size){
     dis.create(left.size(),CV_32F);
     double value[MAXS];
     for(int i = 0;i<left.rows;i++){
@@ -158,7 +168,50 @@ void StereoMatch1(Mat &left,Mat &right,Mat &dis,int size,double mindis){
             }
             //dis.at<float>(i,j) = subPix(value,mindis);
             float *f = dis.ptr<float>(i,j);
-            *f = subPix(value,mindis);
+            *f = subPix(value);
+        }
+    }
+}
+void StereoMatchC(Mat &left,Mat &right,Mat &dis,int size){
+    dis.create(left.size(),CV_32F);
+    double value[MAXS];
+    for(int i = 0;i<left.rows;i++){
+        for(int j = 0;j<left.cols;j++){
+            for(int k = 0;k<MAXS;k++){
+                value[k] = -1;
+                if(j>=k){
+                    value[k] = sadValue(j,i,left,j-k,i,right,size);
+                }
+            }
+            //dis.at<float>(i,j) = subPix(value,mindis);
+            float *f = dis.ptr<float>(i,j);
+            *f = subPix(value);
+        }
+    }
+}
+
+double tempsort[150];
+//中值滤波
+void filter(Mat &src,Mat &output,int size){
+    output.create(src.rows,src.cols,CV_32F);
+    int i_,j_,t_i;
+    for(int i = 0;i<src.rows;i++){
+        for(int j = 0;j<src.cols;j++){
+            t_i = 0;
+            for(int a = -size;a<=size;a++){
+                for(int b = -size;b<=size;b++){
+                    i_ = i+a;
+                    j_ = j+b;
+                    if(i_>=0&&i_<src.rows&&
+                            j_>=0&&j_<src.cols){
+                        tempsort[t_i++] = src.at<float>(i_,j_);
+                    }else{
+                        tempsort[t_i++] = -1;
+                    }
+                }
+            }
+            sort(tempsort,tempsort+t_i);
+            output.at<float>(i,j) = tempsort[t_i/2];
         }
     }
 }
@@ -187,8 +240,10 @@ void testMine(){
             imshow("right_gray",rightgray);
 
             Mat dis,vdisp;
-            StereoMatch1(leftgray,rightgray,dis,0,16*1000);
-            dis.convertTo(vdisp,CV_8U);
+            StereoMatch1(leftgray,rightgray,dis,1);
+            Mat dis1;
+            //filter(dis,dis1,1);
+            dis1.convertTo(vdisp,CV_8U);
             normalize(vdisp,vdisp,0,255,CV_MINMAX);
             imshow("mine disp",vdisp);
         }
@@ -244,7 +299,7 @@ double sadValue2(int x1,int y1,Mat &left,int x2,int y2,Mat &right,int size){
     return sum;
 }
 
-void StereoMatch2(Mat &left,Mat &right,Mat &dis,int size,double mindis){
+void StereoMatch2(Mat &left,Mat &right,Mat &dis,int size){
     dis.create(left.size(),CV_32F);
     double value[MAXS];
     for(int i = 0;i<left.rows;i++){
@@ -257,7 +312,7 @@ void StereoMatch2(Mat &left,Mat &right,Mat &dis,int size,double mindis){
             }
             //dis.at<float>(i,j) = subPix(value,mindis);
             float *f = dis.ptr<float>(i,j);
-            *f = subPix(value,mindis);
+            *f = subPix(value);
         }
     }
 }
@@ -279,10 +334,177 @@ void testRealTime(){
             Mat rightmat = imread(rightfilename.toUtf8().data());
 
             Mat dis,vdisp;
-            StereoMatch2(leftmat,rightmat,dis,0,16*100000);
+            StereoMatch2(leftmat,rightmat,dis,0);
             dis.convertTo(vdisp,CV_8U);
             normalize(vdisp,vdisp,0,255,CV_MINMAX);
             imshow("real time disp",vdisp);
+        }
+    }
+}
+double sad3Value(Mat &left,Mat &right,int x1,int y1,int x2,int y2,int size){
+    double sum = 0;
+    int x_1,y_1,x_2,y_2;
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+    for(int i = -size;i<=size;i++){
+        for(int j = -size;j<=size;j++){
+            y_1 = y1 + i;
+            x_1 = x1 + j;
+            y_2 = y2 + i;
+            x_2 = x2 + j;
+            if(x_1>=0&&x_1<left.cols&&y_1>=0&&y_1<left.rows&&
+                    x_2>=0&&x_2<right.cols&&y_2>=0&&y_2<right.rows){
+                //Vec3b *p1 = left.ptr<Vec3b>(y_1,x_1);
+                //Vec3b *p2 = right.ptr<Vec3b>(y_2,x_2);
+                unsigned char *p1 = leftptr + (y_1*left.cols + x_1)*3;
+                unsigned char *p2 = rightptr + (y_2*right.cols + x_2)*3;
+                sum += fabs(p1[0] - p2[0]) +
+                        fabs(p1[1] - p2[1])+
+                        fabs(p1[2] - p2[2]);
+            }
+        }
+    }
+    return sum;
+}
+double getPix(double v[MAXS]){
+    int mmindex = -1;
+    for(int i = 0;i<MAXS;i++){
+        if(v[i]>0){
+            if(mmindex==-1||v[i]<v[mmindex])
+                mmindex = i;
+        }
+    }
+    return mmindex;
+}
+double confV(double v[MAXS]){
+    int mmindex = -1;
+    int mmindex2;
+    for(int i = 0;i<MAXS;i++){
+        if(v[i]>0){
+            if(mmindex==-1||v[i]<v[mmindex]){
+                mmindex2 = mmindex;
+                mmindex = i;
+            }
+        }
+    }
+    if(mmindex2==-1)
+        return -1;
+    return (1 - v[mmindex]/(v[mmindex2]+0.00001))*100;
+}
+
+double deeptemp[MAXS];
+void stereomatchL(Mat &left,Mat &right,Mat &disL,int size){
+    disL.create(left.size(),CV_32F);
+    float *disptr = (float*)disL.data;
+    for(int i = 0;i<left.rows;i++){
+        for(int j = 0;j<left.cols;j++){
+            for(int k = 0;k<MAXS;k++)
+                deeptemp[k] = -1;
+            for(int k = 0;k<MAXS;k++){
+                if(j>=k){
+                    deeptemp[k] = sad3Value(left,right,j,i,j-k,i,size);
+                }
+            }
+            //float *v = disL.ptr<float>(i,j);
+            float *v= disptr + i*disL.cols + j;
+            (*v) = getPix(deeptemp);
+        }
+    }
+}
+void stereomatchR(Mat &left,Mat &right,Mat &disR,int size){
+    disR.create(right.size(),CV_32F);
+    float *disptr = (float*)disR.data;
+    for(int i = 0;i<right.rows;i++){
+        for(int j = 0;j<right.cols;j++){
+            for(int k = 0;k<MAXS;k++)
+                deeptemp[k] = -1;
+            for(int k = 0;k<MAXS;k++){
+                if(j+k<right.cols){
+                    deeptemp[k] = sad3Value(right,left,j,i,j+k,i,size);
+                }
+            }
+//            float *v = disR.ptr<float>(i,j);
+            float *v= disptr + i*disR.cols + j;
+            (*v) = getPix(deeptemp);
+        }
+    }
+}
+void getConf(Mat &left,Mat &right,Mat &disL,Mat &disR,Mat &conf,double cf,int size){
+    double deeptemp[MAXS];
+    conf.create(left.size(),CV_32F);
+    for(int i = 0;i<left.rows;i++){
+        for(int j = 0;j<left.cols;j++){
+            for(int k  =0;k<MAXS;k++)
+                deeptemp[k] = -1;
+            for(int k = 0;k<MAXS;k++){
+                if(j>=k){
+                    deeptemp[k] = sad3Value(left,right,j,i,j-k,i,size);
+                }
+            }
+            float *v = conf.ptr<float>(i,j);
+            *v = confV(deeptemp);
+            float *disLp = disL.ptr<float>(i,j);
+            float *disRp = disR.ptr<float>(i,j);
+            if(fabs((*disLp)-(*disRp))<0.00001){
+                *v += cf;
+            }else {
+                *v -= cf;
+            }
+        }
+    }
+}
+void constant(Mat &disL,Mat &disR,Mat &output){
+    output.create(disL.size(),CV_32F);
+    for(int i = 0;i<disL.rows;i++){
+        for(int j = 0;j<disL.cols;j++){
+            float *p1 = disL.ptr<float>(i,j);
+            float *p2 = disR.ptr<float>(i,j);
+            float *p = output.ptr<float>(i,j);
+            if(fabs((*p1)-(*p2))<=1){
+                *p = *p1;
+            }else *p = -1;
+        }
+    }
+}
+
+void testLocal(){
+    QString leftfilename = QFileDialog::getOpenFileName(
+       0,
+       "Binocular Calibration - Open Left Image",
+       NULL,
+       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if (!leftfilename.isNull()) { //用户选择了左图文件
+        QString rightfilename = QFileDialog::getOpenFileName(
+           0,
+           "Binocular Calibration - Open Right Image",
+           NULL,
+           "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+        if (!rightfilename.isNull()) { //用户选择了左图文件
+            Mat leftmat = imread(leftfilename.toUtf8().data());
+            Mat rightmat = imread(rightfilename.toUtf8().data());
+
+            Mat disL,vdispL;
+            stereomatchL(leftmat,rightmat,disL,1);
+            disL.convertTo(vdispL,CV_8U);
+            normalize(vdispL,vdispL,0,255,CV_MINMAX);
+            imshow("dispL",vdispL);
+            Mat disR,vdispR;
+            stereomatchR(leftmat,rightmat,disR,1);
+            disR.convertTo(vdispR,CV_8U);
+            normalize(vdispR,vdispR,0,255,CV_MINMAX);
+            imshow("dispR",vdispR);
+
+            Mat conf,vconf;
+            getConf(leftmat,rightmat,disL,disR,conf,10,1);
+            conf.convertTo(vconf,CV_8U);
+            normalize(vconf,vconf,0,255,CV_MINMAX);
+            imshow("conf",vconf);
+
+            Mat unit,vunit;
+            constant(disL,disR,unit);
+            unit.convertTo(vunit,CV_8U);
+            normalize(vunit,vunit,0,255,CV_MINMAX);
+            imshow("constant check",vunit);
         }
     }
 }
@@ -290,12 +512,13 @@ void testRealTime(){
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    MainWindow w;
-    w.show();
+//    MainWindow w;
+//    w.show();
     //cvNamedWindow("test");
 //    testBM();
 //    testMine();
 //    testRealTime();
+    testLocal();
     
     return a.exec();
 }
