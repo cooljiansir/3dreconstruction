@@ -568,10 +568,12 @@ void MainWindow::on_stereoMatchLoadBut_clicked()
 
     this->disOk = true;
     this->dispMat.convertTo(vdisp,CV_8U);
+
     cvtColor(vdisp,vdisp3,CV_GRAY2BGR);
     QPixmap re = QPixmap::fromImage(Mat2QImage(vdisp3));
     ui->stereoMatchResultLabel->setPixmap(re.scaled(ui->stereoMatchResultLabel->width()
                                                     ,ui->stereoMatchResultLabel->height()));
+
     //this->isStereoLoading = false;
     this->mutex.unlock();
     qDebug()<<"正常退出"<<endl;
