@@ -582,6 +582,78 @@ void dynamicPro(Mat &left,Mat &right,Mat &disL,double q,double c0){
     delete []minres;
     delete []stepres;
 }
+//从右往左动态规划
+void dynamicProR(Mat &left,Mat &right,Mat &dis,double q,double c0){
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+    dis.create(left.size(),CV_32F);
+    float *ot = (float*)dis.data;
+
+    int rows = left.rows;
+    int cols = left.cols;
+
+    double *minres = new double[cols*cols];
+    char *stepres = new char[cols*cols];
+
+    double v1,v2,v3;
+    double p1,p2;
+
+    for(int i = 0;i<rows;i++){
+        for(int a = cols-1;a>=0;a--){
+            for(int b = cols-1;b>=0;b--){
+                p1 = *(leftptr+(i*cols+a)*3)
+                        + *(leftptr+(i*cols+a)*3+1)
+                        + *(leftptr+(i*cols+a)*3+2);
+                p2 = *(rightptr+(i*cols+b)*3)
+                        + *(rightptr+(i*cols+b)*3+1)
+                        + *(rightptr+(i*cols+b)*3+2);
+                p1/=3;
+                p2/=3;
+                v1 = (p1 - p2)*(p1 - p2)/q/q;
+                if(a<cols-1&&b<cols-1)
+                    v1 += minres[(a+1)*cols+b+1];
+                v2 = c0;
+                if(b<cols-1)
+                    v2 += minres[a*cols+b+1];
+                v3 = c0;
+                if(a<cols-1)
+                    v3 += minres[(a+1)*cols+b];
+                if(v1<v2&&a>=b){//加入a>=b约束，即视差不能为负
+                    minres[a*cols+b] = v1;
+                    stepres[a*cols+b] = 1;
+                }else{
+                    minres[a*cols+b] = v2;
+                    stepres[a*cols+b] = 2;
+                }
+                if(v3<minres[a*cols+b]){
+                    minres[a*cols+b] = v3;
+                    stepres[a*cols+b] = 3;
+                }
+            }
+        }
+        int a = 0,b = 0;
+        while(a<cols&&b<cols){
+            if(stepres[a*cols+b]==1){
+                if(a>=b){
+                    ot[i*cols+a] = a - b;
+                    if(a-b>=MAXS)ot[i*cols+a] = -1;
+                }
+                else ot[i*cols+a] = -1;
+                a++;
+                b++;
+            }else if(stepres[a*cols+b]==2){
+                b++;
+            }else{
+                ot[i*cols+a] = -1;
+                a++;
+            }
+        }
+    }
+
+    delete []minres;
+    delete []stepres;
+}
+
 void testDynamic(){
     QString leftfilename = QFileDialog::getOpenFileName(
        0,
@@ -598,11 +670,15 @@ void testDynamic(){
             Mat leftmat = imread(leftfilename.toUtf8().data());
             Mat rightmat = imread(rightfilename.toUtf8().data());
 
-            Mat dis,vdisp;
-            dynamicPro(leftmat,rightmat,dis,2,100);
+            Mat disL,disR;
+            dynamicPro(leftmat,rightmat,disL,2,2);
+            dynamicProR(leftmat,rightmat,disR,2,2);
+
+            Mat unit,vdisp;
+            constant(disL,disR,unit);
 //            freopen("log.txt","w",stdout);
 //            cout<<dis;
-            dis.convertTo(vdisp,CV_8U);
+            unit.convertTo(vdisp,CV_8U);
             normalize(vdisp,vdisp,0,255,CV_MINMAX);
             imshow("dynamic ",vdisp);
         }
