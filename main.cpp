@@ -5,6 +5,9 @@
 #include <QFileDialog>
 #include <algorithm>
 
+#include <QDebug>
+
+
 using namespace cv;
 using namespace std;
 
@@ -508,7 +511,103 @@ void testLocal(){
         }
     }
 }
+void dynamicPro(Mat &left,Mat &right,Mat &disL,double q,double c0){
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+    disL.create(left.size(),CV_32F);
+    float *ot = (float*)disL.data;
 
+    int cols = left.cols;
+    int rows = left.rows;
+    double *minres = new double[cols*cols];
+    char *stepres = new char[cols*cols];
+
+    double v1,v2,v3;
+    double p1,p2;
+    for(int i = 0;i<rows;i++){
+//        qDebug()<<"开始动归"<<endl;
+        for(int a = 0;a<cols;a++){
+            for(int b = 0;b<cols;b++){
+                p1 = *(leftptr+(i*cols+a)*3)
+                        + *(leftptr+(i*cols+a)*3+1)
+                        + *(leftptr+(i*cols+a)*3+2);
+                p2 = *(rightptr+(i*cols+b)*3)
+                        + *(rightptr+(i*cols+b)*3+1)
+                        + *(rightptr+(i*cols+b)*3+2);
+                p1/=3;
+                p2/=3;
+                v1 = (p1 - p2)*(p1 - p2)/q/q;
+                if(a>0&&b>0)v1 += minres[(a-1)*cols+b-1];
+                v2 = c0;
+                if(b>0)v2 += minres[a*cols+b-1];
+                v3 = c0;
+                if(a>0)v3 += minres[(a-1)*cols+b];
+                if(v1<v2&&a>=b){//加入a>=b约束，即视差不能为负
+                    minres[a*cols+b] = v1;
+                    stepres[a*cols+b] = 1;
+                }else{
+                    minres[a*cols+b] = v2;
+                    stepres[a*cols+b] = 2;
+                }
+                if(v3<minres[a*cols+b]){
+                    minres[a*cols+b] = v3;
+                    stepres[a*cols+b] = 3;
+                }
+            }
+        }
+//        qDebug()<<"动归结束"<<endl;
+        int a = cols-1;
+        int b = cols-1;
+        for(int k = 0;k<cols;k++)
+            ot[i*cols+k] = -1;
+        while(a>=0&&b>=0){
+            if(stepres[a*cols+b]==1){
+                if(a>=b){
+                    ot[i*cols+a] = a - b;
+                    if(a-b>MAXS)
+                        ot[i*cols+a] = -1;
+                }
+                else ot[i*cols+a] = -1;
+                a--;
+                b--;
+            }else if(stepres[a*cols+b]==2){
+                b--;
+            }else{
+                ot[i*cols+a] = -1;
+                a--;
+            }
+        }
+        //qDebug()<<"完成"<<i+1<<"/"<<rows<<"\r";
+    }
+    delete []minres;
+    delete []stepres;
+}
+void testDynamic(){
+    QString leftfilename = QFileDialog::getOpenFileName(
+       0,
+       "Binocular Calibration - Open Left Image",
+       NULL,
+       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if (!leftfilename.isNull()) { //用户选择了左图文件
+        QString rightfilename = QFileDialog::getOpenFileName(
+           0,
+           "Binocular Calibration - Open Right Image",
+           NULL,
+           "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+        if (!rightfilename.isNull()) { //用户选择了左图文件
+            Mat leftmat = imread(leftfilename.toUtf8().data());
+            Mat rightmat = imread(rightfilename.toUtf8().data());
+
+            Mat dis,vdisp;
+            dynamicPro(leftmat,rightmat,dis,2,100);
+//            freopen("log.txt","w",stdout);
+//            cout<<dis;
+            dis.convertTo(vdisp,CV_8U);
+            normalize(vdisp,vdisp,0,255,CV_MINMAX);
+            imshow("dynamic ",vdisp);
+        }
+    }
+}
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
@@ -518,7 +617,8 @@ int main(int argc, char *argv[])
 //    testBM();
 //    testMine();
 //    testRealTime();
-    testLocal();
+//    testLocal();
+    testDynamic();
     
     return a.exec();
 }
