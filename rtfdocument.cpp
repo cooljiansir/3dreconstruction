@@ -17,6 +17,7 @@ RTFDocument::RTFDocument(){
     this->stereoMatchMethods.push_back(new StereoMatchOpencvSGBM());
     this->stereoMatchMethods.push_back(new StereoMatchOpencvBM());
     this->stereoMatchMethods.push_back(new StereoMatchOpencvVar());
+    this->stereoMatchMethods.push_back(new StereoMatchDynamic());
 }
 RTFDocument::~RTFDocument(){
     for(int i = 0;i<this->stereoMatchMethods.size();i++){

@@ -79,5 +79,20 @@ private:
     int paramCount;
     int param[1];//可调参数
 };
+class StereoMatchDynamic : public StereoMatch{
+public:
+    StereoMatchDynamic();
+    string getKindName();//获取分类的方法名称
+    int getParamCount();//获取算法可调参数个数
+    string getParamName(int index);//获取可调参数名称
+    int getParamValue(int index);//获取可调参数的值
+    int getParamMax(int index);//获取可调参数的最大值
+    int getParamMin(int index);//获取可调参数的最小值
+    void setParamValue(int index,int value);//设置可调参数的值
+    void stereoMatch(Mat &left,Mat &right,Mat &dis);//匹配函数
+
+private:
+    int paramCount;
+};
 
 #endif // STEREOMATCH_H

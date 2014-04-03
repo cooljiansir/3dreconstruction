@@ -6,6 +6,8 @@
 #include "cv.h"
 #include <QDebug>
 
+#define MAXS 100//最大视差
+
 using namespace cv;
 
 StereoMatchOpencvSGBM::StereoMatchOpencvSGBM(){
@@ -77,6 +79,7 @@ void StereoMatchOpencvSGBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
     sgbm.fullDP = true;
 
     sgbm(leftgray,rightgray,dis);
+    dis.convertTo(dis,CV_32F);
 }
 
 
@@ -140,7 +143,7 @@ void StereoMatchOpencvBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
     bm.state->speckleWindowSize = 100;
     bm.state->speckleRange = 32;
     bm.state->disp12MaxDiff = 1;
-    bm(leftgray,rightgray,dis);
+    bm(leftgray,rightgray,dis,CV_32F);
 }
 
 StereoMatchOpencvVar::StereoMatchOpencvVar(){
@@ -202,4 +205,192 @@ void StereoMatchOpencvVar::stereoMatch(Mat &left, Mat &right, Mat &dis){
     var.cycle = var.CYCLE_V;                        // ignored with USE_AUTO_PARAMS
     var.flags = var.USE_SMART_ID | var.USE_AUTO_PARAMS | var.USE_INITIAL_DISPARITY | var.USE_MEDIAN_FILTERING ;
     var(leftgray,rightgray,dis);
+}
+StereoMatchDynamic::StereoMatchDynamic(){
+    //没有可调参数
+    this->paramCount = 0;
+}
+string StereoMatchDynamic::getKindName(){
+    return "dynamic";
+}
+int StereoMatchDynamic::getParamCount(){
+    return this->paramCount;
+}
+string StereoMatchDynamic::getParamName(int index){
+    return "";
+}
+int StereoMatchDynamic::getParamMax(int index){
+    return 0;
+}
+int StereoMatchDynamic::getParamMin(int index){
+    return 0;
+}
+int StereoMatchDynamic::getParamValue(int index){
+    return 0;
+}
+void StereoMatchDynamic::setParamValue(int index, int value){
+
+}
+
+void constant(Mat &disL,Mat &disR,Mat &output){
+    output.create(disL.size(),CV_32F);
+    for(int i = 0;i<disL.rows;i++){
+        for(int j = 0;j<disL.cols;j++){
+            float *p1 = disL.ptr<float>(i,j);
+            float *p2 = disR.ptr<float>(i,j);
+            float *p = output.ptr<float>(i,j);
+            if(fabs((*p1)-(*p2))<=1){
+                *p = *p1;
+            }else *p = -1;
+        }
+    }
+}
+void dynamicPro(Mat &left,Mat &right,Mat &disL,double q,double c0){
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+    disL.create(left.size(),CV_32F);
+    float *ot = (float*)disL.data;
+
+    int cols = left.cols;
+    int rows = left.rows;
+    double *minres = new double[cols*cols];
+    char *stepres = new char[cols*cols];
+
+    double v1,v2,v3;
+    double p1,p2;
+    for(int i = 0;i<rows;i++){
+//        qDebug()<<"开始动归"<<endl;
+        for(int a = 0;a<cols;a++){
+            for(int b = 0;b<cols;b++){
+                p1 = *(leftptr+(i*cols+a)*3)
+                        + *(leftptr+(i*cols+a)*3+1)
+                        + *(leftptr+(i*cols+a)*3+2);
+                p2 = *(rightptr+(i*cols+b)*3)
+                        + *(rightptr+(i*cols+b)*3+1)
+                        + *(rightptr+(i*cols+b)*3+2);
+                p1/=3;
+                p2/=3;
+                v1 = (p1 - p2)*(p1 - p2)/q/q;
+                if(a>0&&b>0)v1 += minres[(a-1)*cols+b-1];
+                v2 = c0;
+                if(b>0)v2 += minres[a*cols+b-1];
+                v3 = c0;
+                if(a>0)v3 += minres[(a-1)*cols+b];
+                if(v1<v2&&a>=b){//加入a>=b约束，即视差不能为负
+                    minres[a*cols+b] = v1;
+                    stepres[a*cols+b] = 1;
+                }else{
+                    minres[a*cols+b] = v2;
+                    stepres[a*cols+b] = 2;
+                }
+                if(v3<minres[a*cols+b]){
+                    minres[a*cols+b] = v3;
+                    stepres[a*cols+b] = 3;
+                }
+            }
+        }
+//        qDebug()<<"动归结束"<<endl;
+        int a = cols-1;
+        int b = cols-1;
+        for(int k = 0;k<cols;k++)
+            ot[i*cols+k] = -1;
+        while(a>=0&&b>=0){
+            if(stepres[a*cols+b]==1){
+                if(a>=b){
+                    ot[i*cols+a] = a - b;
+                    if(a-b>MAXS)
+                        ot[i*cols+a] = -1;
+                }
+                else ot[i*cols+a] = -1;
+                a--;
+                b--;
+            }else if(stepres[a*cols+b]==2){
+                b--;
+            }else{
+                ot[i*cols+a] = -1;
+                a--;
+            }
+        }
+        //qDebug()<<"完成"<<i+1<<"/"<<rows<<"\r";
+    }
+    delete []minres;
+    delete []stepres;
+}
+//从右往左动态规划
+void dynamicProR(Mat &left,Mat &right,Mat &dis,double q,double c0){
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+    dis.create(left.size(),CV_32F);
+    float *ot = (float*)dis.data;
+
+    int rows = left.rows;
+    int cols = left.cols;
+
+    double *minres = new double[cols*cols];
+    char *stepres = new char[cols*cols];
+
+    double v1,v2,v3;
+    double p1,p2;
+
+    for(int i = 0;i<rows;i++){
+        for(int a = cols-1;a>=0;a--){
+            for(int b = cols-1;b>=0;b--){
+                p1 = *(leftptr+(i*cols+a)*3)
+                        + *(leftptr+(i*cols+a)*3+1)
+                        + *(leftptr+(i*cols+a)*3+2);
+                p2 = *(rightptr+(i*cols+b)*3)
+                        + *(rightptr+(i*cols+b)*3+1)
+                        + *(rightptr+(i*cols+b)*3+2);
+                p1/=3;
+                p2/=3;
+                v1 = (p1 - p2)*(p1 - p2)/q/q;
+                if(a<cols-1&&b<cols-1)
+                    v1 += minres[(a+1)*cols+b+1];
+                v2 = c0;
+                if(b<cols-1)
+                    v2 += minres[a*cols+b+1];
+                v3 = c0;
+                if(a<cols-1)
+                    v3 += minres[(a+1)*cols+b];
+                if(v1<v2&&a>=b){//加入a>=b约束，即视差不能为负
+                    minres[a*cols+b] = v1;
+                    stepres[a*cols+b] = 1;
+                }else{
+                    minres[a*cols+b] = v2;
+                    stepres[a*cols+b] = 2;
+                }
+                if(v3<minres[a*cols+b]){
+                    minres[a*cols+b] = v3;
+                    stepres[a*cols+b] = 3;
+                }
+            }
+        }
+        int a = 0,b = 0;
+        while(a<cols&&b<cols){
+            if(stepres[a*cols+b]==1){
+                if(a>=b){
+                    ot[i*cols+a] = a - b;
+                    if(a-b>=MAXS)ot[i*cols+a] = -1;
+                }
+                else ot[i*cols+a] = -1;
+                a++;
+                b++;
+            }else if(stepres[a*cols+b]==2){
+                b++;
+            }else{
+                ot[i*cols+a] = -1;
+                a++;
+            }
+        }
+    }
+
+    delete []minres;
+    delete []stepres;
+}
+void StereoMatchDynamic::stereoMatch(Mat &left, Mat &right, Mat &dis){
+    Mat disL,disR;
+    dynamicPro(left,right,disL,4,20);
+    dynamicProR(left,right,disR,4,20);
+
+    constant(disL,disR,dis);
 }
