@@ -182,11 +182,11 @@ void StereoMatchOpencvVar::setParamValue(int index, int value){
     this->param[index] = value;
 }
 void StereoMatchOpencvVar::stereoMatch(Mat &left, Mat &right, Mat &dis){
-    Mat leftgray,rightgray;
-    leftgray.create(left.size(),CV_8UC1);
-    rightgray.create(right.size(),CV_8UC1);
-    cvtColor(left,leftgray,CV_BGR2GRAY);
-    cvtColor(right,rightgray,CV_BGR2GRAY);
+//    Mat leftgray,rightgray;
+//    leftgray.create(left.size(),CV_8UC1);
+//    rightgray.create(right.size(),CV_8UC1);
+//    cvtColor(left,leftgray,CV_BGR2GRAY);
+//    cvtColor(right,rightgray,CV_BGR2GRAY);
 
     int numberOfDisparities = this->param[0];
 
@@ -203,9 +203,8 @@ void StereoMatchOpencvVar::stereoMatch(Mat &left, Mat &right, Mat &dis){
     var.penalization = var.PENALIZATION_TICHONOV;   // ignored with USE_AUTO_PARAMS
     var.cycle = var.CYCLE_V;                        // ignored with USE_AUTO_PARAMS
     var.flags = var.USE_SMART_ID | var.USE_AUTO_PARAMS | var.USE_INITIAL_DISPARITY | var.USE_MEDIAN_FILTERING ;
-    var(leftgray,rightgray,dis);
+    var(left,right,dis);
 }
-
 
 /*
  *
