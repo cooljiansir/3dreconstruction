@@ -101,6 +101,8 @@ private:
     bool opened;
     //极线矫正、左右图像
     Mat polar_left,polar_right;
+
+    bool polar_changed;//重建图片是否改变
     bool polar_finished;
     Mat dispMat;//差视图
     bool disOk;//

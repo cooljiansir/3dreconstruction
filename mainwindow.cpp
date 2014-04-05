@@ -510,8 +510,10 @@ void MainWindow::on_savePolarBut_clicked()
 void MainWindow::on_actionStereoMatch_triggered()
 {
     this->ui->stackedWidget->setCurrentIndex(4);
-
-    on_stereoMatchLoadBut_clicked();
+    if(this->polar_changed){
+        on_stereoMatchLoadBut_clicked();
+        this->polar_changed = false;
+    }
 }
 
 void MainWindow::on_stereoMatchLoadBut_clicked()
@@ -610,6 +612,7 @@ void MainWindow::on_polar_Open_clicked()
             Mat unitedr = united(Rect(leftmat_.cols,0,rightmat_.cols,united.rows));
             leftmat_.copyTo(unitedl);
             rightmat_.copyTo(unitedr);
+            this->polar_changed = true;
             for(int i = 0;i<10;i++){
                 int temp = united.rows*i/10;
                 if(temp>=united.rows)temp = united.rows;
