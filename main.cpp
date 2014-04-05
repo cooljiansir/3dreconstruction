@@ -11,7 +11,7 @@
 using namespace cv;
 using namespace std;
 
-#define MAXS 30 //最大搜索视差
+#define MAXS 100 //最大搜索视差
 
 
 void testBM(){
@@ -51,13 +51,15 @@ void testBM(){
             bm.state->disp12MaxDiff = 1;
 
             Mat disp,vdisp;
+            clock_t t = clock();
             bm(leftgray,rightgray,disp,CV_32F);
+            qDebug()<<"use time"<<clock()-t<<"ms"<<endl;
             disp.convertTo(vdisp, CV_8U);//, 255/(32*16.));
             normalize(vdisp,vdisp,0,255,CV_MINMAX);
             imshow("dis",vdisp);
-            freopen("log.txt","w",stdout);
+//            freopen("log.txt","w",stdout);
             //imwrite("vdisp.png",vdisp);
-            cout<<disp;
+            //cout<<disp;
         }
     }
 }
@@ -457,6 +459,34 @@ void getConf(Mat &left,Mat &right,Mat &disL,Mat &disR,Mat &conf,double cf,int si
     }
 }
 void constant(Mat &disL,Mat &disR,Mat &output){
+    if(disR.size()!=disL.size())
+        return;
+    output.create(disL.size(),CV_32F);
+    float *disLptr = (float*)disL.data;
+    float *disRptr = (float*)disR.data;
+    float *ot = (float*)output.data;
+    int rows = disL.rows;
+    int cols = disL.cols;
+
+    for(int i = 0;i<rows;i++){
+        for(int j = 0;j<cols;j++){
+            int p1 = *(disLptr + i*cols+j);
+            int r2 = j - p1;
+            if(r2>=0&&r2<cols){
+                int p2 = *(disRptr+i*cols+r2);
+                if(fabs(p1-p2)<=1)
+                    *(ot+i*cols+j) = p1;
+                else *(ot+i*cols+j) = -1;
+            }else{
+                *(ot+i*cols+j) = -1;
+            }
+        }
+    }
+}
+void constant2(Mat &disL, Mat &disR, Mat &output){
+    if(disL.size()!=disR.size()){
+        return;
+    }
     output.create(disL.size(),CV_32F);
     for(int i = 0;i<disL.rows;i++){
         for(int j = 0;j<disL.cols;j++){
@@ -671,30 +701,33 @@ void testDynamic(){
             Mat rightmat = imread(rightfilename.toUtf8().data());
 
             Mat disL,disR;
-            dynamicPro(leftmat,rightmat,disL,2,2);
-            dynamicProR(leftmat,rightmat,disR,2,2);
+            dynamicPro(leftmat,rightmat,disL,5,20);
+            dynamicProR(leftmat,rightmat,disR,5,20);
 
             Mat unit,vdisp;
-            constant(disL,disR,unit);
+            constant2(disL,disR,unit);
 //            freopen("log.txt","w",stdout);
-//            cout<<dis;
+//            cout<<unit;
             unit.convertTo(vdisp,CV_8U);
             normalize(vdisp,vdisp,0,255,CV_MINMAX);
             imshow("dynamic ",vdisp);
         }
     }
 }
+
+/*
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 //    MainWindow w;
 //    w.show();
     //cvNamedWindow("test");
-//    testBM();
+    testBM();
 //    testMine();
 //    testRealTime();
 //    testLocal();
-    testDynamic();
+//    testDynamic();
     
     return a.exec();
 }
+*/

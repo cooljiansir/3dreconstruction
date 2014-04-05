@@ -15,7 +15,8 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp \
     clicklabel.cpp \
-    uti.cpp
+    uti.cpp \
+    bm.cpp
 
 HEADERS  += mainwindow.h \
     clicklabel.h \
