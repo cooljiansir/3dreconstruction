@@ -445,6 +445,7 @@ void StereoMatchBM::setParamValue(int index, int value){
     }
     this->param[index] = value;
 }
+/*
 void StereoMatchBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
     if(left.size()!=right.size())
         return;
@@ -575,4 +576,133 @@ void StereoMatchBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
     delete []aline;
     delete []tempcost;
     delete []tempcost2;
+}
+*/
+void StereoMatchBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
+    if(left.size()!=right.size())
+        return;
+    int winsize = this->param[0]/2;
+    int maxdis = this->param[1];
+    Size size = left.size();
+    dis.create(size,CV_32F);
+
+
+    //left and right consistence needs
+    int *cost2 = new int[size.width]; //mmin cost of a line
+    int *disint = new int[size.width];       //dis of a line integer
+    int *disint2 = new int[size.width];      //dis2 of a line integer
+
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+    float *disptr = (float*)dis.data;
+
+    double *aline = new double[size.width*maxdis];
+    double *tempcost = new double[maxdis];//left disparity
+
+    clock_t t1 = clock();
+    //initial the border
+    //up and bottom
+    for(int j = 0;j<size.width;j++){
+        for(int i = 0;i<winsize;i++)
+            disptr[i*size.width+j] = -1;
+        for(int i = size.height-winsize;i<size.height;i++)
+            disptr[i*size.width+j] = -1;
+    }
+    //left and right
+    for(int i = 0;i<size.height;i++){
+        for(int j = 0;j<winsize;j++)
+            disptr[i*size.width+j] = -1;
+        for(int j = size.width-winsize;j<size.width;j++)
+            disptr[i*size.width+    j] = -1;
+    }
+    qDebug()<<"use time 1 "<<clock() - t1<<"ms"<<endl;
+    t1 = clock();
+    //initial aline
+    for(int j = 0;j<size.width;j++){
+        unsigned char *p1 = leftptr + j*3;
+        for(int d = 0;d<maxdis&&d<=j;d++){
+            double te = 0;
+            unsigned char *p2 = rightptr + (j-d)*3;
+            for(int i = 0;i<winsize*2+1;i++){
+                unsigned char *p1_ = p1+3*i*size.width;
+                unsigned char *p2_ = p2+3*i*size.width;
+                te += fabs(p1_[0] - p2_[0]);
+                te += fabs(p1_[1] - p2_[1]);
+                te += fabs(p1_[2] - p2_[2]);
+            }
+            aline[j*maxdis+d] = te;
+        }
+    }
+    qDebug()<<"use time 2 "<<clock() - t1<<"ms"<<endl;
+    t1 = clock();
+    for(int i = winsize;i+winsize<size.height;i++){
+
+        for(int j = winsize;j+winsize<size.width;j++)
+            cost2[j] = -1;
+
+        //calculate left disparity
+        for(int j = winsize;j+winsize<size.width;j++){
+            int mmind = 0;
+            double *sub = aline+(j-winsize-1)*maxdis;
+            double *sub_ = aline+(j+winsize)*maxdis;
+            for(int d = 0;d<maxdis&&d+winsize<=j;d++){
+                if(j-d-winsize>0){//pre has valide value
+                    //tempcost[d] = tempcost[d] - aline[(j-winsize-1)*maxdis+d] + aline[(j+winsize)*maxdis+d];
+                    tempcost[d] = tempcost[d] - sub[d] + sub_[d];
+                }else{//
+                    tempcost[d] = 0;
+                    for(int k = j - winsize;k<=j+winsize;k++)
+                        tempcost[d] += aline[k*maxdis+d];
+                }
+                if(tempcost[d]<tempcost[mmind])
+                    mmind = d;
+            }
+
+            double te = mmind;
+
+            disint[j] = mmind;
+            if(cost2[j-mmind]==-1||tempcost[mmind]<cost2[j-mmind]){
+                disint2[j-mmind] = mmind;
+                cost2[j-mmind] = tempcost[mmind];
+            }
+
+            //interpolation
+            //见 “三维重建中立体匹配算法的研究” P21
+            if(mmind>0&&mmind<maxdis-1&&mmind+winsize<j){
+                double tem = 2*tempcost[mmind - 1]  + 2*tempcost[mmind+1] - 4*tempcost[mmind];
+                if(tem>0.001)te = te +(tempcost[mmind - 1]  - tempcost[mmind+1])/tem;
+            }
+            disptr[i*size.width+j] = te;
+        }
+
+        //left and right consistence
+        for(int j = winsize;j+winsize<size.width;j++){
+            int d = disint[j];
+            if(fabs(disint2[j-d]-d)>1)
+                disptr[i*size.width+j] = -1;
+        }
+
+        if(i+winsize+1==size.height)
+            break;
+        int tempd = (2*winsize+1)*size.width*3;
+        for(int j = 0;j<size.width;j++){
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                unsigned char *p1 = leftptr + ((i-winsize) * size.width + j)*3;
+                unsigned char *p2 = rightptr + ((i-winsize) * size.width + j- d)*3;
+                double te = - fabs(p1[0]-p2[0]) - fabs(p1[1]-p2[1]) - fabs(p1[2]-p2[2]);
+                p1 += tempd;
+                p2 += tempd;
+                te += fabs(p1[0]-p2[0]) + fabs(p1[1]-p2[1]) + fabs(p1[2]-p2[2]);
+                aline[j*maxdis+d] += te;
+            }
+        }
+    }
+    qDebug()<<"use time 3 "<<clock() - t1<<"ms"<<endl;
+    t1 = clock();
+
+    delete []aline;
+    delete []tempcost;
+    delete []cost2;
+    delete []disint;
+    delete []disint2;
 }
