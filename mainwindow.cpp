@@ -703,32 +703,32 @@ void MainWindow::on_reproject_SubBut_clicked()
 
 void MainWindow::on_reproject_XAdd_clicked()
 {
-    ui->glWidget->translateBy(5,0,0);
+    ui->glWidget->translateBy(50,0,0);
 }
 
 void MainWindow::on_reproject_XSub_clicked()
 {
-    ui->glWidget->translateBy(-5,0,0);
+    ui->glWidget->translateBy(-50,0,0);
 }
 
 void MainWindow::on_reproject_YSub_clicked()
 {
-    ui->glWidget->translateBy(0,-5,0);
+    ui->glWidget->translateBy(0,-50,0);
 }
 
 void MainWindow::on_reproject_YAdd_clicked()
 {
-    ui->glWidget->translateBy(0,5,0);
+    ui->glWidget->translateBy(0,50,0);
 }
 
 void MainWindow::on_reproject_ZSub_clicked()
 {
-    ui->glWidget->translateBy(0,0,-5);
+    ui->glWidget->translateBy(0,0,-50);
 }
 
 void MainWindow::on_reproject_ZAdd_clicked()
 {
-    ui->glWidget->translateBy(0,0,5);
+    ui->glWidget->translateBy(0,0,50);
 }
 void MainWindow::on_stereoMatchRadio_clicked(){
     int kind = -1;

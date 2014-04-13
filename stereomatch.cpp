@@ -78,7 +78,15 @@ void StereoMatchOpencvSGBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
     sgbm.disp12MaxDiff = 1;
     sgbm.fullDP = true;
 
-    sgbm(leftgray,rightgray,dis);
+    Mat dis1;
+    Size size = leftgray.size();
+    sgbm(leftgray,rightgray,dis1);
+    dis.create(size,CV_32F);
+    float *disptr = (float*)dis.data;
+    for(int i = 0;i<size.height;i++)
+        for(int j = 0;j<size.width;j++){
+            *(disptr+i*size.width+j) = *dis1.ptr<short int>(i,j)/16.0;
+        }
 }
 
 
@@ -578,6 +586,74 @@ void StereoMatchBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
     delete []tempcost2;
 }
 */
+void connectedArea(Mat &dis,float maxDiff,int maxSize){
+    Size size = dis.size();
+    float *disptr = (float*)dis.data;
+
+    int *stackx = new int[size.height*size.width];
+    int *stacky = new int[size.height*size.width];
+    int *label  = new int[size.height*size.width];
+    int *labelArea =  new int[size.height*size.width];
+
+    int labelc = 1;
+    int stackindex;
+
+    for(int i = 0;i<size.height;i++){
+        int *label_ = label+i*size.width;
+        int *labelArea_ = labelArea+i*size.width;
+        for(int j = 0;j<size.width;j++){
+            label_[j] = labelArea_[j] = -1;
+        }
+    }
+
+    for(int i = 0;i<size.height;i++){
+        float *disptr_ = disptr + i*size.width;
+        int *label_ = label + i*size.width;
+        for(int j = 0;j<size.width;j++){
+            if(disptr_[j]>=0){
+                if(label_[j]!=-1){
+                    if(labelArea[label_[j]]!=-1&&labelArea[label_[j]]<maxSize)
+                        disptr_[j] = -1;
+                }else{
+                    stackindex = 1;
+                    stackx[0] = j;
+                    stacky[0] = i;
+                    int counta = 0;
+                    while(stackindex>0){
+                        stackindex--;
+                        counta++;
+                        int x = stackx[stackindex];
+                        int y = stacky[stackindex];
+                        label[y*size.width+x] = labelc;
+                        int dx[]={-1,1,0,0};
+                        int dy[]={0,0,-1,1};
+                        for(int k =0;k<4;k++){
+                            int x_ = x+dx[k];
+                            int y_ = y+dy[k];
+                            int tempd = y_*size.width+x_;
+                            if(x_>=0&&x_<size.width&&y_>=0&&y_<size.height
+                                    &&label[tempd]==-1
+                                    &&disptr[tempd]>=0
+                                    &&fabs(disptr[tempd]-disptr[y*size.width+x])<=maxDiff){
+                                stackx[stackindex] = x_;
+                                stacky[stackindex] = y_;
+                                stackindex++;
+                            }
+                        }
+                    }
+                    labelArea[labelc++] = counta;
+                    if(counta<maxSize){
+                        disptr_[j] =  -1;
+                    }
+                }
+            }
+        }
+    }
+    delete []stackx;
+    delete []stacky;
+    delete []label;
+    delete []labelArea;
+}
 void StereoMatchBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
     if(left.size()!=right.size())
         return;
@@ -697,6 +773,7 @@ void StereoMatchBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
             }
         }
     }
+    connectedArea(dis,32,200);
     qDebug()<<"use time 3 "<<clock() - t1<<"ms"<<endl;
     t1 = clock();
 
