@@ -10,6 +10,8 @@
 
 using namespace cv;
 
+void connectedArea(Mat &dis,float maxDiff,int maxSize);
+
 StereoMatchOpencvSGBM::StereoMatchOpencvSGBM(){
     this->paramCount = 3;
     this->param[0] = 11;
@@ -453,7 +455,7 @@ void StereoMatchBM::setParamValue(int index, int value){
     }
     this->param[index] = value;
 }
-/*
+///*
 void StereoMatchBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
     if(left.size()!=right.size())
         return;
@@ -579,13 +581,14 @@ void StereoMatchBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
             }
         }
     }
+    connectedArea(dis,32,100);
     qDebug()<<"use time 3 "<<clock() - t1<<"ms"<<endl;
     t1 = clock();
     delete []aline;
     delete []tempcost;
     delete []tempcost2;
 }
-*/
+//*/
 void connectedArea(Mat &dis,float maxDiff,int maxSize){
     Size size = dis.size();
     float *disptr = (float*)dis.data;
@@ -654,6 +657,7 @@ void connectedArea(Mat &dis,float maxDiff,int maxSize){
     delete []label;
     delete []labelArea;
 }
+/*
 void StereoMatchBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
     if(left.size()!=right.size())
         return;
@@ -782,4 +786,170 @@ void StereoMatchBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
     delete []cost2;
     delete []disint;
     delete []disint2;
+}
+*/
+
+StereoMatchSGBM_DP::StereoMatchSGBM_DP(){
+    this->paramCount = 5;
+    this->param[0] = 11;
+    this->param[1] = 6*16;
+    this->param[2] = 0;
+    this->param[3] = 5;
+    this->param[4] = 20;
+}
+
+string StereoMatchSGBM_DP::getKindName(){
+    return "SGBM_DP";
+}
+int StereoMatchSGBM_DP::getParamCount(){
+    return this->paramCount;
+}
+string StereoMatchSGBM_DP::getParamName(int index){
+    char name[5][100] = {"SADwinSize","ndisparities","mindisparity","q","c0"};
+    return name[index];
+}
+int StereoMatchSGBM_DP::getParamMax(int index){
+    int mmax[5]={41,16*25,40,10,50};
+    return mmax[index];
+}
+int StereoMatchSGBM_DP::getParamMin(int index){
+    int mmin[5]={3,16,0,1,1};
+    return mmin[index];
+}
+int StereoMatchSGBM_DP::getParamValue(int index){
+    return this->param[index];
+}
+void StereoMatchSGBM_DP::setParamValue(int index, int value){
+    if(index>=this->paramCount)return;
+    if(index==0){//参数矫正
+        if((value&1)==0)value+=1;//若是偶数变为奇数
+    }else if(index==1){
+        if(value%16!=0)
+            value = (value/16)*16;
+    }else if(index==2){
+
+    }
+    this->param[index] = value;
+}
+void StereoMatchSGBM_DP::stereoMatch(Mat &leftmat, Mat &rightmat, Mat &dis){
+
+    if(leftmat.size()!=rightmat.size())
+        return ;
+    double q = this->param[3];
+    double c0 = this->param[4];
+
+    Size size = leftmat.size();
+    //use sgbm algorithm for inital
+    Mat leftgray,rightgray;
+    leftgray.create(leftmat.size(),CV_8UC1);
+    rightgray.create(rightmat.size(),CV_8UC1);
+    cvtColor(leftmat,leftgray,CV_BGR2GRAY);
+    cvtColor(rightmat,rightgray,CV_BGR2GRAY);
+
+    int SADWindowSize = this->param[0];
+    int numberOfDisparities = this->param[1];
+    int minDisparity = this->param[2];
+    StereoSGBM sgbm;
+    sgbm.preFilterCap = 63;
+    sgbm.SADWindowSize = SADWindowSize > 0 ? SADWindowSize : 3;
+
+    int cn = 1;//leftgray.channels();
+
+    sgbm.P1 = 8*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
+    sgbm.P2 = 32*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
+    sgbm.minDisparity = minDisparity;
+    sgbm.numberOfDisparities = numberOfDisparities;
+    sgbm.uniquenessRatio = 10;
+    sgbm.speckleWindowSize = 100;
+    sgbm.speckleRange = 32;
+    sgbm.disp12MaxDiff = 1;
+    sgbm.fullDP = true;
+
+    Mat disp;
+
+    sgbm(leftgray,rightgray,disp);
+
+    dis.create(size,CV_32F);
+    float *otptr = (float*)dis.data;
+    for(int i = 0;i<size.height;i++){
+        for(int j = 0;j<size.width;j++){
+            otptr[i*size.width+j] = *disp.ptr<short int>(i,j)/16.0;
+        }
+    }
+
+    short int *disptr_ = (short int*)disp.data;
+    unsigned char *leftptr_ = leftgray.data;
+    unsigned char *rightptr_ = rightgray.data;
+
+
+    float *penalize = new float[size.width*size.width];
+    char *steps = new char[size.width*size.width];
+
+    otptr = (float *)dis.data;
+    for(int i = 0;i<size.height;i++){
+        disptr_ += size.width;
+        leftptr_ += size.width;
+        rightptr_ += size.width;
+        otptr += size.width;
+        for(int j = 0;j<size.width;j++){
+            int d = -1;
+            if(disptr_[j]>0){
+                d = disptr_[j]/16;
+                penalize[j*size.width+d] = 0;
+            }
+            for(int k = 0;k<size.width;k++){
+                if(d==-1||k!=j-d){
+                    float a1 = (leftptr_[j] - rightptr_[k])*(leftptr_[j] - rightptr_[k])/q/q;
+                    if(j>0&&k>0)a1 += penalize[(j-1)*size.width+k-1];
+
+                    float a2 = c0;
+                    if(k>0)a2 += penalize[j*size.width+k-1];
+
+                    float a3 = c0;
+                    if(j>0)a3 += penalize[(j-1)*size.width+k];
+
+                    if(a1<a2){
+                        if(a3<a1){
+                            steps[j*size.width+k] = 3;
+                            penalize[j*size.width+k] = a3;
+                        }else{
+                            steps[j*size.width+k] = 1;
+                            penalize[j*size.width+k] = a1;
+                        }
+                    }else{
+                        if(a3<a2){
+                            steps[j*size.width+k] = 3;
+                            penalize[j*size.width+k] = a3;
+                        }else{
+                            steps[j*size.width+k] = 2;
+                            penalize[j*size.width+k] = a2;
+                        }
+                    }
+                }
+            }
+        }
+        {
+            int a1=size.width-1,a2=size.width-1;
+            while(a1>=0&&a2>=0){
+                if(disptr_[a1]>0){
+                    int d = disptr_[a1]/16;
+                    a1--;
+                    a2 = a1 - d - 1;
+                }else{
+                    if(steps[a1*size.width+a2]==1){
+                        otptr[a1] = a1 - a2;
+                        a1--;
+                        a2--;
+                    }else if(steps[a1*size.width+a2]==2){
+                        a2--;
+                    }else{
+                        a1--;
+                    }
+                }
+            }
+        }
+    }
+    connectedArea(dis,32,200);
+    delete []penalize;
+    delete []steps;
 }

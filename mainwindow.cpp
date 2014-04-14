@@ -643,8 +643,6 @@ void MainWindow::loadStereoParam(int k){
         ui->slider0->setMinimum(st->getParamMin(0));
         ui->slider0->setMaximum(st->getParamMax(0));
         ui->slider0->setValue(st->getParamValue(0));
-        qDebug()<<"set slider"<<st->getParamValue(0)<<endl;
-        qDebug()<<"get slider"<<ui->slider0->value()<<endl;
 
         ui->sliderLabel0v->setText(QString::number(st->getParamValue(0)));
     }
@@ -653,9 +651,9 @@ void MainWindow::loadStereoParam(int k){
     this->ui->sliderLabel1v->setVisible(kind>1);
     if(kind>1){
         ui->sliderLabel1->setText(QString::fromStdString(st->getParamName(1)));
-        ui->slider1->setValue(st->getParamValue(1));
         ui->slider1->setMinimum(st->getParamMin(1));
         ui->slider1->setMaximum(st->getParamMax(1));
+        ui->slider1->setValue(st->getParamValue(1));
         ui->sliderLabel1v->setText(QString::number(st->getParamValue(1)));
     }
 
@@ -664,19 +662,33 @@ void MainWindow::loadStereoParam(int k){
     this->ui->sliderLabel2v->setVisible(kind>2);
     if(kind>2){
         ui->sliderLabel2->setText(QString::fromStdString(st->getParamName(2)));
-        ui->slider2->setValue(st->getParamValue(2));
         ui->slider2->setMinimum(st->getParamMin(2));
         ui->slider2->setMaximum(st->getParamMax(2));
+        ui->slider2->setValue(st->getParamValue(2));
         ui->sliderLabel2v->setText(QString::number(st->getParamValue(2)));
     }
 
     this->ui->sliderLabel3->setVisible(kind>3);
     this->ui->slider3->setVisible(kind>3);
     this->ui->sliderLabel3v->setVisible(kind>3);
+    if(kind>3){
+        ui->sliderLabel3->setText(QString::fromStdString(st->getParamName(3)));
+        ui->slider3->setValue(st->getParamValue(3));
+        ui->slider3->setMaximum(st->getParamMax(3));
+        ui->slider3->setMinimum(st->getParamMin(3));
+        ui->sliderLabel3v->setText(QString::number(st->getParamValue(3)));
+    }
 
     this->ui->sliderLabel4->setVisible(kind>4);
     this->ui->slider4->setVisible(kind>4);
     this->ui->sliderLabel4v->setVisible(kind>4);
+    if(kind>4){
+        ui->sliderLabel4->setText(QString::fromStdString(st->getParamName(4)));
+        ui->slider4->setValue(st->getParamValue(4));
+        ui->slider4->setMaximum(st->getParamMax(4));
+        ui->slider4->setMinimum(st->getParamMin(4));
+        ui->sliderLabel4v->setText(QString::number(st->getParamValue(4)));
+    }
 
     this->ui->sliderLabel5->setVisible(kind>5);
     this->ui->slider5->setVisible(kind>5);
