@@ -648,6 +648,7 @@ void dynamicProR(Mat &left,Mat &right,Mat &dis,double q,double c0){
                 v3 = c0;
                 if(a<cols-1)
                     v3 += minres[(a+1)*cols+b];
+
                 if(v1<v2&&a>=b){//加入a>=b约束，即视差不能为负
                     minres[a*cols+b] = v1;
                     stepres[a*cols+b] = 1;
@@ -715,19 +716,279 @@ void testDynamic(){
     }
 }
 
-/*
+void improve_DP(Mat &leftmat,Mat &rightmat,Mat &dis,double q,double c0){
+
+    if(leftmat.size()!=rightmat.size())
+        return ;
+    Size size = leftmat.size();
+    //use sgbm algorithm for inital
+    Mat leftgray,rightgray;
+    leftgray.create(leftmat.size(),CV_8UC1);
+    rightgray.create(rightmat.size(),CV_8UC1);
+    cvtColor(leftmat,leftgray,CV_BGR2GRAY);
+    cvtColor(rightmat,rightgray,CV_BGR2GRAY);
+
+    int SADWindowSize = 7;
+    int numberOfDisparities = 16*6;
+    StereoSGBM sgbm;
+    sgbm.preFilterCap = 63;
+    sgbm.SADWindowSize = SADWindowSize > 0 ? SADWindowSize : 3;
+
+    int cn = 1;//leftgray.channels();
+
+    sgbm.P1 = 8*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
+    sgbm.P2 = 32*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
+    sgbm.minDisparity = 0;
+    sgbm.numberOfDisparities = numberOfDisparities;
+    sgbm.uniquenessRatio = 10;
+    sgbm.speckleWindowSize = 100;
+    sgbm.speckleRange = 32;
+    sgbm.disp12MaxDiff = 1;
+    sgbm.fullDP = true;
+
+    Mat disp;
+
+    sgbm(leftgray,rightgray,disp);
+
+    dis.create(size,CV_32F);
+    float *otptr = (float*)dis.data;
+    for(int i = 0;i<size.height;i++){
+        for(int j = 0;j<size.width;j++){
+            otptr[i*size.width+j] = *disp.ptr<short int>(i,j)/16.0;
+        }
+    }
+
+//    return ;
+
+    short int *disptr_ = (short int*)disp.data;
+    unsigned char *leftptr_ = leftgray.data;
+    unsigned char *rightptr_ = rightgray.data;
+
+
+    float *penalize = new float[size.width*size.width];
+    char *steps = new char[size.width*size.width];
+
+    otptr = (float *)dis.data;
+    for(int i = 0;i<size.height;i++){
+        disptr_ += size.width;
+        leftptr_ += size.width;
+        rightptr_ += size.width;
+        otptr += size.width;
+        for(int j = 0;j<size.width;j++){
+            int d = -1;
+            if(disptr_[j]>0){
+                d = disptr_[j]/16;
+                penalize[j*size.width+d] = 0;
+            }
+            for(int k = 0;k<size.width;k++){
+                if(d==-1||k!=j-d){
+                    float a1 = (leftptr_[j] - rightptr_[k])*(leftptr_[j] - rightptr_[k])/q/q;
+                    if(j>0&&k>0)a1 += penalize[(j-1)*size.width+k-1];
+
+                    float a2 = c0;
+                    if(k>0)a2 += penalize[j*size.width+k-1];
+
+                    float a3 = c0;
+                    if(j>0)a3 += penalize[(j-1)*size.width+k];
+
+                    if(a1<a2){
+                        if(a3<a1){
+                            steps[j*size.width+k] = 3;
+                            penalize[j*size.width+k] = a3;
+                        }else{
+                            steps[j*size.width+k] = 1;
+                            penalize[j*size.width+k] = a1;
+                        }
+                    }else{
+                        if(a3<a2){
+                            steps[j*size.width+k] = 3;
+                            penalize[j*size.width+k] = a3;
+                        }else{
+                            steps[j*size.width+k] = 2;
+                            penalize[j*size.width+k] = a2;
+                        }
+                    }
+                }
+            }
+        }
+        {
+            int a1=size.width-1,a2=size.width-1;
+            while(a1>=0&&a2>=0){
+                if(disptr_[a1]>0){
+                    int d = disptr_[a1]/16;
+                    a1--;
+                    a2 = a1 - d - 1;
+                }else{
+                    if(steps[a1*size.width+a2]==1){
+                        otptr[a1] = a1 - a2;
+                        a1--;
+                        a2--;
+                    }else if(steps[a1*size.width+a2]==2){
+                        a2--;
+                    }else{
+                        a1--;
+                    }
+                }
+            }
+        }
+    }
+
+    delete []penalize;
+    delete []steps;
+}
+
+void test_dp(){
+    QString leftfilename = QFileDialog::getOpenFileName(
+       0,
+       "Binocular Calibration - Open Left Image",
+       NULL,
+       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if (!leftfilename.isNull()) { //用户选择了左图文件
+        QString rightfilename = QFileDialog::getOpenFileName(
+           0,
+           "Binocular Calibration - Open Right Image",
+           NULL,
+           "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+        if (!rightfilename.isNull()) { //用户选择了左图文件
+            Mat leftmat = imread(leftfilename.toUtf8().data());
+            Mat rightmat = imread(rightfilename.toUtf8().data());
+
+            Mat dis,vdisp;
+            improve_DP(leftmat,rightmat,dis,5,20);
+
+            dis.convertTo(vdisp,CV_8U);
+            normalize(vdisp,vdisp,0,255,CV_MINMAX);
+            imshow("dynamic ",vdisp);
+        }
+    }
+}
+
+void stereoSemi(Mat &leftmat,Mat &rightmat,Mat &dis,double p1,double p2,int maxdis){
+    if(leftmat.size()!=rightmat.size())
+        return ;
+    Size size = leftmat.size();
+    //use sgbm algorithm for inital
+    Mat leftgray,rightgray;
+    leftgray.create(leftmat.size(),CV_8UC1);
+    rightgray.create(rightmat.size(),CV_8UC1);
+    cvtColor(leftmat,leftgray,CV_BGR2GRAY);
+    cvtColor(rightmat,rightgray,CV_BGR2GRAY);
+
+
+    dis.create(size,CV_32F);
+    float *disptr = (float*)dis.data;
+    unsigned char *leftptr  = leftgray.data;
+    unsigned char *rightptr = rightgray.data;
+
+    double *Lbuff = new double[size.width*maxdis];
+    int rank[3];//the smallest 3 of L(x-1,i)
+
+    for(int i = 0;i<size.height;i++){
+        unsigned char *leftptri = leftptr+i*size.width;
+        unsigned char *rightptri = rightptr+i*size.width;
+        float *disptri = disptr + i*size.width;
+        for(int j = 0;j<size.width;j++){
+            unsigned char *leftptrij = leftptri+j;
+            unsigned char *rightptrij = rightptri + j;
+            double *Lbuffj = Lbuff + j*maxdis;
+            double *Lbuffj_1 = j>0?Lbuffj - maxdis:0;
+            for(int d = 0;d<maxdis;d++)
+                Lbuffj[d] = -1;
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                Lbuffj[d] = (*leftptrij - rightptrij[-d])*(*leftptrij - rightptrij[-d]);
+                double mmin = -1;
+                if(j>d)
+                    mmin = Lbuffj_1[d];
+                if(d>0&&(mmin<0||Lbuffj_1[d-1]+p1<mmin))
+                    mmin = Lbuffj_1[d-1]+p1;
+                if(j>d+1&&(mmin<0||Lbuffj_1[d+1]+p1<mmin))
+                    mmin = Lbuffj_1[d+1]+p1;
+                if(j>0){
+                    if(rank[0]!=-1){
+                        if(rank[0]==d-1||rank[0]==d+1){
+                            if(rank[1]!=-1){
+                                if(rank[1]==d-1||rank[1]==d+1){
+                                    if(rank[2]!=-1)
+                                        if(mmin<0||Lbuffj_1[rank[2]]+p2<mmin)
+                                            mmin = Lbuffj_1[rank[2]]+p2;
+                                }else{
+                                    if(mmin<0||Lbuffj_1[rank[1]]+p2<mmin)
+                                        mmin = Lbuffj_1[rank[1]]+p2;
+                                }
+                            }
+                        }else{
+                            if(mmin<0||Lbuffj_1[rank[0]]+p2<mmin)
+                                mmin = Lbuffj_1[rank[0]]+p2;
+                        }
+                    }
+                }
+                if(mmin>0)Lbuffj[d] += mmin;
+            }
+            int rankmin = -1;
+            for(int k = 0;k<maxdis;k++)
+                if(Lbuffj[k]>0&&(rankmin==-1||Lbuffj[k]<Lbuffj[rankmin]))
+                    rankmin = k;
+            rank[0] = rankmin;
+            rankmin = -1;
+            for(int k = 0;k<maxdis;k++)
+                if(Lbuffj[k]>0&&(rankmin==-1||Lbuffj[k]<Lbuffj[rankmin])&&k!=rank[0])
+                    rankmin = k;
+            rank[1] = rankmin;
+            rankmin = -1;
+            for(int k = 0;k<maxdis;k++)
+                if(Lbuffj[k]>0&&(rankmin==-1||Lbuffj[k]<Lbuffj[rankmin])&&k!=rank[0]&&k!=rank[1])
+                    rankmin = k;
+            rank[2] = rankmin;
+            disptri[j] = rank[0];
+        }
+    }
+
+    delete []Lbuff;
+}
+
+
+void test_semi(){
+    QString leftfilename = QFileDialog::getOpenFileName(
+       0,
+       "Binocular Calibration - Open Left Image",
+       NULL,
+       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if (!leftfilename.isNull()) { //用户选择了左图文件
+        QString rightfilename = QFileDialog::getOpenFileName(
+           0,
+           "Binocular Calibration - Open Right Image",
+           NULL,
+           "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+        if (!rightfilename.isNull()) { //用户选择了左图文件
+            Mat leftmat = imread(leftfilename.toUtf8().data());
+            Mat rightmat = imread(rightfilename.toUtf8().data());
+
+            Mat dis,vdisp;
+            stereoSemi(leftmat,rightmat,dis,8*3*3,32*3*3,128);
+
+            dis.convertTo(vdisp,CV_8U);
+            normalize(vdisp,vdisp,0,255,CV_MINMAX);
+            imshow("dynamic ",vdisp);
+        }
+    }
+}
+
+///*
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
+    QApplication app(argc, argv);
 //    MainWindow w;
 //    w.show();
     //cvNamedWindow("test");
-    testBM();
+//    testsegment();
+//    testBM();
 //    testMine();
 //    testRealTime();
 //    testLocal();
 //    testDynamic();
-    
-    return a.exec();
+//    test_dp();
+    test_semi();
+
+    return app.exec();
 }
-*/
+//*/
