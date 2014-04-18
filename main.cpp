@@ -1498,7 +1498,81 @@ void test_semi(){
     }
 }
 
-///*
+//This colors the segmentations
+static void floodFillPostprocess( Mat& img, const Scalar& colorDiff=Scalar::all(1) )
+{
+    CV_Assert( !img.empty() );
+    RNG rng = theRNG();
+    Mat mask( img.rows+2, img.cols+2, CV_8UC1, Scalar::all(0) );
+    for( int y = 0; y < img.rows; y++ )
+    {
+        for( int x = 0; x < img.cols; x++ )
+        {
+            if( mask.at<uchar>(y+1, x+1) == 0 )
+            {
+                Scalar newVal( rng(256), rng(256), rng(256) );
+                floodFill( img, mask, Point(x,y), newVal, 0, colorDiff, colorDiff );
+            }
+        }
+    }
+}
+
+string winName = "meanshift";
+int spatialRad, colorRad, maxPyrLevel;
+Mat img, res;
+
+static void meanShiftSegmentation( int, void* )
+{
+    cout << "spatialRad=" << spatialRad << "; "
+         << "colorRad=" << colorRad << "; "
+         << "maxPyrLevel=" << maxPyrLevel << endl;
+    pyrMeanShiftFiltering( img, res, spatialRad, colorRad, maxPyrLevel );
+    if(res.type()==CV_32S){
+        cout<<"res.type CV_32S"<<endl;
+    }
+    else if(res.type()==CV_16U){
+        cout<<"res.type CV_16U"<<endl;
+    }
+    else if(res.type()==CV_16S){
+        cout<<"res.type CV_16S"<<endl;
+    }
+    else if(res.type()==CV_8U){
+        cout<<"res.type CV_8U"<<endl;
+    }
+    else if(res.type()==CV_8UC3){
+        cout<<"res.type CV_8UC3"<<endl;
+    }
+    floodFillPostprocess( res, Scalar::all(2) );
+    imshow( winName, res );
+}
+
+void testMeanShift(){
+    QString leftfilename = QFileDialog::getOpenFileName(
+       0,
+       "Binocular Calibration - Open Left Image",
+       NULL,
+       "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
+    if (!leftfilename.isNull()) { //用户选择了左图文件
+        img = imread( leftfilename.toStdString().c_str() );
+        if( img.empty() )
+            return ;
+
+        spatialRad = 10;
+        colorRad = 10;
+        maxPyrLevel = 1;
+
+        namedWindow( winName, WINDOW_AUTOSIZE );
+
+        createTrackbar( "spatialRad", winName, &spatialRad, 80, meanShiftSegmentation );
+        createTrackbar( "colorRad", winName, &colorRad, 60, meanShiftSegmentation );
+        createTrackbar( "maxPyrLevel", winName, &maxPyrLevel, 5, meanShiftSegmentation );
+
+        meanShiftSegmentation(0, 0);
+        waitKey();
+    }
+}
+
+/*
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
@@ -1512,8 +1586,9 @@ int main(int argc, char *argv[])
 //    testLocal();
 //    testDynamic();
 //    test_dp();
-    test_semi();
+//    test_semi();
+    testMeanShift();
 
     return app.exec();
 }
-//*/
+*/
