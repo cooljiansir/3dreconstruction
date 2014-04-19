@@ -145,7 +145,7 @@ void stereo_BM_segment(Mat &left,Mat &right,Mat &dis,int winsize,int maxdis){
     if(left.size()!=right.size())
         return;
 
-    double lamda = 0.01;
+    double lamda = 0.3;
     //segmentation
     int spatialRad = 10,colorRad = 10,maxPyrLevel = 1;
     Mat segmentmat;
@@ -188,7 +188,7 @@ void stereo_BM_segment(Mat &left,Mat &right,Mat &dis,int winsize,int maxdis){
                         double r=1;
                         if(se[0]==se1[0]&&se[1]==se1[1]&&se[2]==se1[2])
                             r = 1;
-//                        else r = lamda;
+                        else r = lamda;
                         sadsum += r*abs(leftptr[(i+i1)*size.width+j+j1]-
                                 rightptr[(i+i1)*size.width+j-d+j1]);
                     }
@@ -223,6 +223,65 @@ void stereo_BM_segment(Mat &left,Mat &right,Mat &dis,int winsize,int maxdis){
     delete []costindex;
     delete []costindex2;
 }
+
+void stereo_BM_AW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
+    if(left.size()!=right.size())
+        return;
+    double yc=7,yg=36;
+
+    Size size = left.size();
+    dis.create(size,CV_32F);
+
+    float *disptr = (float*)dis.data;
+
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+
+    for(int i = 0;i<size.height;i++)
+        for(int j = 0;j<size.width;j++)
+            disptr[i*size.width+j] = -1;
+
+    //double *mincost = new double[size.width];
+    //double *
+
+    for(int i = winsize;i+winsize<size.height;i++){
+        for(int j = winsize;j+winsize<size.width;j++){
+            double mincost;
+            int mmindex=-1;
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                double sum = 0;
+                double sumw = 0;
+                int p = (i*size.width + j)*3;
+                int p_ = p-3*d;
+                for(int i1 = -winsize;i1<=winsize;i1++){
+                    for(int j1 = -winsize;j1<=winsize;j1++){
+                        int q = ((i+i1)*size.width + j+j1)*3;
+                        int q_ = q-d*3;
+                        double w1 =
+                                exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
+                                          (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
+                                          (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/yc
+                                -sqrt(i1*i1+j1*j1)/yg);
+                        double w2 =
+                                exp(-sqrt((rightptr[p_] - rightptr[q_])*(rightptr[p_] - rightptr[q_])+
+                                             (rightptr[p_+1] - rightptr[q_+1])*(rightptr[p_+1] - rightptr[q_+1])+
+                                             (rightptr[p_+2] - rightptr[q_+2])*(rightptr[p_+2] - rightptr[q_+2]))/yc
+                                -sqrt(i1*i1+j1*j1)/yg);
+                        double e1 = fabs(leftptr[q]-rightptr[q_])+
+                                fabs(leftptr[q+1]-rightptr[q_+1])+
+                                fabs(leftptr[q+2]-rightptr[q_+2]);
+                        sum += w1*w2*e1;
+                        sumw += w1*w2;
+                    }
+                }
+                if(mmindex==-1||sum/sumw<mincost)
+                    mincost = sum/sumw,mmindex = d;
+            }
+            disptr[i*size.width+j] = mmindex;
+        }
+        qDebug()<<"finished "<<i*100/size.height<<"%\r";
+    }
+}
 void testMyBM(){
     QString leftfilename = QFileDialog::getOpenFileName(
        0,
@@ -243,7 +302,8 @@ void testMyBM(){
 
             clock_t t = clock();
 //            stereo_BM(leftmat,rightmat,dis,5,100);
-            stereo_BM_segment(leftmat,rightmat,dis,5,40);
+//            stereo_BM_segment(leftmat,rightmat,dis,7,40);
+            stereo_BM_AW(leftmat,rightmat,dis,40,5);
 
             qDebug()<<"use time"<<clock() - t<<"ms"<<endl;
             dis.convertTo(vdisp,CV_8U);
