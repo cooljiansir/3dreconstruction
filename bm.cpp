@@ -322,7 +322,7 @@ void stereo_BM_AW_LRC(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
     if(left.size()!=right.size())
         return;
 //    double yc=7,yg=36;
-    double yc=10,yg=36;
+    double yc=7,yg=10;
 
     Size size = left.size();
     dis.create(size,CV_32F);
@@ -387,7 +387,8 @@ void stereo_BM_AW_LRC(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
                                 fabs(leftptr[q+2]-rightptr[q_+2]);
 
                         double w1 = w1buff[w1index++];
-                        double w2 = w2buff[w2index++];
+                        //double w2 = w2buff[w2index++];
+                        double w2 = 1;
                         sum += w1*w2*e1;
                         sumw += w1*w2;
                     }
@@ -454,7 +455,8 @@ void testMyBM(){
             clock_t t = clock();
 //            stereo_BM(leftmat,rightmat,dis,7,100);
 //            stereo_BM_segment(leftmat,rightmat,dis,7,40);
-            stereo_BM_AW(leftmat,rightmat,dis,120,16);
+//            stereo_BM_AW(leftmat,rightmat,dis,40,5);
+            stereo_BM_AW_LRC(leftmat,rightmat,dis,120,5);
 
             qDebug()<<"use time"<<clock() - t<<"ms"<<endl;
             dis.convertTo(vdisp,CV_8U);
