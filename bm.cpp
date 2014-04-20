@@ -145,7 +145,7 @@ void stereo_BM_segment(Mat &left,Mat &right,Mat &dis,int winsize,int maxdis){
     if(left.size()!=right.size())
         return;
 
-    double lamda = 0.3;
+    double lamda = 0.1;
     //segmentation
     int spatialRad = 10,colorRad = 10,maxPyrLevel = 1;
     Mat segmentmat;
@@ -227,7 +227,8 @@ void stereo_BM_segment(Mat &left,Mat &right,Mat &dis,int winsize,int maxdis){
 void stereo_BM_AW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
     if(left.size()!=right.size())
         return;
-    double yc=7,yg=36;
+//    double yc=7,yg=36;
+    double yc=10,yg=36;
 
     Size size = left.size();
     dis.create(size,CV_32F);
@@ -243,8 +244,33 @@ void stereo_BM_AW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
 
     //double *mincost = new double[size.width];
     //double *
+    double *w1buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+    double *w2buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+
 
     for(int i = winsize;i+winsize<size.height;i++){
+        for(int j = winsize;j+winsize<size.width;j++){
+            int p = (i*size.width + j)*3;
+            int windex = j*(2*winsize+1)*(2*winsize+1);
+            for(int i1 = -winsize;i1<=winsize;i1++){
+                for(int j1 = -winsize;j1<=winsize;j1++){
+                    int q = ((i+i1)*size.width + j+j1)*3;
+                    double w1 =
+                            exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
+                                      (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
+                                      (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    double w2 =
+                            exp(-sqrt((rightptr[p] - rightptr[q])*(rightptr[p] - rightptr[q])+
+                                         (rightptr[p+1] - rightptr[q+1])*(rightptr[p+1] - rightptr[q+1])+
+                                         (rightptr[p+2] - rightptr[q+2])*(rightptr[p+2] - rightptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    w1buff[windex] = w1;
+                    w2buff[windex] = w2;
+                    windex++;
+                }
+            }
+        }
         for(int j = winsize;j+winsize<size.width;j++){
             double mincost;
             int mmindex=-1;
@@ -253,11 +279,14 @@ void stereo_BM_AW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
                 double sumw = 0;
                 int p = (i*size.width + j)*3;
                 int p_ = p-3*d;
+                int w1index = j*(2*winsize+1)*(2*winsize+1);
+                int w2index = (j-d)*(2*winsize+1)*(2*winsize+1);
                 for(int i1 = -winsize;i1<=winsize;i1++){
                     for(int j1 = -winsize;j1<=winsize;j1++){
+
                         int q = ((i+i1)*size.width + j+j1)*3;
                         int q_ = q-d*3;
-                        double w1 =
+                        /*double w1 =
                                 exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
                                           (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
                                           (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/yc
@@ -267,9 +296,13 @@ void stereo_BM_AW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
                                              (rightptr[p_+1] - rightptr[q_+1])*(rightptr[p_+1] - rightptr[q_+1])+
                                              (rightptr[p_+2] - rightptr[q_+2])*(rightptr[p_+2] - rightptr[q_+2]))/yc
                                 -sqrt(i1*i1+j1*j1)/yg);
+                        */
                         double e1 = fabs(leftptr[q]-rightptr[q_])+
                                 fabs(leftptr[q+1]-rightptr[q_+1])+
                                 fabs(leftptr[q+2]-rightptr[q_+2]);
+
+                        double w1 = w1buff[w1index++];
+                        double w2 = w2buff[w2index++];
                         sum += w1*w2*e1;
                         sumw += w1*w2;
                     }
@@ -281,6 +314,124 @@ void stereo_BM_AW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
         }
         qDebug()<<"finished "<<i*100/size.height<<"%\r";
     }
+    delete []w1buff;
+    delete []w2buff;
+}
+
+void stereo_BM_AW_LRC(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
+    if(left.size()!=right.size())
+        return;
+//    double yc=7,yg=36;
+    double yc=10,yg=36;
+
+    Size size = left.size();
+    dis.create(size,CV_32F);
+
+    float *disptr = (float*)dis.data;
+
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+
+    for(int i = 0;i<size.height;i++)
+        for(int j = 0;j<size.width;j++)
+            disptr[i*size.width+j] = -1;
+
+    //double *mincost = new double[size.width];
+    //double *
+    double *w1buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+    double *w2buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+    double *cost = new double[size.width*maxdis];
+    int *mincost2 = new int[size.width];
+
+
+    for(int i = winsize;i+winsize<size.height;i++){
+        for(int j = winsize;j+winsize<size.width;j++){
+            int p = (i*size.width + j)*3;
+            int windex = j*(2*winsize+1)*(2*winsize+1);
+            for(int i1 = -winsize;i1<=winsize;i1++){
+                for(int j1 = -winsize;j1<=winsize;j1++){
+                    int q = ((i+i1)*size.width + j+j1)*3;
+                    double w1 =
+                            exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
+                                      (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
+                                      (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    double w2 =
+                            exp(-sqrt((rightptr[p] - rightptr[q])*(rightptr[p] - rightptr[q])+
+                                         (rightptr[p+1] - rightptr[q+1])*(rightptr[p+1] - rightptr[q+1])+
+                                         (rightptr[p+2] - rightptr[q+2])*(rightptr[p+2] - rightptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    w1buff[windex] = w1;
+                    w2buff[windex] = w2;
+                    windex++;
+                }
+            }
+        }
+        for(int j = winsize;j+winsize<size.width;j++){
+            double mincost;
+            int mmindex=-1;
+            for(int d = 0;d<maxdis&&d+winsize<=j;d++){
+                double sum = 0;
+                double sumw = 0;
+                int p = (i*size.width + j)*3;
+                int p_ = p-3*d;
+                int w1index = j*(2*winsize+1)*(2*winsize+1);
+                int w2index = (j-d)*(2*winsize+1)*(2*winsize+1);
+                for(int i1 = -winsize;i1<=winsize;i1++){
+                    for(int j1 = -winsize;j1<=winsize;j1++){
+
+                        int q = ((i+i1)*size.width + j+j1)*3;
+                        int q_ = q-d*3;
+                        double e1 = fabs(leftptr[q]-rightptr[q_])+
+                                fabs(leftptr[q+1]-rightptr[q_+1])+
+                                fabs(leftptr[q+2]-rightptr[q_+2]);
+
+                        double w1 = w1buff[w1index++];
+                        double w2 = w2buff[w2index++];
+                        sum += w1*w2*e1;
+                        sumw += w1*w2;
+                    }
+                }
+                cost[j*maxdis+d] = sum/sumw;
+            }
+        }
+        //right WTA
+        for(int j = winsize;j+winsize<size.width;j++){
+            double mmin;
+            int mindex = -1;
+            for(int d = 0;d<maxdis&&d+j+winsize<size.width;d++){
+                if(mindex==-1||cost[(j+d)*maxdis+d]<mmin)
+                    mmin = cost[(j+d)*maxdis+d],mindex = d;
+            }
+            mincost2[j] = mindex;
+        }
+        //left WTA and consistence check
+        for(int j = winsize;j+winsize<size.width;j++){
+            double mmin;
+            int mindex = -1;
+            for(int d = 0;d<maxdis&&d+winsize<=j;d++){
+                if(mindex==-1||cost[j*maxdis+d]<mmin)
+                    mmin = cost[j*maxdis+d],mindex = d;
+            }
+//            mincost1[j] = mindex;
+            int d2 = mincost2[j-mindex];
+            double *tempcost = cost + j*maxdis;
+            if(abs(mindex-d2)<=1){
+                double te = mindex;
+                if(mindex>0&&mindex<maxdis-1&&mindex+winsize<j){
+                    double tem = 2*tempcost[mindex - 1]  + 2*tempcost[mindex+1] - 4*tempcost[mindex];
+                    if(tem>0.001)te = te +(tempcost[mindex - 1]  - tempcost[mindex+1])/tem;
+                }
+                disptr[i*size.width+j] = te;
+            }
+        }
+
+        qDebug()<<"finished "<<i*100/size.height<<"%\r";
+    }
+    delete []w1buff;
+    delete []w2buff;
+    delete []cost;
+    delete []mincost2;
 }
 void testMyBM(){
     QString leftfilename = QFileDialog::getOpenFileName(
@@ -301,9 +452,9 @@ void testMyBM(){
             Mat dis,vdisp;
 
             clock_t t = clock();
-//            stereo_BM(leftmat,rightmat,dis,5,100);
+//            stereo_BM(leftmat,rightmat,dis,7,100);
 //            stereo_BM_segment(leftmat,rightmat,dis,7,40);
-            stereo_BM_AW(leftmat,rightmat,dis,40,5);
+            stereo_BM_AW(leftmat,rightmat,dis,120,16);
 
             qDebug()<<"use time"<<clock() - t<<"ms"<<endl;
             dis.convertTo(vdisp,CV_8U);

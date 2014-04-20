@@ -1468,6 +1468,286 @@ void stereoSemibm(Mat &leftmat,Mat &rightmat,Mat &dis,int p1,int p2,int maxdis,i
 
 }
 
+//4 directions semi
+void stereoSemi_AW(Mat &leftmat,Mat &rightmat,Mat &dis,int p1,int p2,int maxdis,int winsize){
+    if(leftmat.size()!=rightmat.size())
+        return ;
+//    double q = (winsize+1)*(winsize+1);
+    double yc=7,yg=36;
+    Size size = leftmat.size();
+
+    unsigned char *leftptr = leftmat.data;
+    unsigned char *rightptr = rightmat.data;
+
+    dis.create(size,CV_32F);
+    float *disptr = (float*)dis.data;
+    for(int i = 0;i<size.height;i++)
+        for(int j = 0;j<size.width;j++)
+            disptr[i*size.width+j] = -1;
+
+
+    /* 1  2  3
+     *  \ | /
+     * 0-
+    */
+    double *Lr = new double[size.width*maxdis*7];
+    double *minLr = new double[size.width*6];
+    double *w1buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+    double *w2buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+
+    double  *Lr0  = Lr,
+            *Lr11 = Lr+maxdis*size.width,
+            *Lr12 = Lr+maxdis*size.width*2,
+            *Lr21 = Lr+maxdis*size.width*3,
+            *Lr22 = Lr+maxdis*size.width*4,
+            *Lr31 = Lr+maxdis*size.width*5,
+            *Lr32 = Lr+maxdis*size.width*6;
+    double  *minLr11 = minLr,
+            *minLr12 = minLr + size.width,
+            *minLr21 = minLr + size.width*2,
+            *minLr22 = minLr + size.width*3,
+            *minLr31 = minLr + size.width*4,
+            *minLr32 = minLr + size.width*5;
+    double minLr00;
+
+    //init the first line
+    //cost prepare
+    for(int j = winsize;j+winsize<size.width;j++){
+        int p = (winsize*size.width + j)*3;
+        int windex = j*(2*winsize+1)*(2*winsize+1);
+        for(int i1 = -winsize;i1<=winsize;i1++){
+            for(int j1 = -winsize;j1<=winsize;j1++){
+                int q = ((winsize+i1)*size.width + j+j1)*3;
+                double w1 =
+                        exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
+                                  (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
+                                  (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/yc
+                        -sqrt(i1*i1+j1*j1)/yg);
+                double w2 =
+                        exp(-sqrt((rightptr[p] - rightptr[q])*(rightptr[p] - rightptr[q])+
+                                     (rightptr[p+1] - rightptr[q+1])*(rightptr[p+1] - rightptr[q+1])+
+                                     (rightptr[p+2] - rightptr[q+2])*(rightptr[p+2] - rightptr[q+2]))/yc
+                        -sqrt(i1*i1+j1*j1)/yg);
+                w1buff[windex] = w1;
+                w2buff[windex] = w2;
+                windex++;
+            }
+        }
+    }
+    for(int j = winsize;j+winsize<size.width;j++){
+        double mmin = -1;
+        for(int d = 0;d<maxdis&&d+winsize<=j;d++){
+            //double c = (*leftptr0j - rightptr0j[-d])*(*leftptr0j - rightptr0j[-d])/q/q;
+            //Lr11[j*maxdis+d] = Lr21[j*maxdis+d] = Lr31[j*maxdis+d] = c;
+            //double c = tempcost[d];
+
+            double sum = 0;
+            double sumw = 0;
+            int p = (winsize*size.width + j)*3;
+            int p_ = p-3*d;
+            int w1index = j*(2*winsize+1)*(2*winsize+1);
+            int w2index = (j-d)*(2*winsize+1)*(2*winsize+1);
+            for(int i1 = -winsize;i1<=winsize;i1++){
+                for(int j1 = -winsize;j1<=winsize;j1++){
+                    int q = ((winsize+i1)*size.width + j+j1)*3;
+                    int q_ = q-d*3;
+                    double e1 = fabs(leftptr[q]-rightptr[q_])+
+                            fabs(leftptr[q+1]-rightptr[q_+1])+
+                            fabs(leftptr[q+2]-rightptr[q_+2]);
+
+                    double w1 = w1buff[w1index++];
+                    double w2 = w2buff[w2index++];
+                    sum += w1*w2*e1;
+                    sumw += w1*w2;
+                }
+            }
+            double c = sum/sumw;
+            if(mmin==-1||c<mmin)
+                mmin = c;
+        }
+        minLr11[j] = minLr21[j] = minLr31[j] = mmin;
+    }
+    for(int i = winsize+1;i+winsize<size.height;i++){
+        unsigned char *leftptri = leftptr +i*size.width;
+        unsigned char *rightptri = rightptr + i*size.width;
+
+        for(int j = winsize;j+winsize<size.width;j++)
+            minLr12[j] = minLr22[j] = minLr32[j] = -1;
+
+        for(int j = winsize;j+winsize<size.width;j++){
+            int p = (i*size.width + j)*3;
+            int windex = j*(2*winsize+1)*(2*winsize+1);
+            for(int i1 = -winsize;i1<=winsize;i1++){
+                for(int j1 = -winsize;j1<=winsize;j1++){
+                    int q = ((i+i1)*size.width + j+j1)*3;
+                    double w1 =
+                            exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
+                                      (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
+                                      (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    double w2 =
+                            exp(-sqrt((rightptr[p] - rightptr[q])*(rightptr[p] - rightptr[q])+
+                                         (rightptr[p+1] - rightptr[q+1])*(rightptr[p+1] - rightptr[q+1])+
+                                         (rightptr[p+2] - rightptr[q+2])*(rightptr[p+2] - rightptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    w1buff[windex] = w1;
+                    w2buff[windex] = w2;
+                    windex++;
+                }
+            }
+        }
+        for(int j = winsize;j+winsize<size.width;j++){
+            double *Lr0j    = Lr0 +j*maxdis,
+                   *Lr0j_1  = j>winsize?Lr0j-maxdis:0,
+                   *Lr11j_1 = j>winsize?Lr11+(j-1)*maxdis:0,
+                   *Lr12j   = Lr12+j*maxdis,
+                   *Lr21j   = Lr21+j*maxdis,
+                   *Lr22j   = Lr22+j*maxdis,
+                   *Lr31j_1 = j+winsize+1<size.width?Lr31+(j+1)*maxdis:0,
+                   *Lr32j   = Lr32+j*maxdis;
+            double mminv=-1;
+            int mmindex=-1;
+            double mminL00_ = -1;
+            double mminL1_ = -1;
+            double mminL2_ = -1;
+            double mminL3_ = -1;
+            for(int d = 0;d<maxdis&&d+winsize<=j;d++){
+                double minL0 =-1,minL1 = -1,minL2 = -1,minL3 = -1;
+                if(j>d){
+                    if(j>winsize){
+                        if(minL0<0||Lr0j_1[d]<minL0)
+                            minL0 = Lr0j_1[d];
+                        if(minL1<0||Lr11j_1[d]<minL1)
+                            minL1 = Lr11j_1[d];
+                    }
+                    if(minL2<0||Lr21j[d+1]+p1<minL2)
+                        minL2 = Lr21j[d+1]+p1;
+                }
+                if(j>d+1&&j>winsize){
+                    if(minL0<0||Lr0j_1[d+1]+p1<minL0)
+                        minL0 = Lr0j_1[d+1]+p1;
+                    if(minL1<0||Lr11j_1[d+1]+p1<minL1)
+                        minL1 = Lr11j_1[d+1]+p1;
+                }
+                if(d>0){
+                    if(j>winsize){
+                        if(minL0<0||Lr0j_1[d-1]+p1<minL0)
+                            minL0 = Lr0j_1[d-1]+p1;
+                        if(minL1<0||Lr11j_1[d-1]+p1<minL1)
+                           minL1 = Lr11j_1[d-1]+p1;
+                    }
+                    if(minL2<0||Lr21j[d-1]+p1<minL2)
+                        minL2 = Lr21j[d-1]+p1;
+                }
+
+                if(minL2<0||Lr21j[d]<minL2)
+                    minL2 = Lr21j[d];
+
+                if(j+1+winsize<size.width){
+                    if(minL3<0||Lr31j_1[d]<minL3)
+                        minL3 = Lr31j_1[d];
+                    if(d>0)
+                        if(minL3<0||Lr31j_1[d-1]+p1<minL3)
+                            minL3 = Lr31j_1[d-1]+p1;
+                    if(minL3<0||Lr31j_1[d+1]+p1<minL3)
+                        minL3 = Lr31j_1[d+1]+p1;
+                }
+                if(j>winsize){
+                    if(minLr00>=0)
+                        if(minL0<0||minLr00+p2<minL0)
+                            minL0 = minLr00+p2;
+                }
+                if(j>winsize)
+                    if(minLr11[j-1]>=0)
+                        if(minL1<0||minLr11[j-1]+p2<minL1)
+                            minL1 = minLr11[j-1] + p2;
+                if(minLr21[j]>=0)
+                    if(minL2<0||minLr21[j]+p2<minL2)
+                        minL2 = minLr21[j] + p2;
+                if(j+1+winsize<size.width)
+                    if(minL3<0||minLr31[j+1]+p2<minL3)
+                        minL3 = minLr31[j+1]+p2;
+
+                //double c = (*leftptrij - rightptrij[-d])*(*leftptrij - rightptrij[-d]);
+                double sum = 0;
+                double sumw = 0;
+                int p = (i*size.width + j)*3;
+                int p_ = p-3*d;
+                int w1index = j*(2*winsize+1)*(2*winsize+1);
+                int w2index = (j-d)*(2*winsize+1)*(2*winsize+1);
+                for(int i1 = -winsize;i1<=winsize;i1++){
+                    for(int j1 = -winsize;j1<=winsize;j1++){
+
+                        int q = ((i+i1)*size.width + j+j1)*3;
+                        int q_ = q-d*3;
+                        double e1 = fabs(leftptr[q]-rightptr[q_])+
+                                fabs(leftptr[q+1]-rightptr[q_+1])+
+                                fabs(leftptr[q+2]-rightptr[q_+2]);
+
+                        double w1 = w1buff[w1index++];
+                        double w2 = w2buff[w2index++];
+                        sum += w1*w2*e1;
+                        sumw += w1*w2;
+                    }
+                }
+                double c = sum/sumw;
+
+                if(minL0>0)
+                    minL0 +=c;
+                else minL0 = c;
+                if(minL1>0)
+                    minL1 +=c;
+                else minL1 = c;
+                if(minL2>0)
+                    minL2 +=c;
+                else minL2 = c;
+                if(minL3>0)
+                    minL3 +=c;
+                else minL3 = c;
+                Lr0j[d] = minL0;
+                Lr12j[d] = minL1;
+                Lr22j[d] = minL2;
+                Lr32j[d] = minL3;
+                if(mminL00_<0||minL0<mminL00_)
+                    mminL00_ = minL0;
+                if(mminL1_<0||minL1<mminL1_)
+                    mminL1_ = minL1;
+                if(mminL2_<0||minL2<mminL2_)
+                    mminL2_ = minL2;
+                if(mminL3_<0||minL3<mminL3_)
+                    mminL3_ = minL3;
+                if(mminv<0||(minL0+minL1+minL2+minL3)<mminv){
+                    mminv = minL0+minL1+minL2+minL3;
+                    mmindex = d;
+                }
+                /*if(mminv<0||minL2<mminv){
+                    mminv = minL2;
+                    mmindex = d;
+                }*/
+            }
+            disptr[i*size.width+j] = mmindex;
+            minLr00 = mminL00_;
+            minLr12[j] = mminL1_;
+            minLr22[j] = mminL2_;
+            minLr32[j] = mminL3_;
+        }
+        swap_d(Lr11,Lr12);
+        swap_d(Lr21,Lr22);
+        swap_d(Lr31,Lr32);
+        swap_d(minLr11,minLr12);
+        swap_d(minLr21,minLr22);
+        swap_d(minLr31,minLr32);
+        qDebug()<<"finished "<<i*100/size.height<<"%\r";
+
+    }
+
+    delete []Lr;
+    delete []minLr;
+    delete []w1buff;
+    delete []w2buff;
+
+}
+
 void test_semi(){
     QString leftfilename = QFileDialog::getOpenFileName(
        0,
@@ -1485,8 +1765,9 @@ void test_semi(){
             Mat rightmat = imread(rightfilename.toUtf8().data());
 
             Mat dis,vdisp;
-//            stereoSemi4(leftmat,rightmat,dis,3,8*7*7,32*7*7,128);
-            stereoSemibm(leftmat,rightmat,dis,8*4*4,32*4*4,128,4);
+//            stereoSemi4(leftmat,rightmat,dis,3,8*4*4,32*4*4,128);
+//            stereoSemibm(leftmat,rightmat,dis,8*7*7,32*7*7,40,1);
+            stereoSemi_AW(leftmat,rightmat,dis,8*11*11,32*11*11,40,3);
 //            stereoSemi2(leftmat,rightmat,dis,1,8*5*5,32*3*3,128);
 //            stereoSemi1(leftmat,rightmat,dis,1,8*5*5,32*3*3,128);
 //            stereoSemi(leftmat,rightmat,dis,2,8*3*3,32*3*3,128);
@@ -1587,7 +1868,7 @@ int main(int argc, char *argv[])
 //    testDynamic();
 //    test_dp();
 //    test_semi();
-    testMeanShift();
+//    testMeanShift();
 
     return app.exec();
 }
