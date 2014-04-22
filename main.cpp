@@ -1580,7 +1580,7 @@ void stereoSemi_AW(Mat &leftmat,Mat &rightmat,Mat &dis,int p1,int p2,int maxdis,
             for(int i1 = -winsize;i1<=winsize;i1++){
                 for(int j1 = -winsize;j1<=winsize;j1++){
                     int q = ((i+i1)*size.width + j+j1)*3;
-                    double w1 =
+                    /*double w1 =
                             exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
                                       (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
                                       (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/yc
@@ -1589,6 +1589,17 @@ void stereoSemi_AW(Mat &leftmat,Mat &rightmat,Mat &dis,int p1,int p2,int maxdis,
                             exp(-sqrt((rightptr[p] - rightptr[q])*(rightptr[p] - rightptr[q])+
                                          (rightptr[p+1] - rightptr[q+1])*(rightptr[p+1] - rightptr[q+1])+
                                          (rightptr[p+2] - rightptr[q+2])*(rightptr[p+2] - rightptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                            */
+                    double w1 =
+                            exp(-(fabs(leftptr[p] - leftptr[q])+
+                                fabs(leftptr[p+1] - leftptr[q+1])+
+                                fabs(leftptr[p+2] - leftptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    double w2 =
+                            exp(-(fabs(rightptr[p] - rightptr[q])+
+                                  fabs(rightptr[p+1] - rightptr[q+1])+
+                                  fabs(rightptr[p+2] - rightptr[q+2]))/yc
                             -sqrt(i1*i1+j1*j1)/yg);
                     w1buff[windex] = w1;
                     w2buff[windex] = w2;
@@ -1765,9 +1776,9 @@ void test_semi(){
             Mat rightmat = imread(rightfilename.toUtf8().data());
 
             Mat dis,vdisp;
-//            stereoSemi4(leftmat,rightmat,dis,3,8*4*4,32*4*4,128);
-//            stereoSemibm(leftmat,rightmat,dis,8*7*7,32*7*7,40,1);
-            stereoSemi_AW(leftmat,rightmat,dis,8*11*11,32*11*11,40,3);
+//            stereoSemi4(leftmat,rightmat,dis,1,8*4*4,32*4*4,40);
+//            stereoSemibm(leftmat,rightmat,dis,8*7*7,32*7*7,40,3);
+            stereoSemi_AW(leftmat,rightmat,dis,8*11*11,32*11*11,130,7);
 //            stereoSemi2(leftmat,rightmat,dis,1,8*5*5,32*3*3,128);
 //            stereoSemi1(leftmat,rightmat,dis,1,8*5*5,32*3*3,128);
 //            stereoSemi(leftmat,rightmat,dis,2,8*3*3,32*3*3,128);
@@ -1853,12 +1864,12 @@ void testMeanShift(){
     }
 }
 
-/*
+///*
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-//    MainWindow w;
-//    w.show();
+    MainWindow w;
+    w.show();
     //cvNamedWindow("test");
 //    testsegment();
 //    testBM();
@@ -1872,4 +1883,4 @@ int main(int argc, char *argv[])
 
     return app.exec();
 }
-*/
+//*/

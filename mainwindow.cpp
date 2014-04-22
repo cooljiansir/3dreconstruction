@@ -5,6 +5,7 @@
 #include "highgui.h"
 #include "clicklabel.h"
 #include "uti.h"
+#include <QDebug>
 
 using namespace cv;
 
@@ -42,6 +43,66 @@ MainWindow::~MainWindow()
 {
     delete ui;
 }
+//显示窗口内的权值
+
+void showWeight(Mat &imgmat,int i,int j,int winsize){
+    Mat img = imgmat.clone();
+    Size size = img.size();
+    if(i>=winsize&&i+winsize<size.height
+            &&j>=winsize&&j+winsize<size.width){
+        //double yc=7,yg=36;
+        double yc=20,yg=36;
+
+        Mat inters = img(Rect(j-winsize,i-winsize,2*winsize+1,2*winsize+1));
+        Mat disp;
+        unsigned char *leftptr = img.data;
+        disp.create(2*winsize+1,2*winsize+1,CV_64F);
+        double *disptr = (double *)disp.data;
+
+        int p = (i*size.width + j)*3;
+        int windex = 0;
+        for(int i1 = -winsize;i1<=winsize;i1++){
+            for(int j1 = -winsize;j1<=winsize;j1++){
+                int q = ((i+i1)*size.width + j+j1)*3;
+                double w1 =
+                        exp(-sqrt((leftptr[p]+leftptr[p+1] +leftptr[p+2]
+                            - leftptr[q]-leftptr[q+1]-leftptr[q+2])*
+                        (leftptr[p]+leftptr[p+1] + leftptr[p+2]
+                        - leftptr[q]-leftptr[q+1]-leftptr[q+2]))/3/yc
+                        -sqrt(i1*i1+j1*j1)/yg);
+
+                /*double w1 =
+                        exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
+                                  (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
+                                  (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/3/yc
+                        -sqrt(i1*i1+j1*j1)/yg);
+                        */
+                qDebug()<<"w: "<<w1<<endl;
+                disptr[windex++] = w1;
+            }
+        }
+        Mat vdisp;
+        disp.convertTo(vdisp,CV_8U);
+        normalize(vdisp,vdisp,0,255,CV_MINMAX);
+        for(int i = 0;i<2*winsize+1;i++){
+            for(int j = 0;j<2*winsize+1;j++){
+                unsigned char *p0 = inters.ptr<unsigned char>(i,j);
+                p0[0] = p0[1] = p0[2] = vdisp.at<unsigned char>(i,j);
+
+            }
+        }
+        imshow("img ",img);
+//        imshow("Weight ",vdisp);
+        //imshow("original ",inters);
+    }
+}
+
+//查看权重值
+void MainWindow::on_pressed(int x, int y){
+    showWeight(this->matLeft,y,x,20);
+}
+
+/*以前用来研究一行显示的波形图的
 void MainWindow::on_pressed(int x, int y){
 //    int thres = 500;
 //    Mat temmat;
@@ -73,3 +134,4 @@ void MainWindow::on_pressed(int x, int y){
     imshow("graph",showmat);
     //ui->label->setPixmap(QPixmap::fromImage(Mat2QImage(showmat)));
 }
+*/

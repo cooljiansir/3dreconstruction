@@ -227,8 +227,8 @@ void stereo_BM_segment(Mat &left,Mat &right,Mat &dis,int winsize,int maxdis){
 void stereo_BM_AW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
     if(left.size()!=right.size())
         return;
-//    double yc=7,yg=36;
-    double yc=10,yg=36;
+    double yc=7,yg=36;
+//    double yc=50,yg=36;
 
     Size size = left.size();
     dis.create(size,CV_32F);
@@ -318,11 +318,470 @@ void stereo_BM_AW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
     delete []w2buff;
 }
 
-void stereo_BM_AW_LRC(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
+//换成Lab空间
+void stereo_BM_AW_Lab(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
+    if(left.size()!=right.size())
+        return;
+    double yc=7,yg=36;
+//    double yc=50,yg=36;
+
+    Size size = left.size();
+    dis.create(size,CV_32F);
+
+    float *disptr = (float*)dis.data;
+
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+
+    Mat leftlab,rightlab;
+    cvtColor(left,leftlab,CV_BGR2Lab);
+    cvtColor(right,rightlab,CV_BGR2Lab);
+
+    unsigned char *leftlabptr = leftlab.data;
+    unsigned char *rightlabptr = rightlab.data;
+
+    for(int i = 0;i<size.height;i++)
+        for(int j = 0;j<size.width;j++)
+            disptr[i*size.width+j] = -1;
+
+    //double *mincost = new double[size.width];
+    //double *
+    double *w1buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+    double *w2buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+
+
+    for(int i = winsize;i+winsize<size.height;i++){
+        for(int j = winsize;j+winsize<size.width;j++){
+            int p = (i*size.width + j)*3;
+            int windex = j*(2*winsize+1)*(2*winsize+1);
+            for(int i1 = -winsize;i1<=winsize;i1++){
+                for(int j1 = -winsize;j1<=winsize;j1++){
+                    int q = ((i+i1)*size.width + j+j1)*3;
+                    double w1 =
+                            exp(-sqrt((leftlabptr[p] - leftlabptr[q])*(leftlabptr[p] - leftlabptr[q])+
+                                      (leftlabptr[p+1] - leftlabptr[q+1])*(leftlabptr[p+1] - leftlabptr[q+1])+
+                                      (leftlabptr[p+2] - leftlabptr[q+2])*(leftlabptr[p+1] - leftlabptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    double w2 =
+                            exp(-sqrt((rightlabptr[p] - rightlabptr[q])*(rightlabptr[p] - rightlabptr[q])+
+                                         (rightlabptr[p+1] - rightlabptr[q+1])*(rightlabptr[p+1] - rightlabptr[q+1])+
+                                         (rightlabptr[p+2] - rightlabptr[q+2])*(rightlabptr[p+2] - rightlabptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    /*double w1 =
+                            exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
+                                      (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
+                                      (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    double w2 =
+                            exp(-sqrt((rightptr[p] - rightptr[q])*(rightptr[p] - rightptr[q])+
+                                         (rightptr[p+1] - rightptr[q+1])*(rightptr[p+1] - rightptr[q+1])+
+                                         (rightptr[p+2] - rightptr[q+2])*(rightptr[p+2] - rightptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                            */
+                    w1buff[windex] = w1;
+                    w2buff[windex] = w2;
+                    windex++;
+                }
+            }
+        }
+        for(int j = winsize;j+winsize<size.width;j++){
+            double mincost;
+            int mmindex=-1;
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                double sum = 0;
+                double sumw = 0;
+                int p = (i*size.width + j)*3;
+                int p_ = p-3*d;
+                int w1index = j*(2*winsize+1)*(2*winsize+1);
+                int w2index = (j-d)*(2*winsize+1)*(2*winsize+1);
+                for(int i1 = -winsize;i1<=winsize;i1++){
+                    for(int j1 = -winsize;j1<=winsize;j1++){
+
+                        int q = ((i+i1)*size.width + j+j1)*3;
+                        int q_ = q-d*3;
+                        /*double w1 =
+                                exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
+                                          (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
+                                          (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/yc
+                                -sqrt(i1*i1+j1*j1)/yg);
+                        double w2 =
+                                exp(-sqrt((rightptr[p_] - rightptr[q_])*(rightptr[p_] - rightptr[q_])+
+                                             (rightptr[p_+1] - rightptr[q_+1])*(rightptr[p_+1] - rightptr[q_+1])+
+                                             (rightptr[p_+2] - rightptr[q_+2])*(rightptr[p_+2] - rightptr[q_+2]))/yc
+                                -sqrt(i1*i1+j1*j1)/yg);
+                        */
+                        double e1 = fabs(leftptr[q]-rightptr[q_])+
+                                fabs(leftptr[q+1]-rightptr[q_+1])+
+                                fabs(leftptr[q+2]-rightptr[q_+2]);
+
+                        double w1 = w1buff[w1index++];
+                        double w2 = w2buff[w2index++];
+                        sum += w1*w2*e1;
+                        sumw += w1*w2;
+                    }
+                }
+                if(mmindex==-1||sum/sumw<mincost)
+                    mincost = sum/sumw,mmindex = d;
+            }
+            disptr[i*size.width+j] = mmindex;
+        }
+        qDebug()<<"finished "<<i*100/size.height<<"%\r";
+    }
+    delete []w1buff;
+    delete []w2buff;
+}
+
+//发现彩色图片只能得到非常稀疏（大部分在边缘）,给/3
+void stereo_BM_AW_Color(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
     if(left.size()!=right.size())
         return;
 //    double yc=7,yg=36;
-    double yc=7,yg=10;
+    double yc=20,yg=36;
+
+    Size size = left.size();
+    dis.create(size,CV_32F);
+
+    float *disptr = (float*)dis.data;
+
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+
+    for(int i = 0;i<size.height;i++)
+        for(int j = 0;j<size.width;j++)
+            disptr[i*size.width+j] = -1;
+
+    //double *mincost = new double[size.width];
+    //double *
+    double *w1buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+    double *w2buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+
+
+    for(int i = winsize;i+winsize<size.height;i++){
+        for(int j = winsize;j+winsize<size.width;j++){
+            int p = (i*size.width + j)*3;
+            int windex = j*(2*winsize+1)*(2*winsize+1);
+            for(int i1 = -winsize;i1<=winsize;i1++){
+                for(int j1 = -winsize;j1<=winsize;j1++){
+                    int q = ((i+i1)*size.width + j+j1)*3;
+                    /*double w1 =
+                            exp(-sqrt((leftptr[p]+leftptr[p+1] +leftptr[p+2]
+                                - leftptr[q]-leftptr[q+1]-leftptr[q+2])*
+                            (leftptr[p]+leftptr[p+1] + leftptr[p+2]
+                            - leftptr[q]-leftptr[q+1]-leftptr[q+2]))/3/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    double w2 =
+                            exp(-sqrt((rightptr[p]+rightptr[p+1] +rightptr[p+2]
+                                - rightptr[q]-rightptr[q+1]-rightptr[q+2])*
+                            (rightptr[p]+rightptr[p+1] + rightptr[p+2]
+                            - rightptr[q]-rightptr[q+1]-rightptr[q+2]))/3/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                            *//*
+                    double w1 =
+                            exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
+                                      (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
+                                      (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/3/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    double w2 =
+                            exp(-sqrt((rightptr[p] - rightptr[q])*(rightptr[p] - rightptr[q])+
+                                         (rightptr[p+1] - rightptr[q+1])*(rightptr[p+1] - rightptr[q+1])+
+                                         (rightptr[p+2] - rightptr[q+2])*(rightptr[p+2] - rightptr[q+2]))/3/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                            */
+                    double w1 =
+                            exp(-(fabs(leftptr[p] - leftptr[q])+
+                                fabs(leftptr[p+1] - leftptr[q+1])+
+                                fabs(leftptr[p+2] - leftptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    double w2 =
+                            exp(-(fabs(rightptr[p] - rightptr[q])+
+                                  fabs(rightptr[p+1] - rightptr[q+1])+
+                                  fabs(rightptr[p+2] - rightptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    w1buff[windex] = w1;
+                    w2buff[windex] = w2;
+                    windex++;
+                }
+            }
+        }
+        for(int j = winsize;j+winsize<size.width;j++){
+            double mincost;
+            int mmindex=-1;
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                double sum = 0;
+                double sumw = 0;
+                int p = (i*size.width + j)*3;
+                int p_ = p-3*d;
+                int w1index = j*(2*winsize+1)*(2*winsize+1);
+                int w2index = (j-d)*(2*winsize+1)*(2*winsize+1);
+                for(int i1 = -winsize;i1<=winsize;i1++){
+                    for(int j1 = -winsize;j1<=winsize;j1++){
+
+                        int q = ((i+i1)*size.width + j+j1)*3;
+                        int q_ = q-d*3;
+                        double e1 = fabs(leftptr[q]-rightptr[q_])+
+                                fabs(leftptr[q+1]-rightptr[q_+1])+
+                                fabs(leftptr[q+2]-rightptr[q_+2]);
+
+
+                        /*double e1 = fabs((leftptr[q]+leftptr[q+1]+leftptr[q+2])
+                                -(rightptr[q_]+rightptr[q_+1]+rightptr[q_+2]))/3;
+                                */
+                        double w1 = w1buff[w1index++];
+                        double w2 = w2buff[w2index++];
+                        sum += w1*w2*e1;
+                        sumw += w1*w2;
+                    }
+                }
+                if(mmindex==-1||sum/sumw<mincost)
+                    mincost = sum/sumw,mmindex = d;
+            }
+            disptr[i*size.width+j] = mmindex;
+        }
+        qDebug()<<"finished "<<i*100/size.height<<"%\r";
+    }
+    delete []w1buff;
+    delete []w2buff;
+}
+void stereo_BM_AW_gray(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
+    if(left.size()!=right.size())
+        return;
+    double yc=7,yg=36;
+//    double yc=10,yg=36;
+
+    Size size = left.size();
+    dis.create(size,CV_32F);
+
+    float *disptr = (float*)dis.data;
+
+    Mat leftgray,rightgray;
+    leftgray.create(left.size(),CV_8UC1);
+    rightgray.create(right.size(),CV_8UC1);
+    cvtColor(left,leftgray,CV_BGR2GRAY);
+    cvtColor(right,rightgray,CV_BGR2GRAY);
+
+    unsigned char *leftptr = leftgray.data;
+    unsigned char *rightptr = rightgray.data;
+
+    for(int i = 0;i<size.height;i++)
+        for(int j = 0;j<size.width;j++)
+            disptr[i*size.width+j] = -1;
+
+    //double *mincost = new double[size.width];
+    //double *
+    double *w1buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+    double *w2buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+
+
+    for(int i = winsize;i+winsize<size.height;i++){
+        for(int j = winsize;j+winsize<size.width;j++){
+            int p = i*size.width + j;
+            int windex = j*(2*winsize+1)*(2*winsize+1);
+            for(int i1 = -winsize;i1<=winsize;i1++){
+                for(int j1 = -winsize;j1<=winsize;j1++){
+                    int q = (i+i1)*size.width + j+j1;
+                    double w1 =
+                            exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    double w2 =
+                            exp(-sqrt((rightptr[p] - rightptr[q])*(rightptr[p] - rightptr[q]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    w1buff[windex] = w1;
+                    w2buff[windex] = w2;
+                    windex++;
+                }
+            }
+        }
+        for(int j = winsize;j+winsize<size.width;j++){
+            double mincost;
+            int mmindex=-1;
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                double sum = 0;
+                double sumw = 0;
+                int p = i*size.width + j;
+                int p_ = p-d;
+                int w1index = j*(2*winsize+1)*(2*winsize+1);
+                int w2index = (j-d)*(2*winsize+1)*(2*winsize+1);
+                for(int i1 = -winsize;i1<=winsize;i1++){
+                    for(int j1 = -winsize;j1<=winsize;j1++){
+
+                        int q = (i+i1)*size.width + j+j1;
+                        int q_ = q-d;
+
+                        double e1 = fabs(leftptr[q]-rightptr[q_]);
+
+                        double w1 = w1buff[w1index++];
+                        double w2 = w2buff[w2index++];
+                        sum += w1*w2*e1;
+                        sumw += w1*w2;
+                    }
+                }
+                if(mmindex==-1||sum/sumw<mincost)
+                    mincost = sum/sumw,mmindex = d;
+            }
+            disptr[i*size.width+j] = mmindex;
+        }
+        qDebug()<<"finished "<<i*100/size.height<<"%\r";
+    }
+    delete []w1buff;
+    delete []w2buff;
+}
+
+void stereo_BM_FBS(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int winsizesmall){
+    if((2*winsize+1)%(2*winsizesmall+1)!=0){
+        qDebug()<<"winsize 不合法1"<<endl;
+        return;
+    }
+    if((2*winsize+1)/(2*winsizesmall+1)%2==0){
+        qDebug()<<"winsize 不合法2"<<endl;
+        return;
+    }
+    if(left.size()!=right.size())
+        return;
+    double yc=7,yg=36;
+//    double yc=10,yg=36;
+
+    Size size = left.size();
+    dis.create(size,CV_32F);
+
+    float *disptr = (float*)dis.data;
+
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+
+    for(int i = 0;i<size.height;i++)
+        for(int j = 0;j<size.width;j++)
+            disptr[i*size.width+j] = -1;
+
+    //double *mincost = new double[size.width];
+    //double *
+    double *w1buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+    double *w2buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+
+    int winsmallwidth = winsizesmall*2+1;
+    int nwin = (2*winsize+1)/winsmallwidth;
+    double *s1buff = new double[nwin*nwin*3];
+    double *s2buff = new double[nwin*nwin*3];
+
+
+    for(int i = winsize;i+winsize<size.height;i++){
+        for(int j = winsize;j+winsize<size.width;j++){
+            int p = (i*size.width + j)*3;
+
+            for(int k1 = 0;k1<nwin*nwin*3;k1++)
+                s1buff[k1] = s2buff[k1] = 0;
+            int windex0 = 0;
+            //计算每个小窗口中的平均值
+            for(int i1 = -winsize;i1<=winsize;i1++){
+                for(int j1 = -winsize;j1<=winsize;j1++){
+                    int q = ((i+i1)*size.width + j+j1)*3;
+                    int i_ = windex0 / (2*winsize+1);
+                    int j_ = windex0 % (2*winsize+1);
+                    i_ /= winsmallwidth;
+                    j_ /= winsmallwidth;
+                    s1buff[(i_*nwin+j_)*3] += leftptr[q];
+                    s1buff[(i_*nwin+j_)*3+1] += leftptr[q+1];
+                    s1buff[(i_*nwin+j_)*3+2] += leftptr[q+2];
+
+                    s2buff[(i_*nwin+j_)*3] += rightptr[q];
+                    s2buff[(i_*nwin+j_)*3+1] += rightptr[q+1];
+                    s2buff[(i_*nwin+j_)*3+2] += rightptr[q+2];
+                    windex0++;
+                }
+            }
+
+            int windex = j*(2*winsize+1)*(2*winsize+1);
+            windex0 = 0;
+            for(int i1 = -winsize;i1<=winsize;i1++){
+                for(int j1 = -winsize;j1<=winsize;j1++){
+                    int q = ((i+i1)*size.width + j+j1)*3;
+                    int i_ = windex0 / (2*winsize+1);
+                    int j_ = windex0 % (2*winsize+1);
+                    i_ /= winsmallwidth;
+                    j_ /= winsmallwidth;
+                    double lp0 = s1buff[(i_*nwin+j_)*3]/winsmallwidth/winsmallwidth;
+                    double lp1 = s1buff[(i_*nwin+j_)*3+1]/winsmallwidth/winsmallwidth;
+                    double lp2 = s1buff[(i_*nwin+j_)*3+2]/winsmallwidth/winsmallwidth;
+
+                    double rp0 = s2buff[(i_*nwin+j_)*3]/winsmallwidth/winsmallwidth;
+                    double rp1 = s2buff[(i_*nwin+j_)*3+1]/winsmallwidth/winsmallwidth;
+                    double rp2 = s2buff[(i_*nwin+j_)*3+2]/winsmallwidth/winsmallwidth;
+
+                    double dis = (i_*winsmallwidth + winsizesmall - winsize)*
+                                 (i_*winsmallwidth + winsizesmall - winsize)+
+                                 (j_*winsmallwidth + winsizesmall - winsize)*
+                                 (j_*winsmallwidth + winsizesmall - winsize);
+                    dis = sqrt(dis);
+
+                    double w1 = exp(-sqrt((leftptr[p] - lp0)*(leftptr[p] - lp0)+
+                                          (leftptr[p+1] - lp1)*(leftptr[p+1] - lp1)+
+                                          (leftptr[p+2] - lp2)*(leftptr[p+1] - lp2))/yc
+                            -dis/yg);
+                    double w2 = exp(-sqrt((rightptr[p] - rp0)*(rightptr[p] - rp0)+
+                                          (rightptr[p+1] - rp1)*(rightptr[p+1] - rp1)+
+                                          (rightptr[p+2] - rp2)*(rightptr[p+2] - rp2))/yc
+                            -dis/yg);
+                    /*
+                    double w1 =
+                            exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
+                                      (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
+                                      (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    double w2 =
+                            exp(-sqrt((rightptr[p] - rightptr[q])*(rightptr[p] - rightptr[q])+
+                                         (rightptr[p+1] - rightptr[q+1])*(rightptr[p+1] - rightptr[q+1])+
+                                         (rightptr[p+2] - rightptr[q+2])*(rightptr[p+2] - rightptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                            */
+                    w1buff[windex] = w1;
+                    w2buff[windex] = w2;
+                    windex++;
+                    windex0 ++;
+                }
+            }
+        }
+        for(int j = winsize;j+winsize<size.width;j++){
+            double mincost;
+            int mmindex=-1;
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                double sum = 0;
+                double sumw = 0;
+                int p = (i*size.width + j)*3;
+                int p_ = p-3*d;
+                int w1index = j*(2*winsize+1)*(2*winsize+1);
+                int w2index = (j-d)*(2*winsize+1)*(2*winsize+1);
+                for(int i1 = -winsize;i1<=winsize;i1++){
+                    for(int j1 = -winsize;j1<=winsize;j1++){
+
+                        int q = ((i+i1)*size.width + j+j1)*3;
+                        int q_ = q-d*3;
+                        double e1 = fabs(leftptr[q]-rightptr[q_])+
+                                fabs(leftptr[q+1]-rightptr[q_+1])+
+                                fabs(leftptr[q+2]-rightptr[q_+2]);
+
+                        double w1 = w1buff[w1index++];
+                        double w2 = w2buff[w2index++];
+                        sum += w1*w2*e1;
+                        sumw += w1*w2;
+                    }
+                }
+                if(mmindex==-1||sum/sumw<mincost)
+                    mincost = sum/sumw,mmindex = d;
+            }
+            disptr[i*size.width+j] = mmindex;
+        }
+        qDebug()<<"finished "<<i*100/size.height<<"%\r";
+    }
+    delete []w1buff;
+    delete []w2buff;
+    delete []s1buff;
+    delete []s2buff;
+}
+
+void stereo_BM_AW_LRC(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
+    if(left.size()!=right.size())
+        return;
+    double yc=7,yg=36;
+//    double yc=7,yg=10;
 
     Size size = left.size();
     dis.create(size,CV_32F);
@@ -351,7 +810,7 @@ void stereo_BM_AW_LRC(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
             for(int i1 = -winsize;i1<=winsize;i1++){
                 for(int j1 = -winsize;j1<=winsize;j1++){
                     int q = ((i+i1)*size.width + j+j1)*3;
-                    double w1 =
+                    /*double w1 =
                             exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
                                       (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
                                       (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/yc
@@ -361,8 +820,19 @@ void stereo_BM_AW_LRC(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
                                          (rightptr[p+1] - rightptr[q+1])*(rightptr[p+1] - rightptr[q+1])+
                                          (rightptr[p+2] - rightptr[q+2])*(rightptr[p+2] - rightptr[q+2]))/yc
                             -sqrt(i1*i1+j1*j1)/yg);
-                    w1buff[windex] = w1;
-                    w2buff[windex] = w2;
+                            */
+                    double w1 = 1.0/(1+1/yc*sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
+                                                          (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
+                                                          (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2])))
+                            /(1+1/yg*sqrt(i1*i1+j1*j1));
+                    double w2 = 1.0/(1+1/yc*sqrt((rightptr[p] - rightptr[q])*(rightptr[p] - rightptr[q])+
+                                         (rightptr[p+1] - rightptr[q+1])*(rightptr[p+1] - rightptr[q+1])+
+                                         (rightptr[p+2] - rightptr[q+2])*(rightptr[p+2] - rightptr[q+2])))
+                            /(1+1/yg*sqrt(i1*i1+j1*j1));
+//                    w1buff[windex] = w1;
+//                    w2buff[windex] = w2;
+                    w1buff[windex] = 1;
+                    w2buff[windex] = 1;
                     windex++;
                 }
             }
@@ -387,8 +857,7 @@ void stereo_BM_AW_LRC(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
                                 fabs(leftptr[q+2]-rightptr[q_+2]);
 
                         double w1 = w1buff[w1index++];
-                        //double w2 = w2buff[w2index++];
-                        double w2 = 1;
+                        double w2 = w2buff[w2index++];
                         sum += w1*w2*e1;
                         sumw += w1*w2;
                     }
@@ -453,10 +922,15 @@ void testMyBM(){
             Mat dis,vdisp;
 
             clock_t t = clock();
-//            stereo_BM(leftmat,rightmat,dis,7,100);
+//            stereo_BM(leftmat,rightmat,dis,7,130);
 //            stereo_BM_segment(leftmat,rightmat,dis,7,40);
-//            stereo_BM_AW(leftmat,rightmat,dis,40,5);
-            stereo_BM_AW_LRC(leftmat,rightmat,dis,120,5);
+//            stereo_BM_AW(leftmat,rightmat,dis,40,7);
+//            stereo_BM_AW_Lab(leftmat,rightmat,dis,30,16);
+//            stereo_BM_AW_gray(leftmat,rightmat,dis,130,7);
+            stereo_BM_AW_Color(leftmat,rightmat,dis,130,7);
+//            stereo_BM_FBS(leftmat,rightmat,dis,130,16,1);
+//            stereo_BM_AW_LRC(leftmat,rightmat,dis,120,5);
+
 
             qDebug()<<"use time"<<clock() - t<<"ms"<<endl;
             dis.convertTo(vdisp,CV_8U);
@@ -466,11 +940,11 @@ void testMyBM(){
     }
 }
 
-///*
+/*
 int main(int argc, char *argv[]){
     QApplication a(argc, argv);
     testMyBM();
 
     return a.exec();
 }
-//*/
+*/
