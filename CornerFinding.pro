@@ -8,23 +8,11 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = StereoMatch
+TARGET = CornerFinding
 TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp \
-    clicklabel.cpp \
-    uti.cpp \
-    bm.cpp
-
-HEADERS  += mainwindow.h \
-    clicklabel.h \
-    uti.h
-
-FORMS    += mainwindow.ui \
-    clicklabel.ui
-
 
 
 INCLUDEPATH +=include\
