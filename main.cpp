@@ -188,6 +188,55 @@ void conv(Mat &mata,Mat &matb,Mat &res){
     }
 }
 
+//calculate
+//(IxIx)(IyIy) - (IxIy)*(IxIy)
+//-----------------------------
+//(IxIx)       +     (IyIy)
+void calNobel(Mat &IxIx,Mat &IyIy,Mat &IxIy,Mat &res){
+    Size size = IxIx.size();
+    res.create(size,CV_64F);
+    double *IxIxptr = (double *)IxIx.data;
+    double *IyIyptr = (double *)IyIy.data;
+    double *IxIyptr = (double *)IxIy.data;
+    double *resptr  = (double *)res.data;
+
+    for(int i = 0;i<size.height;i++){
+        for(int j = 0;j<size.width;j++){
+            *resptr = ((*IxIxptr)*(*IyIyptr) - (*IxIyptr)*(*IxIyptr)) /
+                    ((*IxIxptr) + (*IyIyptr));
+            IxIxptr++;
+            IyIyptr++;
+            IxIyptr++;
+            resptr++;
+        }
+    }
+}
+
+
+
+//non-maximum suppression
+void getCorner(Mat &cim,int winsize,double threshold,list<Point> &cornerList){
+    Size size = cim.size();
+    double *cimptr = (double *)cim.data;
+    for(int i = winsize;i+winsize<size.height;i++){
+        double *cimptri = cimptr + i*size.width;
+        for(int j = winsize;j+winsize<size.width;j++){
+            if(cimptri[j]>=threshold){
+                bool ismax = true;
+                for(int i1 = -winsize;i1<=winsize;i1++){
+                    for(int j1  = -winsize;j1<=winsize;j1++){
+                        if(cimptri[i1*size.width+j+j1]>cimptri[j]){
+                            ismax = false;
+                            break;
+                        }
+                    }
+                }
+                if(ismax)cornerList.push_back(Point(j,i));
+            }
+        }
+    }
+}
+
 void testMoravec(){
     QString filename = QFileDialog::getOpenFileName();
     if(!filename.isEmpty()){
@@ -225,11 +274,46 @@ void testgradient(){
     }
 }
 
+void testNobel(){
+    QString filename = QFileDialog::getOpenFileName();
+    if(!filename.isEmpty()){
+        Mat img = imread(filename.toStdString().c_str());
+        Mat imggray;
+        cvtColor(img,imggray,CV_BGR2GRAY);
+
+        clock_t t1 = clock();
+        Mat Ix,Iy;
+        gradient_x_3(imggray,Ix);
+        gradient_y_3(imggray,Iy);
+
+        Mat IxIx,IyIy,IxIy;
+
+        conv(Ix,Ix,IxIx);
+        conv(Iy,Iy,IyIy);
+        conv(Ix,Iy,IxIy);
+
+        Mat cim;
+        calNobel(IxIx,IyIy,IxIy,cim);
+
+        list<Point> cornerList;
+        getCorner(cim,3,2000,cornerList);
+
+        cout<<"total used "<<clock()-t1<<"ms"<<endl;
+
+        for(list<Point>::iterator it = cornerList.begin();it!=cornerList.end();it++){
+            circle(img,*it,6,Scalar(0,0,255));
+        }
+
+        imshow("Nobel ",img);
+    }
+}
+
 int main(int argc,char * argv[]){
     QApplication app(argc,argv);
 
 //    testMoravec();
-    testgradient();
+//    testgradient();
+    testNobel();
     cvWaitKey(0);
 
     return app.exec();
