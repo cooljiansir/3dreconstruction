@@ -13,6 +13,9 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
+    MyMat.cpp \
+    cornerdialog.cpp \
+    uti.cpp
 
 
 INCLUDEPATH +=include\
@@ -24,3 +27,11 @@ LIBS += $$_PRO_FILE_PWD_\lib\libopencv_highgui247.dll.a\
         $$_PRO_FILE_PWD_\lib\libopencv_core247.dll.a\
         $$_PRO_FILE_PWD_\lib\libopencv_imgproc247.dll.a\
         $$_PRO_FILE_PWD_\lib\libopencv_calib3d247.dll.a
+
+HEADERS += \
+    MyMat.h \
+    cornerdialog.h \
+    uti.h
+
+FORMS += \
+    cornerdialog.ui

@@ -3,6 +3,8 @@
 #include "highgui.h"
 #include <QFileDialog>
 #include <algorithm>
+#include "MyMat.h"
+#include "cornerdialog.h"
 
 #include <QDebug>
 
@@ -273,6 +275,97 @@ void testgradient(){
 
     }
 }
+void getSubPix(Mat &cim,Point &a,Point2d &as){
+//    freopen("log.txt","w",stdout);
+    Size size  = cim.size();
+    as.x = as.y = 0;
+    double *cimptr = (double*)cim.data;
+    if(a.x>=2&&a.x+2<size.width&&a.y>=2&&a.y+2<size.height){
+        MyMat A(25,6);
+        MyMat B(25,1);
+        MyMat X(6,1);
+        int windex = 0;
+        for(int i1=-2;i1<=2;i1++){
+            for(int j1 = -2;j1<=2;j1++){
+                /*
+                A.at(windex,0) = (a.x + j1)*(a.x + j1);
+                A.at(windex,1) = (a.x + j1)*(a.y + i1);
+                A.at(windex,2) = (a.y + i1)*(a.y + i1);
+                A.at(windex,3) = (a.x + j1);
+                A.at(windex,4) = (a.y + i1);
+                A.at(windex,5) = 1;
+
+                B.at(windex,0) = cimptr[(a.y + i1)*size.width+a.x+j1];
+                */
+                A.at(windex,0) = j1*j1;
+                A.at(windex,1) = j1*i1;
+                A.at(windex,2) = i1*i1;
+                A.at(windex,3) = j1;
+                A.at(windex,4) = i1;
+                A.at(windex,5) = 1;
+
+                B.at(windex,0) = cimptr[(a.y + i1)*size.width+a.x+j1];
+                windex++;
+            }
+        }
+        MyMat ATA = A.transpose()*A;
+        MyMat ATA_(6,6);
+        ATA.inverse(ATA_);
+        X = ATA_*(A.transpose())*B;
+
+        /*
+        printf("A:\n");
+        A.show();
+        ATA.show();
+        printf("ATA:\n");
+        ATA.show();
+        printf("ATA_:\n");
+        ATA_.show();
+        printf("X:\n");
+        X.show();
+        fflush(stdout);
+        */
+
+        as.x = (2*X.at(2,0)*X.at(3,0) - X.at(1,0)*X.at(4,0))/(X.at(1,0)*X.at(1,0)-4*X.at(0,0)*X.at(2,0));
+        as.y = (2*X.at(0,0)*X.at(4,0) - X.at(1,0)*X.at(3,0))/(X.at(1,0)*X.at(1,0)-4*X.at(0,0)*X.at(2,0));
+        as.x += a.x;
+        as.y += a.y;
+    }
+}
+
+void getSubPix2(Mat &Ix,Mat &Iy,Point &a, Point2d &as){
+    Size size = Ix.size();
+    as.x = as.y = 0;
+    double *Ixptr = (double*)Ix.data;
+    double *Iyptr = (double*)Iy.data;
+
+    if(a.x>=2&&a.x+2<size.width&&
+            a.y>=2&&a.y+2<size.height){
+        MyMat A(25,2);
+        MyMat B(25,1);
+        MyMat X(2,1);
+        int windex = 0;
+        for(int i1 = -2;i1<=2;i1++){
+            for(int j1 = -2;j1<=2;j1++){
+                double dx = Ixptr[(a.y+i1)*size.width+a.x+i1];
+                double dy = Iyptr[(a.y+i1)*size.width+a.x+i1];
+                A.at(windex,0) = dx;
+                A.at(windex,1) = dy;
+
+                B.at(windex,0) = dx*j1+dy*i1;
+                windex++;
+            }
+        }
+        MyMat ATA = A.transpose()*A;
+        MyMat ATA_(2,2);
+        ATA.inverse(ATA_);
+        X = ATA_*A.transpose()*B;
+        as.x = X.at(0,0);
+        as.y = X.at(1,0);
+        as.x += a.x;
+        as.y += a.y;
+    }
+}
 
 void testNobel(){
     QString filename = QFileDialog::getOpenFileName();
@@ -280,6 +373,7 @@ void testNobel(){
         Mat img = imread(filename.toStdString().c_str());
         Mat imggray;
         cvtColor(img,imggray,CV_BGR2GRAY);
+
 
         clock_t t1 = clock();
         Mat Ix,Iy;
@@ -298,13 +392,66 @@ void testNobel(){
         list<Point> cornerList;
         getCorner(cim,3,2000,cornerList);
 
+
+
         cout<<"total used "<<clock()-t1<<"ms"<<endl;
+
+        vector<Point2d> sublist;
+        for(list<Point>::iterator it = cornerList.begin();it!=cornerList.end();it++){
+            Point2d as;
+//            getSubPix(cim,*it,as);
+            getSubPix2(Ix,Iy,*it,as);
+            sublist.push_back(as);
+        }
+
+        CornerDialog *dia = new CornerDialog(img,sublist);
+        dia->exec();
+
+        return;
 
         for(list<Point>::iterator it = cornerList.begin();it!=cornerList.end();it++){
             circle(img,*it,6,Scalar(0,0,255));
         }
 
         imshow("Nobel ",img);
+    }
+}
+void testcvharris(){
+    QString filename = QFileDialog::getOpenFileName();
+    if(!filename.isEmpty()){
+        Mat img = imread(filename.toStdString().c_str());
+        Mat imggray;
+        cvtColor(img,imggray,CV_BGR2GRAY);
+
+        int thresh = 90;
+
+        Mat dst, dst_norm, dst_norm_scaled;
+        dst = Mat::zeros( img.size(), CV_32FC1 );
+
+        /// Detector parameters
+        int blockSize = 2;
+        int apertureSize = 3;
+        double k = 0.04;
+
+        /// Detecting corners
+        cornerHarris( imggray, dst, blockSize, apertureSize, k, BORDER_DEFAULT );
+
+        /// Normalizing
+        normalize( dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat() );
+        convertScaleAbs( dst_norm, dst_norm_scaled );
+
+        /// Drawing a circle around corners
+        for( int j = 0; j < dst_norm.rows ; j++ )
+         { for( int i = 0; i < dst_norm.cols; i++ )
+              {
+                if( (int) dst_norm.at<float>(j,i) > thresh )
+                  {
+                   circle( img, Point( i, j ), 5,  Scalar(0), 2, 8, 0 );
+                  }
+              }
+         }
+        /// Showing the result
+        imshow("opencv harris",img);
     }
 }
 
@@ -314,6 +461,7 @@ int main(int argc,char * argv[]){
 //    testMoravec();
 //    testgradient();
     testNobel();
+//    testcvharris();
     cvWaitKey(0);
 
     return app.exec();
