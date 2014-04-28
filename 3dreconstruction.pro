@@ -24,7 +24,9 @@ SOURCES += main.cpp\
     uti.cpp \
     comparedialog.cpp \
     glwidget.cpp \
-    stereomatch.cpp
+    stereomatch.cpp \
+    cornerclicklabel.cpp \
+    dialogcorner.cpp
 
 HEADERS  += mainwindow.h \
     photodialog.h \
@@ -37,7 +39,9 @@ HEADERS  += mainwindow.h \
     photodialog2.h \
     comparedialog.h \
     glwidget.h \
-    stereomatch.h
+    stereomatch.h \
+    cornerclicklabel.h \
+    dialogcorner.h
 
 FORMS    += mainwindow.ui \
     photodialog.ui \
@@ -45,7 +49,8 @@ FORMS    += mainwindow.ui \
     clicklabel.ui \
     binoculardialog.ui \
     photodialog2.ui \
-    comparedialog.ui
+    comparedialog.ui \
+    dialogcorner.ui
 
 
 

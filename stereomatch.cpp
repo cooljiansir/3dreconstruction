@@ -79,6 +79,7 @@ void StereoMatchOpencvSGBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
     sgbm.speckleRange = 32;
     sgbm.disp12MaxDiff = 1;
     sgbm.fullDP = true;
+//    sgbm.fullDP = false;
 
     Mat dis1;
     Size size = leftgray.size();
@@ -144,11 +145,13 @@ void StereoMatchOpencvBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
     int minDisparity = this->param[2];
 
     bm.state->preFilterCap = 31;
+//    bm.state->preFilterCap = 1;
     bm.state->SADWindowSize = SADWindowSize;
     bm.state->minDisparity = minDisparity;
     bm.state->numberOfDisparities = numberOfDisparities;
     bm.state->textureThreshold = 10;
     bm.state->uniquenessRatio = 15;
+//      bm.state->uniquenessRatio = 0;
     bm.state->speckleWindowSize = 100;
     bm.state->speckleRange = 32;
     bm.state->disp12MaxDiff = 1;
@@ -652,9 +655,6 @@ void stereoSemi4(Mat &leftmat,Mat &rightmat,Mat &dis,double q,int p1,int p2,int 
 
 ///*
 void StereoMatchBM::stereoMatch(Mat &left, Mat &right, Mat &dis){
-    stereoSemi4(left,right,dis,2,8*5*5,32*5*5,128);
-    connectedArea(dis,32,100);
-    return;
     if(left.size()!=right.size())
         return;
     int winsize = this->param[0]/2;
@@ -1150,4 +1150,157 @@ void StereoMatchSGBM_DP::stereoMatch(Mat &leftmat, Mat &rightmat, Mat &dis){
     connectedArea(dis,32,200);
     delete []penalize;
     delete []steps;
+}
+
+StereoMatchAW::StereoMatchAW(){
+    this->paramCount = 0;
+}
+string StereoMatchAW::getKindName(){
+    return "AW";
+}
+int StereoMatchAW::getParamCount(){
+    return this->paramCount;
+}
+string StereoMatchAW::getParamName(int index){
+    return "";
+}
+int StereoMatchAW::getParamMax(int index){
+    return 0;
+}
+int StereoMatchAW::getParamMin(int index){
+    return 0;
+}
+int StereoMatchAW::getParamValue(int index){
+    return 0;
+}
+void StereoMatchAW::setParamValue(int index, int value){
+
+}
+void StereoMatchAW::stereoMatch(Mat &left, Mat &right, Mat &dis){
+    if(left.size()!=right.size())
+        return;
+    double yc=7,yg=36;
+    int winsize = 7;
+    int maxdis = 200;
+
+    Size size = left.size();
+    dis.create(size,CV_32F);
+
+    float *disptr = (float*)dis.data;
+
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+
+    for(int i = 0;i<size.height;i++)
+        for(int j = 0;j<size.width;j++)
+            disptr[i*size.width+j] = -1;
+
+    //double *mincost = new double[size.width];
+    //double *
+    double *w1buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+    double *w2buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+    double *cost = new double[size.width*maxdis];
+    int *mincost2 = new int[size.width];
+
+
+    for(int i = winsize;i+winsize<size.height;i++){
+        for(int j = winsize;j+winsize<size.width;j++){
+            int p = (i*size.width + j)*3;
+            int windex = j*(2*winsize+1)*(2*winsize+1);
+            for(int i1 = -winsize;i1<=winsize;i1++){
+                for(int j1 = -winsize;j1<=winsize;j1++){
+                    int q = ((i+i1)*size.width + j+j1)*3;
+
+                    /*double w1 =
+                            exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
+                                      (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
+                                      (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    double w2 =
+                            exp(-sqrt((rightptr[p] - rightptr[q])*(rightptr[p] - rightptr[q])+
+                                         (rightptr[p+1] - rightptr[q+1])*(rightptr[p+1] - rightptr[q+1])+
+                                         (rightptr[p+2] - rightptr[q+2])*(rightptr[p+2] - rightptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                            */
+                    double w1 =
+                            exp(-(fabs(leftptr[p] - leftptr[q])+
+                                fabs(leftptr[p+1] - leftptr[q+1])+
+                                fabs(leftptr[p+2] - leftptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    double w2 =
+                            exp(-(fabs(rightptr[p] - rightptr[q])+
+                                  fabs(rightptr[p+1] - rightptr[q+1])+
+                                  fabs(rightptr[p+2] - rightptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    w1buff[windex] = w1;
+                    w2buff[windex] = w2;
+                    windex++;
+                }
+            }
+        }
+        for(int j = winsize;j+winsize<size.width;j++){
+            double mincost;
+            int mmindex=-1;
+            for(int d = 0;d<maxdis&&d+winsize<=j;d++){
+                double sum = 0;
+                double sumw = 0;
+                int p = (i*size.width + j)*3;
+                int p_ = p-3*d;
+                int w1index = j*(2*winsize+1)*(2*winsize+1);
+                int w2index = (j-d)*(2*winsize+1)*(2*winsize+1);
+                for(int i1 = -winsize;i1<=winsize;i1++){
+                    for(int j1 = -winsize;j1<=winsize;j1++){
+
+                        int q = ((i+i1)*size.width + j+j1)*3;
+                        int q_ = q-d*3;
+                        double e1 = fabs(leftptr[q]-rightptr[q_])+
+                                fabs(leftptr[q+1]-rightptr[q_+1])+
+                                fabs(leftptr[q+2]-rightptr[q_+2]);
+
+                        double w1 = w1buff[w1index++];
+                        double w2 = w2buff[w2index++];
+                        sum += w1*w2*e1;
+                        sumw += w1*w2;
+                    }
+                }
+                cost[j*maxdis+d] = sum/sumw;
+            }
+        }
+        //right WTA
+        for(int j = winsize;j+winsize<size.width;j++){
+            double mmin;
+            int mindex = -1;
+            for(int d = 0;d<maxdis&&d+j+winsize<size.width;d++){
+                if(mindex==-1||cost[(j+d)*maxdis+d]<mmin)
+                    mmin = cost[(j+d)*maxdis+d],mindex = d;
+            }
+            mincost2[j] = mindex;
+        }
+        //left WTA and consistence check
+        for(int j = winsize;j+winsize<size.width;j++){
+            double mmin;
+            int mindex = -1;
+            for(int d = 0;d<maxdis&&d+winsize<=j;d++){
+                if(mindex==-1||cost[j*maxdis+d]<mmin)
+                    mmin = cost[j*maxdis+d],mindex = d;
+            }
+//            mincost1[j] = mindex;
+            int d2 = mincost2[j-mindex];
+            double *tempcost = cost + j*maxdis;
+            if(abs(mindex-d2)<=1){
+                double te = mindex;
+                if(mindex>0&&mindex<maxdis-1&&mindex+winsize<j){
+                    double tem = 2*tempcost[mindex - 1]  + 2*tempcost[mindex+1] - 4*tempcost[mindex];
+                    if(tem>0.001)te = te +(tempcost[mindex - 1]  - tempcost[mindex+1])/tem;
+                }
+                disptr[i*size.width+j] = te;
+            }
+        }
+
+        qDebug()<<"finished "<<i*100/size.height<<"%\r";
+    }
+    delete []w1buff;
+    delete []w2buff;
+    delete []cost;
+    delete []mincost2;
 }

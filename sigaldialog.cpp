@@ -3,6 +3,7 @@
 #include "clicklabel.h"
 #include <QStackedLayout>
 #include <QMessageBox>
+#include "dialogcorner.h"
 
 SigalDialog::SigalDialog(int isright,QString filename, RTFDocument *doc, QWidget *parent):
     QDialog(parent),
@@ -47,4 +48,18 @@ void SigalDialog::on_okBut_clicked()
 
 void SigalDialog::onLabelOk(){
     ui->okBut->setEnabled(true);
+}
+
+void SigalDialog::on_clearBut_clicked()
+{
+    ClickLabel *la = (ClickLabel*)this->label;
+
+    vector<Point2f> vec;
+    for(int i = 0;i<la->corners.size();i++){
+        for(int j = 0;j<la->corners[i].size();j++){
+            vec.push_back(la->corners[i][j]);
+        }
+    }
+    DialogCorner dg(la->selectimg,vec,(QWidget *)this->parent());
+    dg.exec();
 }

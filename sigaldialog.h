@@ -22,6 +22,8 @@ private slots:
     void on_okBut_clicked();
     void onLabelOk();
 
+    void on_clearBut_clicked();
+
 private:
     Ui::SigalDialog *ui;
     QLabel *label;

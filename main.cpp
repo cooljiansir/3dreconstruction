@@ -8,6 +8,7 @@
 #include <QTextCodec>
 #include "glwidget.h"
 #include <iostream>
+#include "dialogcorner.h"
 
 using namespace cv;
 using namespace std;
@@ -121,6 +122,11 @@ int main(int argc, char *argv[])
 
     MainWindow w;
     w.showMaximized();
+//    Mat mat;
+//    vector<Point2f> vc;
+//    DialogCorner dia(mat,vc);
+//    DialogCorner dia;
+//    dia.exec();
 //    testBM();
 //    testsbm();
 
