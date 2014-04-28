@@ -33,7 +33,7 @@
        <number>0</number>
       </property>
       <item alignment="Qt::AlignHCenter|Qt::AlignVCenter">
-       <widget class="CornerClickLabel" name="bigLabel">
+       <widget class="ClickLabel" name="bigLabel">
         <property name="text">
          <string>TextLabel</string>
         </property>
@@ -129,11 +129,6 @@
    <class>ClickLabel</class>
    <extends>QLabel</extends>
    <header>clicklabel.h</header>
-  </customwidget>
-  <customwidget>
-   <class>CornerClickLabel</class>
-   <extends>QLabel</extends>
-   <header>cornerclicklabel.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

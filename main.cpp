@@ -215,10 +215,38 @@ void calNobel(Mat &IxIx,Mat &IyIy,Mat &IxIy,Mat &res){
     }
 }
 
+//
+//两个特征值为：
+//IxIx + IyIy +- sqrt((IxIx - IyIy)*(IxIx - IyIy)+4*IxIy*IxIy)
+//------------------------------------------------------------
+//                            2
+//其中较小的一个为sqrt取负号时的值
+//
+void calShiTomas(Mat &IxIx,Mat &IyIy,Mat &IxIy,Mat &res){
+    Size size = IxIx.size();
+    res.create(size,CV_64F);
+    double *IxIxptr = (double *)IxIx.data;
+    double *IyIyptr = (double *)IyIy.data;
+    double *IxIyptr = (double *)IxIy.data;
+    double *resptr  = (double *)res.data;
+
+    for(int i = 0;i<size.height;i++){
+        for(int j = 0;j<size.width;j++){
+            *resptr = 0.5*(
+                        (*IxIxptr)+(*IyIyptr)
+                        - sqrt(((*IxIxptr)-(*IyIyptr))*((*IxIxptr)-(*IyIyptr))+4*(*IxIyptr)*(*IxIyptr))
+                        );
+            IxIxptr++;
+            IyIyptr++;
+            IxIyptr++;
+            resptr++;
+        }
+    }
+}
 
 
 //non-maximum suppression
-void getCorner(Mat &cim,int winsize,double threshold,list<Point> &cornerList){
+void getCorner(Mat &cim,int winsize,double threshold,vector<Point> &cornerList){
     Size size = cim.size();
     double *cimptr = (double *)cim.data;
     for(int i = winsize;i+winsize<size.height;i++){
@@ -276,7 +304,7 @@ void testgradient(){
 
     }
 }
-void getSubPix(Mat &cim,Point &a,Point2d &as){
+void getSubPix(Mat &cim,Point &a,Point2f &as){
 //    freopen("log.txt","w",stdout);
     Size size  = cim.size();
     as.x = as.y = 0;
@@ -334,26 +362,29 @@ void getSubPix(Mat &cim,Point &a,Point2d &as){
     }
 }
 
-void getSubPix2(Mat &Ix,Mat &Iy,Point &a, Point2d &as){
+void getSubPix2_(Mat &Ix,Mat &Iy,Point2f a, Point2f &as){
+    int winsize = 5;
     Size size = Ix.size();
     as.x = as.y = 0;
     double *Ixptr = (double*)Ix.data;
     double *Iyptr = (double*)Iy.data;
 
-    if(a.x>=2&&a.x+2<size.width&&
-            a.y>=2&&a.y+2<size.height){
-        MyMat A(25,2);
-        MyMat B(25,1);
+    if(a.x>=winsize&&a.x+winsize<size.width&&
+            a.y>=winsize&&a.y+winsize<size.height){
+        MyMat A((2*winsize+1)*(2*winsize+1),2);
+        MyMat B((2*winsize+1)*(2*winsize+1),1);
         MyMat X(2,1);
         int windex = 0;
-        for(int i1 = -2;i1<=2;i1++){
-            for(int j1 = -2;j1<=2;j1++){
-                double dx = Ixptr[(a.y+i1)*size.width+a.x+i1];
-                double dy = Iyptr[(a.y+i1)*size.width+a.x+i1];
+        for(int i1 = -5;i1<=5;i1++){
+            for(int j1 = -5;j1<=5;j1++){
+                int ddx = (int)a.x;
+                int ddy = (int)a.y;
+                double dx = Ixptr[(ddy+i1)*size.width+ddx+j1];
+                double dy = Iyptr[(ddy+i1)*size.width+ddx+j1];
                 A.at(windex,0) = dx;
                 A.at(windex,1) = dy;
 
-                B.at(windex,0) = dx*j1+dy*i1;
+                B.at(windex,0) = dx*(j1+ddx-a.x)+dy*(i1+ddy-a.y);
                 windex++;
             }
         }
@@ -366,6 +397,30 @@ void getSubPix2(Mat &Ix,Mat &Iy,Point &a, Point2d &as){
         as.x += a.x;
         as.y += a.y;
     }
+}
+void getSubPix2(Mat &Ix,Mat &Iy,Point &a, Point2f &as){
+
+
+    double thre = 0.01;
+    int maxn = 1000;
+    Point2f ap(a.x,a.y);
+    Point2f asp(0,0);
+    Point2f asp1(100,100);
+
+    for(int i = 0;i<maxn;i++){
+        getSubPix2_(Ix,Iy,ap,asp);
+        if((asp1.x-asp.x)*(asp1.x-asp.x) + (asp1.y-asp.y)*(asp1.y-asp.y)<thre)
+            break;
+        /*if((asp1.x-a.x)*(asp1.x-a.x) + (asp1.y-a.y)*(asp1.y-a.y)>11*11){
+            asp.x = a.x;
+            asp.y = a.y;
+            break;
+        }*/
+        as.x = asp.x;
+        as.y = asp.y;
+        asp1 = asp;
+    }
+    as = asp;
 }
 
 void testNobel(){
@@ -389,19 +444,27 @@ void testNobel(){
 
         Mat cim;
         calNobel(IxIx,IyIy,IxIy,cim);
+//        calShiTomas(IxIx,IyIy,IxIy,cim);
 
-        list<Point> cornerList;
-        getCorner(cim,3,2000,cornerList);
+        vector<Point> cornerList;
+
+//        getCorner(cim,3,8000,cornerList);
+        getCorner(cim,3,15000,cornerList);
 
 
 
         cout<<"total used "<<clock()-t1<<"ms"<<endl;
 
-        vector<Point2d> sublist;
-        for(list<Point>::iterator it = cornerList.begin();it!=cornerList.end();it++){
-            Point2d as;
-//            getSubPix(cim,*it,as);
-            getSubPix2(Ix,Iy,*it,as);
+        vector<Point2f> sublist;
+        for(int i = 0;i<cornerList.size();i++){
+            Point2f as;
+            as.x = cornerList[i].x;
+            as.y = cornerList[i].y;
+//            getSubPix(cim,cornerList[i],as);
+//            getSubPix2(Ix,Iy,cornerList[i],as);
+//            Point a(as.x,as.y);
+//            getSubPix2(Ix,Iy,cornerList[i],as);
+//            getSubPix2_(Ix,Iy,as,as);
             sublist.push_back(as);
         }
 
@@ -415,7 +478,11 @@ void testNobel(){
         Size winSize = Size( 5, 5 );
         Size zeroZone = Size( -1, -1 );
         TermCriteria criteria = TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 );
+
+
         cornerSubPix( imggray,harriscorners, winSize, zeroZone, criteria );
+        cornerSubPix( imggray,sublist, winSize, zeroZone, criteria );
+
         /*****************/
 
 /*
@@ -445,16 +512,10 @@ void testNobel(){
         */
         //        CornerDialog *dia = new CornerDialog(img,sublist);
         //        CornerDialog *dia = new CornerDialog(img,harriscorners);
-        PhotoDialog *dia = new PhotoDialog(img,harriscorners);
+//        PhotoDialog *dia = new PhotoDialog(img,harriscorners);
+          PhotoDialog *dia = new PhotoDialog(img,sublist);
         dia->exec();
 
-        return;
-
-        for(list<Point>::iterator it = cornerList.begin();it!=cornerList.end();it++){
-            circle(img,*it,6,Scalar(0,0,255));
-        }
-
-        imshow("Nobel ",img);
     }
 }
 void testcvharris(){

@@ -111,24 +111,32 @@ void PhotoDialog::keyPressEvent(QKeyEvent *e){
     bool changed = false;
     if(e->key()==Qt::Key_Left){
         this->smallx --;
-        if(this->smallx<0)this->smallx = 0;
-        if(this->smallx>=img.cols)this->smallx = this->img.cols-1;
+        if(this->smallx*this->smallrate<this->smallwinwidth/2)
+            this->smallx = this->smallwinwidth/this->smallrate/2;
+        if(this->smallx*this->smallrate+this->smallwinwidth/2>=img.cols)
+            this->smallx = (this->img.cols-1-this->smallwinwidth/2)/this->smallrate;
         changed = true;
     }
     else if(e->key()==Qt::Key_Right){
         this->smallx ++;
-        if(this->smallx<0)this->smallx = 0;
-        if(this->smallx>=img.cols)this->smallx = this->img.cols-1;
+        if(this->smallx*this->smallrate<this->smallwinwidth/2)
+            this->smallx = this->smallwinwidth/this->smallrate/2;
+        if(this->smallx*this->smallrate+this->smallwinwidth/2>=img.cols)
+            this->smallx = (this->img.cols-1-this->smallwinwidth/2)/this->smallrate;
         changed = true;
     }else if(e->key()==Qt::Key_Up){
         this->smally--;
-        if(this->smally<0)this->smally=0;
-        if(this->smally>=img.rows)this->smally = img.rows-1;
+        if(this->smally*this->smallrate<this->smallwinheight/2)
+            this->smally=this->smallwinheight/this->smallrate/2;
+        if(this->smally*this->smallrate+this->smallwinheight/2>=img.rows)
+            this->smally = (img.rows-1-this->smallwinheight/2)/this->smallrate;
         changed = true;
     }else if(e->key()==Qt::Key_Down){
         this->smally++;
-        if(this->smally<0)this->smally=0;
-        if(this->smally>=img.rows)this->smally = img.rows-1;
+        if(this->smally*this->smallrate<this->smallwinheight/2)
+            this->smally=this->smallwinheight/this->smallrate/2;
+        if(this->smally*this->smallrate+this->smallwinheight/2>=img.rows)
+            this->smally = (img.rows-1-this->smallwinheight/2)/this->smallrate;
         changed = true;
     }
     if(changed){
