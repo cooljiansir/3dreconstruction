@@ -1,6 +1,7 @@
 #include "dialogcorner.h"
 #include "ui_dialogcorner.h"
 #include "uti.h"
+#include <QDebug>
 #include <QKeyEvent>
 
 DialogCorner::DialogCorner(Mat &img,vector<Point2f> &corners,QWidget *parent) :
@@ -57,8 +58,8 @@ void DialogCorner::showSmall(){
     int h = this->smallwinheight;
     if(w>img.cols)w = img.cols;
     if(h>img.rows)h = img.rows;
-    int x = this->smallx*this->smallrate - this->smallwinwidth/2;
-    int y = this->smally*this->smallrate - this->smallwinheight/2;
+    int x = this->smallx - this->smallwinwidth/2;
+    int y = this->smally - this->smallwinheight/2;
     if(x<0)x = 0;
     if(y<0)y = 0;
     if(x+w>=img.cols)x = img.cols - w;
@@ -79,7 +80,7 @@ void DialogCorner::showSmall(){
             p.x = (corners[i].x - x)*realsx;
             p.y = (corners[i].y - y)*realsy;
             //circle(showbigmat,p,6,Scalar(0,0,255));
-            int li = 15;
+            int li = 10;
             if(p.x-li>=0&&p.y-li>=0&&p.x+li<showbigmat.cols&&p.y+li<showbigmat.rows){
                 line(showbigmat,Point(p.x-li,p.y),Point(p.x+li,p.y),Scalar(0,0,255));
                 line(showbigmat,Point(p.x,p.y-li),Point(p.x,p.y+li),Scalar(0,0,255));
@@ -103,32 +104,33 @@ void DialogCorner::keyPressEvent(QKeyEvent *e){
     bool changed = false;
     if(e->key()==Qt::Key_Left){
         this->smallx --;
-        if(this->smallx*this->smallrate<this->smallwinwidth/2)
-            this->smallx = this->smallwinwidth/this->smallrate/2;
-        if(this->smallx*this->smallrate+this->smallwinwidth/2>=img.cols)
-            this->smallx = (this->img.cols-1-this->smallwinwidth/2)/this->smallrate;
+        if(this->smallx<this->smallwinwidth/2)
+            this->smallx = this->smallwinwidth/2;
+        if(this->smallx+this->smallwinwidth/2>=img.cols)
+            this->smallx = this->img.cols-1-this->smallwinwidth/2;
         changed = true;
     }
     else if(e->key()==Qt::Key_Right){
         this->smallx ++;
-        if(this->smallx*this->smallrate<this->smallwinwidth/2)
-            this->smallx = this->smallwinwidth/this->smallrate/2;
-        if(this->smallx*this->smallrate+this->smallwinwidth/2>=img.cols)
-            this->smallx = (this->img.cols-1-this->smallwinwidth/2)/this->smallrate;
+        if(this->smallx<this->smallwinwidth/2)
+            this->smallx = this->smallwinwidth/2;
+        if(this->smallx+this->smallwinwidth/2>=img.cols)
+            this->smallx = this->img.cols-1-this->smallwinwidth/2;
         changed = true;
     }else if(e->key()==Qt::Key_Up){
         this->smally--;
-        if(this->smally*this->smallrate<this->smallwinheight/2)
-            this->smally=this->smallwinheight/this->smallrate/2;
-        if(this->smally*this->smallrate+this->smallwinheight/2>=img.rows)
-            this->smally = (img.rows-1-this->smallwinheight/2)/this->smallrate;
+        if(this->smally<this->smallwinheight/2)
+            this->smally=this->smallwinheight/2;
+        if(this->smally+this->smallwinheight/2>=img.rows)
+            this->smally = img.rows-1-this->smallwinheight/2;
         changed = true;
     }else if(e->key()==Qt::Key_Down){
         this->smally++;
-        if(this->smally*this->smallrate<this->smallwinheight/2)
-            this->smally=this->smallwinheight/this->smallrate/2;
-        if(this->smally*this->smallrate+this->smallwinheight/2>=img.rows)
-            this->smally = (img.rows-1-this->smallwinheight/2)/this->smallrate;
+
+        if(this->smally<this->smallwinheight/2)
+            this->smally=this->smallwinheight/2;
+        if(this->smally+this->smallwinheight/2>=img.rows)
+            this->smally = img.rows-1-this->smallwinheight/2;
         changed = true;
     }
     if(changed){
@@ -145,8 +147,9 @@ void DialogCorner::on_changeScale_clicked()
 }
 
 void DialogCorner::onScaleLabelClicked(int x, int y){
-    this->smallx = x;
-    this->smally = y;
+    qDebug()<<"clicked"<<endl;
+    this->smallx = x*this->smallrate;
+    this->smally = y*this->smallrate;
     this->showBig();
     this->showSmall();
 }

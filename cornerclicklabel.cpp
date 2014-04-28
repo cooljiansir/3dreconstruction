@@ -1,5 +1,6 @@
 #include "cornerclicklabel.h"
 #include <QMouseEvent>
+#include <QDebug>
 
 CornerClickLabel::CornerClickLabel(QWidget *parent) :
     QLabel(parent)
@@ -9,5 +10,6 @@ CornerClickLabel::CornerClickLabel(QWidget *parent) :
     }
 }
 void CornerClickLabel::mousePressEvent(QMouseEvent *ev){
+
     emit mousePressed(ev->x(),ev->y());
 }
