@@ -5,6 +5,7 @@
 #include <algorithm>
 #include "MyMat.h"
 #include "cornerdialog.h"
+#include "photodialog.h"
 
 #include <QDebug>
 
@@ -404,7 +405,47 @@ void testNobel(){
             sublist.push_back(as);
         }
 
-        CornerDialog *dia = new CornerDialog(img,sublist);
+        //opencv corner
+        vector<Point2f> harriscorners;
+        int maxCorner = 1000;
+        double quality_level = 0.1;
+        double min_dis = 9;
+
+        cv::goodFeaturesToTrack(imggray,harriscorners,maxCorner,quality_level,min_dis);
+        Size winSize = Size( 5, 5 );
+        Size zeroZone = Size( -1, -1 );
+        TermCriteria criteria = TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 );
+        cornerSubPix( imggray,harriscorners, winSize, zeroZone, criteria );
+        /*****************/
+
+/*
+
+
+        Mat showbigmat;
+        int sca = 10;
+        cv::resize(img,showbigmat,Size(img.cols*sca,img.rows*sca),0,0,INTER_NEAREST);
+        vector<Point2f> &corners = harriscorners;
+        for(int i = 0;i<corners.size();i++){
+            int li = 10;
+            Point p;
+            p.x = corners[i].x*sca;
+            p.y = corners[i].y*sca;
+            //if(p.x>=li&&p.y>=li
+              //      &&p.x+li<showbigmat.cols
+                //    &&p.y+li<showbigmat.rows){
+                line(showbigmat,Point(p.x-li,p.y),Point(p.x+li,p.y),Scalar(0,0,255));
+                line(showbigmat,Point(p.x,p.y-li),Point(p.x,p.y+li),Scalar(0,0,255));
+            //}
+                qDebug()<<"debug"<<endl;
+        }
+        QString filename2 = filename+"res.png";
+        imshow("test",showbigmat);
+        imwrite(filename2.toStdString().c_str(),showbigmat);
+
+        */
+        //        CornerDialog *dia = new CornerDialog(img,sublist);
+        //        CornerDialog *dia = new CornerDialog(img,harriscorners);
+        PhotoDialog *dia = new PhotoDialog(img,harriscorners);
         dia->exec();
 
         return;

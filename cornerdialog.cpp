@@ -6,7 +6,7 @@
 
 using namespace std;
 
-CornerDialog::CornerDialog(Mat &img, vector<Point2d> &corners, QWidget *parent) :
+CornerDialog::CornerDialog(Mat &img, vector<Point2f> &corners, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::CornerDialog)
 {
@@ -39,7 +39,9 @@ void CornerDialog::calMat(Mat &showmat, Point c,double prerate){
     }
 
     int swinwidth = winwidth / rate;
+    rate = winwidth*1.0/swinwidth;
     int swinheight = winheight / rate;
+
 
     //小于显示窗口，就不放大了
     if(swinwidth>=this->img.cols||swinheight>=this->img.rows){
@@ -57,8 +59,8 @@ void CornerDialog::calMat(Mat &showmat, Point c,double prerate){
         this->showdx = this->showdy = 0;
 
     Rect r;
-    r.x = this->showdx + c.x/prerate - swinwidth/2;
-    r.y = this->showdy + c.y/prerate - swinheight/2;
+    r.x = this->showdx + c.x/prerate - c.x/rate;
+    r.y = this->showdy + c.y/prerate - c.y/rate;
     r.width = swinwidth;
     r.height = swinheight;
     if(r.x<0)r.x = 0;
@@ -73,7 +75,7 @@ void CornerDialog::calMat(Mat &showmat, Point c,double prerate){
     qDebug()<<"swinwidth"<<swinwidth<<endl;
     qDebug()<<"swinheight"<<swinheight<<endl;
     Size dsize(winwidth,winheight);
-    cv::resize(this->img(r),showmat,dsize);
+    cv::resize(this->img(r),showmat,dsize,0,0,INTER_NEAREST);
     for(int i = 0;i<this->corners.size();i++){
         if(corners[i].x>=r.x&&corners[i].x<=r.x+swinwidth&&
                 corners[i].y>=r.y&&corners[i].y<=r.y+swinheight){
