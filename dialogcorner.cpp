@@ -50,22 +50,25 @@ void DialogCorner::showBig(){
 void DialogCorner::showSmall(){
     this->smallwinwidth = ui->bigBorder->width()/bigrate;
     this->smallwinheight = ui->bigBorder->height()/bigrate;
-    double realsx = ui->bigBorder->width()*1.0/this->smallwinwidth;
-    double realsy = ui->bigBorder->height()*1.0/this->smallwinheight;
-    Mat showmat = img.clone();
 
-    int w = this->smallwinwidth;
-    int h = this->smallwinheight;
-    if(w>img.cols)w = img.cols;
-    if(h>img.rows)h = img.rows;
+
+    if(this->smallwinwidth>img.cols)this->smallwinwidth = img.cols;
+    if(this->smallwinheight>img.rows)this->smallwinheight = img.rows;
+
+
     int x = this->smallx - this->smallwinwidth/2;
     int y = this->smally - this->smallwinheight/2;
     if(x<0)x = 0;
     if(y<0)y = 0;
-    if(x+w>=img.cols)x = img.cols - w;
-    if(y+h>=img.rows)y = img.rows - h;
-    cv::rectangle(showmat,Rect(x,y,w,h),Scalar(0,0,255),4);
-    Mat sMat = img(Rect(x,y,w,h));
+    if(x+this->smallwinwidth>=img.cols)x = img.cols - this->smallwinwidth;
+    if(y+this->smallwinheight>=img.rows)y = img.rows - this->smallwinheight;
+
+    double realsx = ui->bigBorder->width()*1.0/this->smallwinwidth;
+    double realsy = ui->bigBorder->height()*1.0/this->smallwinheight;
+    Mat showmat = img.clone();
+
+    cv::rectangle(showmat,Rect(x,y,smallwinwidth,smallwinheight),Scalar(0,0,255),4);
+    Mat sMat = img(Rect(x,y,smallwinwidth,smallwinheight));
     Mat showbigmat;
 
 
@@ -87,7 +90,7 @@ void DialogCorner::showSmall(){
             }
         }
     }
-    this->scaledTo(showbigmat,showbigmat,ui->bigBorder->width(),ui->bigBorder->height());
+//    this->scaledTo(showbigmat,showbigmat,ui->bigBorder->width(),ui->bigBorder->height());
     this->ui->bigLabel->setPixmap(QPixmap::fromImage(Mat2QImage(showbigmat)));
 
     for(int i = 0;i<this->corners.size();i++){
