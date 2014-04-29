@@ -243,10 +243,34 @@ void calShiTomas(Mat &IxIx,Mat &IyIy,Mat &IxIy,Mat &res){
         }
     }
 }
+//Harrris 角点响应函数
+//AB-C*C-k*(A+B)*(A+B)
+//即
+//IxIx*IyIy-IxIy*IxIy - k*(IxIx+IyIy)*(IxIx+IyIy)
 
+void calHarris(Mat &IxIx,Mat &IyIy,Mat &IxIy,Mat &res){
+    double k=0.04;
+    Size size = IxIx.size();
+    res.create(size,CV_64F);
+    double *IxIxptr = (double *)IxIx.data;
+    double *IyIyptr = (double *)IyIy.data;
+    double *IxIyptr = (double *)IxIy.data;
+    double *resptr  = (double *)res.data;
+
+    for(int i = 0;i<size.height;i++){
+        for(int j = 0;j<size.width;j++){
+            *resptr = (*IxIxptr)*(*IyIyptr) - (*IxIyptr)*(*IxIyptr) -
+                    k*((*IxIxptr)+(*IyIyptr))*((*IxIxptr)+(*IyIyptr));
+            IxIxptr++;
+            IyIyptr++;
+            IxIyptr++;
+            resptr++;
+        }
+    }
+}
 
 //non-maximum suppression
-void getCorner(Mat &cim,int winsize,double threshold,vector<Point> &cornerList){
+void getCorner(Mat &cim,int winsize,double threshold,vector<Point> &cornerList,bool non){
     Size size = cim.size();
     double *cimptr = (double *)cim.data;
     for(int i = winsize;i+winsize<size.height;i++){
@@ -254,11 +278,13 @@ void getCorner(Mat &cim,int winsize,double threshold,vector<Point> &cornerList){
         for(int j = winsize;j+winsize<size.width;j++){
             if(cimptri[j]>=threshold){
                 bool ismax = true;
-                for(int i1 = -winsize;i1<=winsize;i1++){
-                    for(int j1  = -winsize;j1<=winsize;j1++){
-                        if(cimptri[i1*size.width+j+j1]>cimptri[j]){
-                            ismax = false;
-                            break;
+                if(non){
+                    for(int i1 = -winsize;i1<=winsize;i1++){
+                        for(int j1  = -winsize;j1<=winsize;j1++){
+                            if(cimptri[i1*size.width+j+j1]>cimptri[j]){
+                                ismax = false;
+                                break;
+                            }
                         }
                     }
                 }
@@ -268,42 +294,7 @@ void getCorner(Mat &cim,int winsize,double threshold,vector<Point> &cornerList){
     }
 }
 
-void testMoravec(){
-    QString filename = QFileDialog::getOpenFileName();
-    if(!filename.isEmpty()){
-        Mat img = imread(filename.toStdString().c_str());
-        //imshow("test",imggray);
-        moravec(img,5000);
 
-    }
-}
-
-void testgradient(){
-    QString filename = QFileDialog::getOpenFileName();
-    if(!filename.isEmpty()){
-        Mat img = imread(filename.toStdString().c_str());
-        Mat imggray;
-        cvtColor(img,imggray,CV_BGR2GRAY);
-        Mat gx,gx_3,gy,gy_3;
-
-        gradient_x(imggray,gx);
-        gradient_x_3(imggray,gx_3);
-        gradient_y(imggray,gy);
-        gradient_y_3(imggray,gy_3);
-
-        Mat disgx,disgx_3,disgy,disgy_3;
-        gx.convertTo(disgx,CV_8U);
-        gx_3.convertTo(disgx_3,CV_8U);
-        gy.convertTo(disgy,CV_8U);
-        gy_3.convertTo(disgy_3,CV_8U);
-
-        imshow("gx",disgx);
-        imshow("gx_3",disgx_3);
-        imshow("gy",disgy);
-        imshow("gy_3",disgy_3);
-
-    }
-}
 void getSubPix(Mat &cim,Point &a,Point2f &as){
 //    freopen("log.txt","w",stdout);
     Size size  = cim.size();
@@ -375,10 +366,10 @@ void getSubPix2_(Mat &Ix,Mat &Iy,Point2f a, Point2f &as){
         MyMat B((2*winsize+1)*(2*winsize+1),1);
         MyMat X(2,1);
         int windex = 0;
+        int ddx = (int)a.x;
+        int ddy = (int)a.y;
         for(int i1 = -5;i1<=5;i1++){
             for(int j1 = -5;j1<=5;j1++){
-                int ddx = (int)a.x;
-                int ddy = (int)a.y;
                 double dx = Ixptr[(ddy+i1)*size.width+ddx+j1];
                 double dy = Iyptr[(ddy+i1)*size.width+ddx+j1];
                 A.at(windex,0) = dx;
@@ -401,7 +392,7 @@ void getSubPix2_(Mat &Ix,Mat &Iy,Point2f a, Point2f &as){
 void getSubPix2(Mat &Ix,Mat &Iy,Point &a, Point2f &as){
 
 
-    double thre = 0.01;
+    double thre = 0.01*0.01;
     int maxn = 1000;
     Point2f ap(a.x,a.y);
     Point2f asp(0,0);
@@ -421,6 +412,25 @@ void getSubPix2(Mat &Ix,Mat &Iy,Point &a, Point2f &as){
         asp1 = asp;
     }
     as = asp;
+}
+
+void mycvt(Mat &src,Mat &res){
+    Size size = src.size();
+    res.create(size,CV_8U);
+
+    unsigned char *resptr = res.data;
+    unsigned char *srcptr = src.data;
+
+    double r = 0.299,g=0.587,b=0.114;
+//    cvtColor(src,res,CV_BGR2BGRA);
+
+    for(int i = 0;i<size.height;i++){
+        for(int j = 0;j<size.width;j++){
+            *resptr = srcptr[0]*b+srcptr[1]*g+srcptr[2]*r;
+            resptr ++;
+            srcptr +=3;
+        }
+    }
 }
 
 void testNobel(){
@@ -444,12 +454,18 @@ void testNobel(){
 
         Mat cim;
         calNobel(IxIx,IyIy,IxIy,cim);
+//        calHarris(IxIx,IyIy,IxIy,cim);
+
 //        calShiTomas(IxIx,IyIy,IxIy,cim);
 
         vector<Point> cornerList;
 
 //        getCorner(cim,3,8000,cornerList);
-        getCorner(cim,3,15000,cornerList);
+//        getCorner(cim,3,15000,cornerList,false);
+          getCorner(cim,3,15000,cornerList,true);
+//            getCorner(cim,3,15000,cornerList,true);
+//            getCorner(cim,3,10000,cornerList,false);
+//          getCorner(cim,3,400000000,cornerList,false);//harris parameters
 
 
 
@@ -460,10 +476,10 @@ void testNobel(){
             Point2f as;
             as.x = cornerList[i].x;
             as.y = cornerList[i].y;
-//            getSubPix(cim,cornerList[i],as);
+            getSubPix(cim,cornerList[i],as);
 //            getSubPix2(Ix,Iy,cornerList[i],as);
 //            Point a(as.x,as.y);
-//            getSubPix2(Ix,Iy,cornerList[i],as);
+            getSubPix2(Ix,Iy,cornerList[i],as);
 //            getSubPix2_(Ix,Iy,as,as);
             sublist.push_back(as);
         }
@@ -481,7 +497,7 @@ void testNobel(){
 
 
         cornerSubPix( imggray,harriscorners, winSize, zeroZone, criteria );
-        cornerSubPix( imggray,sublist, winSize, zeroZone, criteria );
+//        cornerSubPix( imggray,sublist, winSize, zeroZone, criteria );
 
         /*****************/
 
@@ -557,12 +573,122 @@ void testcvharris(){
     }
 }
 
+void testcvt(){
+    QString filename = QFileDialog::getOpenFileName();
+    if(!filename.isEmpty()){
+        Mat img = imread(filename.toStdString().c_str());
+        Mat graym,graycv;
+        mycvt(img,graym);
+        cvtColor(img,graycv,CV_BGR2GRAY);
+        imshow("source",img);
+        imshow("gray",graym);
+        imshow("opencv",graycv);
+    }
+}
+void testMoravec(){
+    QString filename = QFileDialog::getOpenFileName();
+    if(!filename.isEmpty()){
+        Mat img = imread(filename.toStdString().c_str());
+        //imshow("test",imggray);
+        moravec(img,5000);
+
+    }
+}
+
+void testgradient(){
+    QString filename = QFileDialog::getOpenFileName();
+    if(!filename.isEmpty()){
+        Mat img = imread(filename.toStdString().c_str());
+        Mat imggray;
+        cvtColor(img,imggray,CV_BGR2GRAY);
+        Mat gx,gx_3,gy,gy_3;
+
+        gradient_x(imggray,gx);
+        gradient_x_3(imggray,gx_3);
+        gradient_y(imggray,gy);
+        gradient_y_3(imggray,gy_3);
+
+        Mat disgx,disgx_3,disgy,disgy_3;
+        gx.convertTo(disgx,CV_8U);
+        gx_3.convertTo(disgx_3,CV_8U);
+        gy.convertTo(disgy,CV_8U);
+        gy_3.convertTo(disgy_3,CV_8U);
+
+        //imshow("gx",disgx);
+        //imshow("gx_3",disgx_3);
+        //imshow("gy",disgy);
+        //imshow("gy_3",disgy_3);
+        cv::normalize(disgx_3,disgx_3,0,255,CV_MINMAX);
+        cv::normalize(disgy_3,disgy_3,0,255,CV_MINMAX);
+        imshow("x",disgx_3);
+        imshow("y",disgy_3);
+    }
+}
+
+void gauss(Mat &img,Mat &res){
+    Size size = img.size();
+    int gau[5*5] = {
+                        1,	 4,	 7,	 4,	1,
+                        4,	16,	26,	16,	4,
+                        7,	26,	41,	26,	7,
+                        4,	16,	26,	16,	4,
+                        1,	 4,	 7,	 4,	1};
+    res.create(size,CV_8U);
+
+    unsigned char *imgptr = img.data;
+    unsigned char *resptr = res.data;
+
+    for(int i=0;i<2;i++)
+        for(int j = 0;j<size.width;j++)
+            resptr[i*size.width+j] = resptr[(size.height-1-i)*size.width+j] = 0;
+    for(int i=0;i<size.height;i++)
+        for(int j = 0;j<2;j++)
+            resptr[i*size.width+j] = resptr[i*size.width+size.width-1-j] = 0;
+
+
+    for(int i = 2;i+2<size.height;i++){
+        unsigned char *imgptri = imgptr + i*size.width;
+        for(int j = 2;j+2<size.width;j++){
+            int windex = 0;
+            int sum = 0;
+            for(int i1 = -2;i1<=2;i1++){
+                for(int j1 = -2;j1<=2;j1++){
+                    sum += gau[windex]*imgptri[i1*size.width+j1+j];
+                    windex++;
+                }
+            }
+            resptr[i*size.width+j] = (sum/273);
+        }
+    }
+}
+
+void testConv(){
+    QString filename = QFileDialog::getOpenFileName();
+    if(!filename.isEmpty()){
+        Mat img = imread(filename.toStdString().c_str());
+        Mat imggray;
+        cvtColor(img,imggray,CV_BGR2GRAY);
+        imshow("source",imggray);
+
+        Mat res;
+        gauss(imggray,res);
+//        Mat disres;
+        //return;
+//        res.convertTo(disres,CV_8U);
+//        cv::normalize(disres,disres,0,255,CV_MINMAX);
+
+        imshow("Gauss",res);
+    }
+}
+
 int main(int argc,char * argv[]){
     QApplication app(argc,argv);
 
 //    testMoravec();
 //    testgradient();
+//    testConv();
     testNobel();
+//    testcvt();
 //    testcvharris();
     cvWaitKey(0);
 

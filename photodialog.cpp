@@ -35,8 +35,8 @@ void PhotoDialog::resizeEvent(QResizeEvent *){
 
 void PhotoDialog::onScaleLabelClicked(int x, int y){
     qDebug()<<"clicked!"<<endl;
-    this->smallx = x;
-    this->smally = y;
+    this->smallx = x*this->smallrate;
+    this->smally = y*this->smallrate;
     this->showBig();
     this->showSmall();
 }
@@ -57,22 +57,25 @@ void PhotoDialog::showBig(){
 void PhotoDialog::showSmall(){
     this->smallwinwidth = ui->bigBorder->width()/bigrate;
     this->smallwinheight = ui->bigBorder->height()/bigrate;
+
+
+    if(this->smallwinwidth>img.cols)this->smallwinwidth = img.cols;
+    if(this->smallwinheight>img.rows)this->smallwinheight = img.rows;
+
+
+    int x = this->smallx - this->smallwinwidth/2;
+    int y = this->smally - this->smallwinheight/2;
+    if(x<0)x = 0;
+    if(y<0)y = 0;
+    if(x+this->smallwinwidth>=img.cols)x = img.cols - this->smallwinwidth;
+    if(y+this->smallwinheight>=img.rows)y = img.rows - this->smallwinheight;
+
     double realsx = ui->bigBorder->width()*1.0/this->smallwinwidth;
     double realsy = ui->bigBorder->height()*1.0/this->smallwinheight;
     Mat showmat = img.clone();
 
-    int w = this->smallwinwidth;
-    int h = this->smallwinheight;
-    if(w>img.cols)w = img.cols;
-    if(h>img.rows)h = img.rows;
-    int x = this->smallx*this->smallrate - this->smallwinwidth/2;
-    int y = this->smally*this->smallrate - this->smallwinheight/2;
-    if(x<0)x = 0;
-    if(y<0)y = 0;
-    if(x+w>=img.cols)x = img.cols - w;
-    if(y+h>=img.rows)y = img.rows - h;
-    cv::rectangle(showmat,Rect(x,y,w,h),Scalar(0,0,255),4);
-    Mat sMat = img(Rect(x,y,w,h));
+    cv::rectangle(showmat,Rect(x,y,smallwinwidth,smallwinheight),Scalar(0,0,255),4);
+    Mat sMat = img(Rect(x,y,smallwinwidth,smallwinheight));
     Mat showbigmat;
 
 
@@ -94,7 +97,7 @@ void PhotoDialog::showSmall(){
             }
         }
     }
-    this->scaledTo(showbigmat,showbigmat,ui->bigBorder->width(),ui->bigBorder->height());
+//    this->scaledTo(showbigmat,showbigmat,ui->bigBorder->width(),ui->bigBorder->height());
     this->ui->bigLabel->setPixmap(QPixmap::fromImage(Mat2QImage(showbigmat)));
 
     for(int i = 0;i<this->corners.size();i++){
@@ -111,32 +114,33 @@ void PhotoDialog::keyPressEvent(QKeyEvent *e){
     bool changed = false;
     if(e->key()==Qt::Key_Left){
         this->smallx --;
-        if(this->smallx*this->smallrate<this->smallwinwidth/2)
-            this->smallx = this->smallwinwidth/this->smallrate/2;
-        if(this->smallx*this->smallrate+this->smallwinwidth/2>=img.cols)
-            this->smallx = (this->img.cols-1-this->smallwinwidth/2)/this->smallrate;
+        if(this->smallx<this->smallwinwidth/2)
+            this->smallx = this->smallwinwidth/2;
+        if(this->smallx+this->smallwinwidth/2>=img.cols)
+            this->smallx = this->img.cols-1-this->smallwinwidth/2;
         changed = true;
     }
     else if(e->key()==Qt::Key_Right){
         this->smallx ++;
-        if(this->smallx*this->smallrate<this->smallwinwidth/2)
-            this->smallx = this->smallwinwidth/this->smallrate/2;
-        if(this->smallx*this->smallrate+this->smallwinwidth/2>=img.cols)
-            this->smallx = (this->img.cols-1-this->smallwinwidth/2)/this->smallrate;
+        if(this->smallx<this->smallwinwidth/2)
+            this->smallx = this->smallwinwidth/2;
+        if(this->smallx+this->smallwinwidth/2>=img.cols)
+            this->smallx = this->img.cols-1-this->smallwinwidth/2;
         changed = true;
     }else if(e->key()==Qt::Key_Up){
         this->smally--;
-        if(this->smally*this->smallrate<this->smallwinheight/2)
-            this->smally=this->smallwinheight/this->smallrate/2;
-        if(this->smally*this->smallrate+this->smallwinheight/2>=img.rows)
-            this->smally = (img.rows-1-this->smallwinheight/2)/this->smallrate;
+        if(this->smally<this->smallwinheight/2)
+            this->smally=this->smallwinheight/2;
+        if(this->smally+this->smallwinheight/2>=img.rows)
+            this->smally = img.rows-1-this->smallwinheight/2;
         changed = true;
     }else if(e->key()==Qt::Key_Down){
         this->smally++;
-        if(this->smally*this->smallrate<this->smallwinheight/2)
-            this->smally=this->smallwinheight/this->smallrate/2;
-        if(this->smally*this->smallrate+this->smallwinheight/2>=img.rows)
-            this->smally = (img.rows-1-this->smallwinheight/2)/this->smallrate;
+
+        if(this->smally<this->smallwinheight/2)
+            this->smally=this->smallwinheight/2;
+        if(this->smally+this->smallwinheight/2>=img.rows)
+            this->smally = img.rows-1-this->smallwinheight/2;
         changed = true;
     }
     if(changed){

@@ -240,7 +240,7 @@ bool MyMat::inverse(MyMat &res){
 			this->lineOper(res.data + j*rows,res.data + i*rows,-k,rows);
 		}
 	}
-	//归一化
+    //化为单位矩阵
 	for(int i = 0;i<rows;i++){
 		for(int j = 0;j<rows;j++){
 			double k = 1/temp.data[i*rows+i];
