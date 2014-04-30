@@ -4,13 +4,19 @@
 #include <QDebug>
 #include <QKeyEvent>
 
-PhotoDialog::PhotoDialog(Mat &img, vector<Point2f> &corners, QWidget *parent) :
+#include "highgui.h"
+
+PhotoDialog::PhotoDialog(QString filename, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::PhotoDialog)
 {
     ui->setupUi(this);
-    this->img = img.clone();
-    this->corners = corners;
+    //this->img = filename.clone();
+    //this->corners = corners;
+    this->filename = filename;
+    this->ui->radioButHarris->setChecked(true);
+    this->ui->radioButFitting->setChecked(true);
+    this->loadMat();
     this->smallx = this->smally = 0;
     this->bigrate = 5;
     this->ui->lineEdit->setText(QString::number(this->bigrate));
@@ -21,6 +27,7 @@ PhotoDialog::PhotoDialog(Mat &img, vector<Point2f> &corners, QWidget *parent) :
     this->setWindowTitle("Observe Corners");
     this->showMaximized();
     this->setFocus();
+    this->on_radioButHarris_clicked();
 }
 
 PhotoDialog::~PhotoDialog()
@@ -34,7 +41,6 @@ void PhotoDialog::resizeEvent(QResizeEvent *){
 }
 
 void PhotoDialog::onScaleLabelClicked(int x, int y){
-    qDebug()<<"clicked!"<<endl;
     this->smallx = x*this->smallrate;
     this->smally = y*this->smallrate;
     this->showBig();
@@ -152,6 +158,85 @@ void PhotoDialog::keyPressEvent(QKeyEvent *e){
 void PhotoDialog::on_pushButton_clicked()
 {
     this->bigrate = this->ui->lineEdit->text().toInt();
+    this->showSmall();
+    this->setFocus();
+}
+void PhotoDialog::loadMat(){
+    this->img = imread(this->filename.toStdString().c_str());
+}
+
+void PhotoDialog::on_radioButMoravec_clicked()
+{
+    this->ui->labelK->setVisible(false);
+    this->ui->lineEditK->setVisible(false);
+    this->corn.setPixMethod(Corner::PIX_MORAVEC);
+    this->ui->lineEditThreshold->setText(QString::number(corn.getThreshold(Corner::PIX_MORAVEC)));
+    this->ui->lineEditWinsize->setText(QString::number(this->corn.getWinsize()));
+    this->corn.getCorner(img,this->corners);
+    this->showSmall();
+}
+
+void PhotoDialog::on_radioButHarris_clicked()
+{
+    this->ui->labelK->setVisible(true);
+    this->ui->lineEditK->setVisible(true);
+    this->corn.setPixMethod(Corner::PIX_HARRIS);
+    this->ui->lineEditThreshold->setText(QString::number(corn.getThreshold(Corner::PIX_HARRIS)));
+    this->ui->lineEditWinsize->setText(QString::number(this->corn.getWinsize()));
+    this->ui->lineEditK->setText(QString::number(this->corn.getK()));
+    this->corn.getCorner(img,this->corners);
+    this->showSmall();
+}
+
+void PhotoDialog::on_radioButNobel_clicked()
+{
+    this->ui->labelK->setVisible(false);
+    this->ui->lineEditK->setVisible(false);
+    this->corn.setPixMethod(Corner::PIX_NOBEL);
+    this->ui->lineEditThreshold->setText(QString::number(corn.getThreshold(Corner::PIX_NOBEL)));
+    this->ui->lineEditWinsize->setText(QString::number(this->corn.getWinsize()));
+    this->corn.getCorner(img,this->corners);
+    this->showSmall();
+}
+
+void PhotoDialog::on_radioButShiTomasi_clicked()
+{
+    this->ui->labelK->setVisible(false);
+    this->ui->lineEditK->setVisible(false);
+    this->corn.setPixMethod(Corner::PIX_SHI_TOMASI);
+    this->ui->lineEditThreshold->setText(QString::number(corn.getThreshold(Corner::PIX_SHI_TOMASI)));
+    this->ui->lineEditWinsize->setText(QString::number(this->corn.getWinsize()));
+    this->corn.getCorner(img,this->corners);
+    this->showSmall();
+}
+
+void PhotoDialog::on_radioButFitting_clicked()
+{
+    this->corn.setSubPixMethod(Corner::SUBPIX_FITTING);
+    this->corn.getCorner(img,this->corners);
+    this->showSmall();
+}
+
+void PhotoDialog::on_radioButVector_clicked()
+{
+    this->corn.setSubPixMethod(Corner::SUBPIX_VECTOR);
+    this->corn.getCorner(img,this->corners);
+    this->showSmall();
+}
+
+void PhotoDialog::on_changePraBut_clicked()
+{
+    bool ok;
+    double th = this->ui->lineEditThreshold->text().toDouble(&ok);
+    if(!ok)return;
+    double k = this->ui->lineEditK->text().toDouble(&ok);
+    if(!ok)return;
+    int winsize = this->ui->lineEditWinsize->text().toInt(&ok);
+    if(!ok)return;
+    this->corn.setThreshold(th);
+    this->corn.setK(k);
+    this->corn.setWinsize(winsize);
+    this->corn.getCorner(img,this->corners);
     this->showSmall();
     this->setFocus();
 }

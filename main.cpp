@@ -9,6 +9,11 @@
 
 #include <QDebug>
 
+#ifdef TEST
+#define
+
+
+
 
 using namespace cv;
 using namespace std;
@@ -529,8 +534,8 @@ void testNobel(){
         //        CornerDialog *dia = new CornerDialog(img,sublist);
         //        CornerDialog *dia = new CornerDialog(img,harriscorners);
 //        PhotoDialog *dia = new PhotoDialog(img,harriscorners);
-          PhotoDialog *dia = new PhotoDialog(img,sublist);
-        dia->exec();
+          //PhotoDialog *dia = new PhotoDialog(img,sublist);
+        //dia->exec();
 
     }
 }
@@ -681,16 +686,15 @@ void testConv(){
     }
 }
 
+#endif
+
 int main(int argc,char * argv[]){
     QApplication app(argc,argv);
-
-//    testMoravec();
-//    testgradient();
-//    testConv();
-    testNobel();
-//    testcvt();
-//    testcvharris();
-    cvWaitKey(0);
-
-    return app.exec();
+    QString filename = QFileDialog::getOpenFileName();
+    if(!filename.isEmpty()){
+        PhotoDialog dg(filename);
+        dg.exec();
+    }
+    return 0;
+    //return app.exec();
 }

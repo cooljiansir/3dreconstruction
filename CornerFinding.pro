@@ -14,10 +14,10 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
     MyMat.cpp \
-    cornerdialog.cpp \
     uti.cpp \
     clicklabel.cpp \
-    photodialog.cpp
+    photodialog.cpp \
+    corner.cpp
 
 
 INCLUDEPATH +=include\
@@ -32,11 +32,10 @@ LIBS += $$_PRO_FILE_PWD_\lib\libopencv_highgui247.dll.a\
 
 HEADERS += \
     MyMat.h \
-    cornerdialog.h \
     uti.h \
     clicklabel.h \
-    photodialog.h
+    photodialog.h \
+    corner.h
 
 FORMS += \
-    cornerdialog.ui \
     photodialog.ui
