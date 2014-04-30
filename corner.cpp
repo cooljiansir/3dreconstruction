@@ -227,8 +227,7 @@ void calShiTomas(Mat &IxIx,Mat &IyIy,Mat &IxIy,Mat &res){
 //即
 //IxIx*IyIy-IxIy*IxIy - k*(IxIx+IyIy)*(IxIx+IyIy)
 //由于值太大，将结果/10000
-void calHarris(Mat &IxIx,Mat &IyIy,Mat &IxIy,Mat &res){
-    double k=0.04;
+void calHarris(Mat &IxIx,Mat &IyIy,Mat &IxIy,Mat &res,double k){
     Size size = IxIx.size();
     res.create(size,CV_64F);
     double *IxIxptr = (double *)IxIx.data;
@@ -397,7 +396,7 @@ void Corner::getCorner(Mat &img, vector<Point2f> &corners){
         calMoravec(imggray,cim);
     }
     else if(this->pixmethod==PIX_HARRIS){
-        calHarris(IxIx,IyIy,IxIy,cim);
+        calHarris(IxIx,IyIy,IxIy,cim,this->k);
     }else if(this->pixmethod==PIX_NOBEL){
         calNobel(IxIx,IyIy,IxIy,cim);
     }else if(this->pixmethod==PIX_SHI_TOMASI){
