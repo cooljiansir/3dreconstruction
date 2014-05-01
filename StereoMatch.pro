@@ -16,7 +16,8 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     clicklabel.cpp \
     uti.cpp \
-    bm.cpp
+    bm.cpp \
+    simulated.cpp
 
 HEADERS  += mainwindow.h \
     clicklabel.h \
