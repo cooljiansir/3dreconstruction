@@ -903,6 +903,100 @@ void stereo_BM_AW_LRC(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
     delete []cost;
     delete []mincost2;
 }
+
+
+/*
+ *从上往下，BlockMatching
+ *
+ *Sum(x,y,d) = Sum(x,y-1,d) + s(x,y+winsize,d) - s(x,y-winsize-1,d)
+ *s(x,y,d)   = s(x-1,y,d) + I(x+winsize,y,d)-I(x-winsize-1,y,d)
+ *I(x,y,d)   = fabs(c(x,y)-c(x-d,y))
+ *
+ *
+ */
+
+void stereo_BM2(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
+    if(left.size()!=right.size())
+        return;
+    Mat leftgr,rightgr;
+    Size size = left.size();
+
+    leftgr = Mat::zeros(size.height+2*winsize+1,size.width+2*winsize+1,CV_8U);
+    rightgr = Mat::zeros(leftgr.size(),CV_8U);
+    Size size2 = leftgr.size();
+
+    Mat leftgray = leftgr(Rect(winsize+1,winsize+1,size.width,size.height));
+    Mat rightgray = rightgr(Rect(winsize+1,winsize+1,size.width,size.height));
+
+    cvtColor(left,leftgray,CV_BGR2GRAY);
+    cvtColor(right,rightgray,CV_BGR2GRAY);
+
+    unsigned char *leftptr = leftgray.data;
+    unsigned char *rightptr = rightgray.data;
+
+    dis.create(size,CV_32F);
+    float *disptr = (float *)dis.data;
+
+
+    int *sad = new int[maxdis];
+    int *s0_   = new int[(size.height+2*winsize+1)*maxdis];
+    int *s1_   = new int[(size.height+2*winsize+1)*maxdis];
+
+    int *s0 = s0_ + (winsize+1)*maxdis;
+    int *s1 = s1_ + (winsize+1)*maxdis;
+
+
+    //initial s0
+    for(int i = - winsize-1;i<size.height+winsize;i++){
+        for(int d = 0;d<maxdis;d++)
+            s0[i*maxdis+d] = s1[i*maxdis+d] = 0;
+    }
+
+
+    for(int j = 0;j<size.width;j++){
+        for(int d = 0;d<maxdis&&d<=j;d++){
+            sad[d] = 0;
+            for(int i1=0;i1<winsize;i1++){
+                for(int j1 = -winsize;j1<=winsize;j1++){
+                    sad[d] += abs(leftptr[i1*size2.width+j+j1]-rightptr[i1*size2.width+j+j1-d]);
+                }
+            }
+        }
+        //cal new s0
+        for(int i = - winsize-1;i<size.height+winsize;i++){
+            //d<j
+            for(int d = 0;d<maxdis&&d<j;d++){
+                s1[i*maxdis+d] = s0[i*maxdis+d]
+                        + abs(leftptr[i*size2.width+j+winsize]-rightptr[i*size2.width+j+winsize-d])
+                        - abs(leftptr[i*size2.width+j-winsize-1]-rightptr[i*size2.width+j-winsize-1-d]);
+            }
+            //d=j
+            s1[i*maxdis+j] = 0;
+            for(int j1=-winsize;j1<=winsize;j1++){
+                s1[i*maxdis+j] += abs(leftptr[i*size2.width+j+j1]-rightptr[i*size2.width+j1]);
+            }
+        }
+        int *temp = s0;
+        s0 = s1;
+        s1 = temp;
+        for(int i = 0;i<size.height;i++){
+            int mind;
+            int minsad=1<<29;
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                sad[d] = sad[d] + s0[(i+winsize)*maxdis+d] - s0[(i-1-winsize)*maxdis+d];
+                if(sad[d]<minsad){
+                    minsad = sad[d];
+                    mind = d;
+                }
+            }
+            disptr[i*size.width+j] = mind;
+        }
+    }
+    delete []sad;
+    delete []s0_;
+    delete []s1_;
+}
+
 void testMyBM(){
     QString leftfilename = QFileDialog::getOpenFileName(
        0,
@@ -922,14 +1016,15 @@ void testMyBM(){
             Mat dis,vdisp;
 
             clock_t t = clock();
-//            stereo_BM(leftmat,rightmat,dis,7,130);
+//            stereo_BM(leftmat,rightmat,dis,3,40);
 //            stereo_BM_segment(leftmat,rightmat,dis,7,40);
 //            stereo_BM_AW(leftmat,rightmat,dis,40,7);
 //            stereo_BM_AW_Lab(leftmat,rightmat,dis,30,16);
 //            stereo_BM_AW_gray(leftmat,rightmat,dis,130,7);
-            stereo_BM_AW_Color(leftmat,rightmat,dis,130,7);
+//            stereo_BM_AW_Color(leftmat,rightmat,dis,130,7);
 //            stereo_BM_FBS(leftmat,rightmat,dis,130,16,1);
 //            stereo_BM_AW_LRC(leftmat,rightmat,dis,120,5);
+            stereo_BM2(leftmat,rightmat,dis,40,3);
 
 
             qDebug()<<"use time"<<clock() - t<<"ms"<<endl;
@@ -940,11 +1035,13 @@ void testMyBM(){
     }
 }
 
-/*
+
+
+///*
 int main(int argc, char *argv[]){
     QApplication a(argc, argv);
     testMyBM();
 
     return a.exec();
 }
-*/
+//*/

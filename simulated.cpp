@@ -32,9 +32,9 @@ void stereo_simulate(Mat &left,Mat &right,Mat &dis,int dismax){
 
     double T = 200000;
     double Tend = 0.001;
-    double Tk = 0.9999;
-    int P1 = 8;
-    int P2 = 32;
+    double Tk = 0.995;
+    int P1 = 80;
+    int P2 = 320;
 
     int *disint =  new int[size.width*size.height];
 
@@ -49,6 +49,36 @@ void stereo_simulate(Mat &left,Mat &right,Mat &dis,int dismax){
         for(int j = 0;j<size.width;j++){
             disint[i*size.width+j] = rand()%dismax;
         }
+    }
+
+    if(0){
+    //use sgbm to inital
+    int SADWindowSize = 7;
+    int numberOfDisparities = 16*6;
+    StereoSGBM sgbm;
+    sgbm.preFilterCap = 63;
+    sgbm.SADWindowSize = SADWindowSize > 0 ? SADWindowSize : 3;
+
+    int cn = 1;//leftgray.channels();
+
+    sgbm.P1 = 8*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
+    sgbm.P2 = 32*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
+    sgbm.minDisparity = 0;
+    sgbm.numberOfDisparities = numberOfDisparities;
+    sgbm.uniquenessRatio = 10;
+    sgbm.speckleWindowSize = 100;
+    sgbm.speckleRange = 32;
+    sgbm.disp12MaxDiff = 1;
+    sgbm.fullDP = true;
+
+    Mat disp;
+    sgbm(leftgray,rightgray,disp);
+    short int *sgbptr = (short int*)disp.data;
+    for(int i = 0;i<size.height;i++){
+        for(int j = 0;j<size.width;j++){
+            disint[i*size.width+j] = sgbptr[i*size.width+j]/16;
+        }
+    }
     }
 
     while((T*=Tk)>Tend){
@@ -326,8 +356,8 @@ void test_Simulated(){
             Mat disp,vdisp;
             clock_t t = clock();
 
-//            stereo_simulate(leftmat,rightmat,disp,40);
-            stereoItera(leftmat,rightmat,disp,140);
+            stereo_simulate(leftmat,rightmat,disp,40);
+//            stereoItera(leftmat,rightmat,disp,140);
 
             qDebug()<<"use time"<<clock()-t<<"ms"<<endl;
             disp.convertTo(vdisp, CV_8U);//, 255/(32*16.));
@@ -340,10 +370,11 @@ double fx(double x){
     return x*x;
 }
 
-
+/*
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     test_Simulated();
     return app.exec();
 }
+*/
