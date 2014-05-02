@@ -931,12 +931,12 @@ void stereo_BM2(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
     cvtColor(left,leftgray,CV_BGR2GRAY);
     cvtColor(right,rightgray,CV_BGR2GRAY);
 
+
     unsigned char *leftptr = leftgray.data;
     unsigned char *rightptr = rightgray.data;
 
     dis.create(size,CV_32F);
     float *disptr = (float *)dis.data;
-
 
     int *sad = new int[maxdis];
     int *s0_   = new int[(size.height+2*winsize+1)*maxdis];
@@ -962,18 +962,25 @@ void stereo_BM2(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
                 }
             }
         }
+
         //cal new s0
         for(int i = - winsize-1;i<size.height+winsize;i++){
             //d<j
+            int tem = i*size2.width+j+winsize;
+            int tem2 = i*size2.width+j-winsize-1;
+            int *s0temp = s0 + i*maxdis;
+            int *s1temp = s1 + i*maxdis;
             for(int d = 0;d<maxdis&&d<j;d++){
-                s1[i*maxdis+d] = s0[i*maxdis+d]
-                        + abs(leftptr[i*size2.width+j+winsize]-rightptr[i*size2.width+j+winsize-d])
-                        - abs(leftptr[i*size2.width+j-winsize-1]-rightptr[i*size2.width+j-winsize-1-d]);
+                s1temp[d] = s0temp[d]
+                        + abs(leftptr[tem]-rightptr[tem-d])
+                        - abs(leftptr[tem2]-rightptr[tem2-d]);
             }
             //d=j
-            s1[i*maxdis+j] = 0;
-            for(int j1=-winsize;j1<=winsize;j1++){
-                s1[i*maxdis+j] += abs(leftptr[i*size2.width+j+j1]-rightptr[i*size2.width+j1]);
+            if(j<=maxdis){
+                s1[i*maxdis+j] = 0;
+                for(int j1=-winsize;j1<=winsize;j1++){
+                    s1[i*maxdis+j] += abs(leftptr[i*size2.width+j+j1]-rightptr[i*size2.width+j1]);
+                }
             }
         }
         int *temp = s0;
@@ -982,8 +989,10 @@ void stereo_BM2(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
         for(int i = 0;i<size.height;i++){
             int mind;
             int minsad=1<<29;
+            int tem = (i+winsize)*maxdis;
+            int tem2 = (i-1-winsize)*maxdis;
             for(int d = 0;d<maxdis&&d<=j;d++){
-                sad[d] = sad[d] + s0[(i+winsize)*maxdis+d] - s0[(i-1-winsize)*maxdis+d];
+                sad[d] = sad[d] + s0[tem+d] - s0[tem2+d];
                 if(sad[d]<minsad){
                     minsad = sad[d];
                     mind = d;
