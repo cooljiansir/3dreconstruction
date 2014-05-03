@@ -684,7 +684,105 @@ void dynamicProR(Mat &left,Mat &right,Mat &dis,double q,double c0){
     delete []minres;
     delete []stepres;
 }
+void stereoIteraDP(Mat &left,Mat &right,Mat &dis,int maxdis){
+    if(left.size()!=right.size())
+        return ;
+    Mat leftgray,rightgray;
+    Size size = left.size();
+    leftgray.create(size,CV_8U);
+    rightgray.create(size,CV_8U);
+    cvtColor(left,leftgray,CV_BGR2GRAY);
+    cvtColor(right,rightgray,CV_BGR2GRAY);
 
+
+    unsigned char *leftptr = leftgray.data;
+    unsigned char *rightptr = rightgray.data;
+
+
+    int *disint = new int[size.width*size.height];
+    int *disint2 = new int[size.width*size.height];
+
+    //initalborder
+    for(int i = 0;i<size.height;i++)
+        for(int j = 0;j<size.width;j++)
+            if(dis.rows>0)disint[i*size.width+j] = dis.at<float>(i,j);
+            else disint[i*size.width+j] = 0;
+
+    if(1){
+    int T = -1;
+    int Tmax = 10;
+    int P1 = 40;
+    int P2 = 160;
+    while(++T<Tmax){
+        for(int i = 1;i+1<size.height;i++){
+            int *disinti = disint+i*size.width;
+            int *disinti_p = disinti-size.width;
+            int *disinti_n = disinti+size.width;
+            int *disint2i = disint2+i*size.width;
+            unsigned char *leftptri = leftptr+i*size.width;
+            unsigned char *rightptri = rightptr+i*size.width;
+            for(int j = 1;j<size.width;j++){
+                int mmin=1<<29;
+                int mmindex;
+                /*四邻域
+                int near[4]={disinti_p[j],disinti_n[j],disinti[j-1],disinti[j+1]};
+                for(int d = 0;d<maxdis&&d<=j;d++){
+                    int cost = (leftptri[j] - rightptri[j-d])*(leftptri[j] - rightptri[j-d]);
+                    for(int ni = 0;ni<4;ni++){
+                        if(abs(d-near[ni])==1){
+                            cost += P1;
+                        }else if(abs(d-near[ni])>1){
+                            cost += P2;
+                        }
+                    }
+                    if(cost<mmin){
+                        mmin = cost;
+                        mmindex = d;
+                    }
+                }
+                */
+                //八邻域
+                int near[8]={disinti_p[j-1],disinti_p[j],disinti_p[j+1],
+                             disinti[j-1],disinti[j+1],
+                             disinti_n[j-1],disinti_n[j],disinti_n[j+1]
+                            };
+                for(int d = 0;d<maxdis&&d<=j;d++){
+                    int cost = (leftptri[j] - rightptri[j-d])*(leftptri[j] - rightptri[j-d]);
+                    if(T!=0||dis.rows>0){
+                        for(int ni = 0;ni<8;ni++){
+                            if(abs(d-near[ni])==1){
+                                cost += P1;
+                            }else if(abs(d-near[ni])>1){
+                                cost += P2;
+                            }
+                        }
+                    }
+                    if(cost<mmin){
+                        mmin = cost;
+                        mmindex = d;
+                    }
+                }
+                disint2i[j] = mmindex;
+            }
+        }
+
+        int *temp = disint;
+        disint = disint2;
+        disint2 = temp;
+    }
+    }
+    dis.create(size,CV_32F);
+    float *disptr = (float*)dis.data;
+
+    for(int i = 0;i<size.height;i++){
+        for(int j = 0;j<size.width;j++){
+            disptr[i*size.width+j] = disint[i*size.width+j];
+        }
+    }
+    delete []disint;
+    delete []disint2;
+
+}
 void testDynamic(){
     QString leftfilename = QFileDialog::getOpenFileName(
        0,
@@ -702,11 +800,12 @@ void testDynamic(){
             Mat rightmat = imread(rightfilename.toUtf8().data());
 
             Mat disL,disR;
-            dynamicPro(leftmat,rightmat,disL,5,20);
-            dynamicProR(leftmat,rightmat,disR,5,20);
+//            dynamicPro(leftmat,rightmat,disL,5,20);
+//            dynamicProR(leftmat,rightmat,disR,5,20);
 
             Mat unit,vdisp;
-            constant2(disL,disR,unit);
+//            constant2(disL,disR,unit);
+            stereoIteraDP(leftmat,rightmat,unit,40);
 //            freopen("log.txt","w",stdout);
 //            cout<<unit;
             unit.convertTo(vdisp,CV_8U);
@@ -1868,15 +1967,15 @@ void testMeanShift(){
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    MainWindow w;
-    w.show();
+//    MainWindow w;
+//    w.show();
     //cvNamedWindow("test");
 //    testsegment();
 //    testBM();
 //    testMine();
 //    testRealTime();
 //    testLocal();
-//    testDynamic();
+    testDynamic();
 //    test_dp();
 //    test_semi();
 //    testMeanShift();
