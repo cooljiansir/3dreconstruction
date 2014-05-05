@@ -742,7 +742,7 @@ void stereo_BM_FBS(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int wins
 
                     double w1 = exp(-sqrt((leftptr[p] - lp0)*(leftptr[p] - lp0)+
                                           (leftptr[p+1] - lp1)*(leftptr[p+1] - lp1)+
-                                          (leftptr[p+2] - lp2)*(leftptr[p+1] - lp2))/yc
+                                          (leftptr[p+2] - lp2)*(leftptr[p+2] - lp2))/yc
                             -dis/yg);
                     double w2 = exp(-sqrt((rightptr[p] - rp0)*(rightptr[p] - rp0)+
                                           (rightptr[p+1] - rp1)*(rightptr[p+1] - rp1)+
@@ -1004,7 +1004,7 @@ void stereo_BM2(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
                         - abs(leftptr[tem2]-rightptr[tem2-d]);
             }
             //d=j
-            if(j<=maxdis){
+            if(j<maxdis){
                 s1[i*maxdis+j] = 0;
                 for(int j1=-winsize;j1<=winsize;j1++){
                     s1[i*maxdis+j] += abs(leftptr[i*size2.width+j+j1]-rightptr[i*size2.width+j1]);
@@ -1030,8 +1030,11 @@ void stereo_BM2(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
         }
     }
     delete []sad;
+    qDebug()<<"释放sad"<<endl;
     delete []s0_;
+    qDebug()<<"释放s0"<<endl;
     delete []s1_;
+    qDebug()<<"释放s1"<<endl;
 }
 
 void testMyBM(){
@@ -1056,14 +1059,14 @@ void testMyBM(){
 //            stereo_BM(leftmat,rightmat,dis,3,40);
 //            stereo_BM_segment(leftmat,rightmat,dis,7,40);
 //            stereo_BM_AW(leftmat,rightmat,dis,40,7);
-            freopen("disresult.txt","w",stdout);
-            stereo_BM_AW_Lab(leftmat,rightmat,dis,140,8);
+//            freopen("disresult.txt","w",stdout);
+//            stereo_BM_AW_Lab(leftmat,rightmat,dis,140,8);
 //            cout<<dis<<endl;
 //            stereo_BM_AW_gray(leftmat,rightmat,dis,130,7);
 //            stereo_BM_AW_Color(leftmat,rightmat,dis,130,7);
-//            stereo_BM_FBS(leftmat,rightmat,dis,130,16,1);
+//            stereo_BM_FBS(leftmat,rightmat,dis,20,16,1);
 //            stereo_BM_AW_LRC(leftmat,rightmat,dis,120,5);
-//            stereo_BM2(leftmat,rightmat,dis,40,3);
+            stereo_BM2(leftmat,rightmat,dis,40,3);
 
 
             qDebug()<<"use time"<<clock() - t<<"ms"<<endl;
