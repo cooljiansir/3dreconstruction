@@ -275,6 +275,7 @@ void testAll(){
 
             Mat dis,vdisp;
 
+
             clock_t t = clock();
 //            stereoBmProto(leftmat,rightmat,dis,8,20);
             stereo_BMBox(leftmat,rightmat,dis,20,5);
