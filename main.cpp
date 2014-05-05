@@ -1620,7 +1620,7 @@ void stereoSemi_AW(Mat &leftmat,Mat &rightmat,Mat &dis,int p1,int p2,int maxdis,
                 double w1 =
                         exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
                                   (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
-                                  (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/yc
+                                  (leftptr[p+2] - leftptr[q+2])*(leftptr[p+2] - leftptr[q+2]))/yc
                         -sqrt(i1*i1+j1*j1)/yg);
                 double w2 =
                         exp(-sqrt((rightptr[p] - rightptr[q])*(rightptr[p] - rightptr[q])+
@@ -1975,9 +1975,9 @@ int main(int argc, char *argv[])
 //    testMine();
 //    testRealTime();
 //    testLocal();
-    testDynamic();
+//    testDynamic();
 //    test_dp();
-//    test_semi();
+    test_semi();
 //    testMeanShift();
 
     return app.exec();

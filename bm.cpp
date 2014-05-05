@@ -258,7 +258,7 @@ void stereo_BM_AW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
                     double w1 =
                             exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
                                       (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
-                                      (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/yc
+                                      (leftptr[p+2] - leftptr[q+2])*(leftptr[p+2] - leftptr[q+2]))/yc
                             -sqrt(i1*i1+j1*j1)/yg);
                     double w2 =
                             exp(-sqrt((rightptr[p] - rightptr[q])*(rightptr[p] - rightptr[q])+
@@ -319,6 +319,9 @@ void stereo_BM_AW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
 }
 
 //换成Lab空间
+//L = L*100/255
+//a = a-128
+//b = b-128
 void stereo_BM_AW_Lab(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
     if(left.size()!=right.size())
         return;
@@ -358,9 +361,10 @@ void stereo_BM_AW_Lab(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
                 for(int j1 = -winsize;j1<=winsize;j1++){
                     int q = ((i+i1)*size.width + j+j1)*3;
                     double w1 =
-                            exp(-sqrt((leftlabptr[p] - leftlabptr[q])*(leftlabptr[p] - leftlabptr[q])+
+                            exp(-sqrt((leftlabptr[p] - leftlabptr[q])*(leftlabptr[p] - leftlabptr[q])
+                                      *100.0/255.0*100.0/255.0+
                                       (leftlabptr[p+1] - leftlabptr[q+1])*(leftlabptr[p+1] - leftlabptr[q+1])+
-                                      (leftlabptr[p+2] - leftlabptr[q+2])*(leftlabptr[p+1] - leftlabptr[q+2]))/yc
+                                      (leftlabptr[p+2] - leftlabptr[q+2])*(leftlabptr[p+2] - leftlabptr[q+2]))/yc
                             -sqrt(i1*i1+j1*j1)/yg);
                     double w2 =
                             exp(-sqrt((rightlabptr[p] - rightlabptr[q])*(rightlabptr[p] - rightlabptr[q])+
@@ -378,6 +382,25 @@ void stereo_BM_AW_Lab(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
                                          (rightptr[p+2] - rightptr[q+2])*(rightptr[p+2] - rightptr[q+2]))/yc
                             -sqrt(i1*i1+j1*j1)/yg);
                             */
+                    /*if(isnan(w1)){
+                        printf("i:%d j:%d i1:%d j1:%d w1=nan\n",i,j,i1,j1);
+                        printf("color distance:%lf\n",sqrt((leftlabptr[p] - leftlabptr[q])*(leftlabptr[p] - leftlabptr[q])
+                          *100.0/255.0*100.0/255.0+
+                          (leftlabptr[p+1] - leftlabptr[q+1])*(leftlabptr[p+1] - leftlabptr[q+1])+
+                          (leftlabptr[p+2] - leftlabptr[q+2])*(leftlabptr[p+1] - leftlabptr[q+2])));
+                        printf("(%d,%d,%d)\n",leftlabptr[p],leftlabptr[p+1],leftlabptr[p+2]);
+                        printf("(%d,%d,%d)\n",leftlabptr[q],leftlabptr[q+1],leftlabptr[q+2]);
+                        printf("L2:%d\n",(leftlabptr[p] - leftlabptr[q])*(leftlabptr[p] - leftlabptr[q]));
+                        printf("a2:%d\n",(leftlabptr[p+1] - leftlabptr[q+1])*(leftlabptr[p+1] - leftlabptr[q+1]));
+                        printf("b:%d\n",(leftlabptr[p+2] - leftlabptr[q+2]));
+                        printf("b:%d\n",(leftlabptr[p+1] - leftlabptr[q+2]));
+                        printf("b2:%d\n",(leftlabptr[p+2] - leftlabptr[q+2])*(leftlabptr[p+1] - leftlabptr[q+2]));
+                        return;
+                    }
+                    if(isnan(w2)){
+                        printf("i:%d j:%d i1:%d j1:%d w2=nan\n",i,j,i1,j1);
+                        return;
+                    }*/
                     w1buff[windex] = w1;
                     w2buff[windex] = w2;
                     windex++;
@@ -387,7 +410,7 @@ void stereo_BM_AW_Lab(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
         for(int j = winsize;j+winsize<size.width;j++){
             double mincost;
             int mmindex=-1;
-            for(int d = 0;d<maxdis&&d<=j;d++){
+            for(int d = 0;d<maxdis&&d+winsize<=j;d++){
                 double sum = 0;
                 double sumw = 0;
                 int p = (i*size.width + j)*3;
@@ -399,7 +422,8 @@ void stereo_BM_AW_Lab(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
 
                         int q = ((i+i1)*size.width + j+j1)*3;
                         int q_ = q-d*3;
-                        /*double w1 =
+                        /*
+                         double w1 =
                                 exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
                                           (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
                                           (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/yc
@@ -416,12 +440,16 @@ void stereo_BM_AW_Lab(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
 
                         double w1 = w1buff[w1index++];
                         double w2 = w2buff[w2index++];
+//                        double w1 =1;
+//                        double w2 = 1;
+//                        printf("w1=%lf w2=%lf\n",w1,w2);
                         sum += w1*w2*e1;
                         sumw += w1*w2;
                     }
                 }
                 if(mmindex==-1||sum/sumw<mincost)
                     mincost = sum/sumw,mmindex = d;
+//                printf("%lf\n",sumw);
             }
             disptr[i*size.width+j] = mmindex;
         }
@@ -1028,12 +1056,14 @@ void testMyBM(){
 //            stereo_BM(leftmat,rightmat,dis,3,40);
 //            stereo_BM_segment(leftmat,rightmat,dis,7,40);
 //            stereo_BM_AW(leftmat,rightmat,dis,40,7);
-//            stereo_BM_AW_Lab(leftmat,rightmat,dis,30,16);
+            freopen("disresult.txt","w",stdout);
+            stereo_BM_AW_Lab(leftmat,rightmat,dis,140,8);
+//            cout<<dis<<endl;
 //            stereo_BM_AW_gray(leftmat,rightmat,dis,130,7);
 //            stereo_BM_AW_Color(leftmat,rightmat,dis,130,7);
 //            stereo_BM_FBS(leftmat,rightmat,dis,130,16,1);
 //            stereo_BM_AW_LRC(leftmat,rightmat,dis,120,5);
-            stereo_BM2(leftmat,rightmat,dis,40,3);
+//            stereo_BM2(leftmat,rightmat,dis,40,3);
 
 
             qDebug()<<"use time"<<clock() - t<<"ms"<<endl;
@@ -1046,11 +1076,11 @@ void testMyBM(){
 
 
 
-/*
+///*
 int main(int argc, char *argv[]){
     QApplication a(argc, argv);
     testMyBM();
 
     return a.exec();
 }
-*/
+//*/

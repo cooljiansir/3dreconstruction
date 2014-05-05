@@ -195,9 +195,10 @@ void testAll(){
 
 
 
-
+/*
 int main(int argc, char *argv[]){
     QApplication a(argc, argv);
     testAll();
     return a.exec();
 }
+*/
