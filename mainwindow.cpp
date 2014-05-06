@@ -175,6 +175,7 @@ void showWeight2(Mat &imgmat,Mat &matLab,int i,int j,int winsize,int bigwinsize)
 void MainWindow::on_pressed(int x, int y){
     showWeight(this->matLeft,this->matLeftLab,y,x,22);
     showWeight2(this->matLeft2,this->matLeftLab,y,x,1,7);
+
 }
 
 /*以前用来研究一行显示的波形图的
