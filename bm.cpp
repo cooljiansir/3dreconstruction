@@ -1077,6 +1077,94 @@ void stereo_BM_FBS2(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int big
     double *w1buff=new double[size.width*(2*bigwinsize+1)*(2*bigwinsize+1)];
     double *w2buff=new double[size.width*(2*bigwinsize+1)*(2*bigwinsize+1)];
 
+
+    //每个像素的邻域均值
+    //3通道
+    int *leftsum = new int[size.width*size.height*3];
+    int *rightsum = new int[size.width*size.height*3];
+    int *lefts = new int[size.height*3];
+    int *rights = new int[size.height*3];
+
+    //initial s
+    for(int i=0;i<size.height;i++){
+        lefts[i*3] = lefts[i*3+1] = lefts[i*3+2] = 0;
+        rights[i*3] = rights[i*3+1] = rights[i*3+2] = 0;
+        for(int j = 0;j<2*winsize+1;j++){
+            int temp = i*size.width*3+3*j;
+            lefts[i*3] += leftptr[temp];
+            lefts[i*3+1] += leftptr[temp+1];
+            lefts[i*3+2] += leftptr[temp+2];
+            rights[i*3] += rightptr[temp];
+            rights[i*3+1] += rightptr[temp+1];
+            rights[i*3+2] += rightptr[temp+2];
+        }
+    }
+    {//initial sum
+        int j = winsize;
+        for(int i=winsize;i+winsize<size.height;i++){
+            int temp = (i*size.width+j)*3;
+            leftsum[temp] = leftsum[temp+1] = leftsum[temp+2] = 0;
+            rightsum[temp] = rightsum[temp+1] = rightsum[temp+2] = 0;
+            for(int k = -winsize;k<=winsize;k++){
+                leftsum[temp] += lefts[(i+k)*3];
+                leftsum[temp+1] += lefts[(i+k)*3+1];
+                leftsum[temp+2] += lefts[(i+k)*3+2];
+                rightsum[temp] += rights[(i+k)*3];
+                rightsum[temp+1] += rights[(i+k)*3+1];
+                rightsum[temp+2] += rights[(i+k)*3+2];
+            }
+        }
+    }
+    //real calculate sum
+    for(int j = winsize+1;j+winsize<size.width;j++){
+        for(int i = 0;i<size.height;i++){
+            int temp = (i*size.width+j+winsize)*3;
+            int temp2 = (i*size.width+j-winsize-1)*3;
+            lefts[i*3] = lefts[i*3]+leftptr[temp] - leftptr[temp2];
+            lefts[i*3+1] = lefts[i*3+1]+leftptr[temp+1] - leftptr[temp2+1];
+            lefts[i*3+2] = lefts[i*3+2]+leftptr[temp+2] - leftptr[temp2+2];
+            rights[i*3] = rights[i*3] + rightptr[temp] - rightptr[temp2];
+            rights[i*3+1] = rights[i*3+1] + rightptr[temp+1] - rightptr[temp2+1];
+            rights[i*3+2] = rights[i*3+2] + rightptr[temp+2] - rightptr[temp2+2];
+        }
+
+        //first row
+        {
+            int les[3]={0,0,0};
+            int ris[3]={0,0,0};
+            for(int k = 0;k<2*winsize+1;k++){
+                les[0] += lefts[k*3];
+                les[1] += lefts[k*3+1];
+                les[2] += lefts[k*3+2];
+                ris[0] += rights[k*3];
+                ris[1] += rights[k*3+1];
+                ris[2] += rights[k*3+2];
+            }
+            int temp = (winsize*size.width+j)*3;
+            leftsum[temp] = les[0];
+            leftsum[temp+1] = les[1];
+            leftsum[temp+2] = les[2];
+            rightsum[temp] = ris[0];
+            rightsum[temp+1] = ris[1];
+            rightsum[temp+2] = ris[2];
+        }
+        for(int i = winsize+1;i+winsize<size.height;i++){
+            int temp = (i*size.width+j)*3;
+            int temp_p = ((i-1)*size.width+j)*3;
+            leftsum[temp] = leftsum[temp_p] + lefts[(i+winsize)*3] - lefts[(i-winsize-1)*3];
+            leftsum[temp+1] = leftsum[temp_p+1] + lefts[(i+winsize)*3+1] - lefts[(i-winsize-1)*3+1];
+            leftsum[temp+2] = leftsum[temp_p+2] + lefts[(i+winsize)*3+2] - lefts[(i-winsize-1)*3+2];
+            rightsum[temp] = rightsum[temp_p] + rights[(i+winsize)*3] - rights[(i-winsize-1)*3];
+            rightsum[temp+1] = rightsum[temp_p+1] + rights[(i+winsize)*3+1] - rights[(i-winsize-1)*3+1];
+            rightsum[temp+2] = rightsum[temp_p+2] + rights[(i+winsize)*3+2] - rights[(i-winsize-1)*3+2];
+        }
+    }
+
+    //get mean
+    int squ = (2*winsize+1)*(2*winsize+1);
+    for(int i = 0;i<size.width*size.height*3;i++)
+        leftsum[i]/= squ,rightsum[i] /= squ;
+
     //计算需要用到的sad范围行为：距上边界winsize到下边界winsize
     //采用循环结构
     //
@@ -1157,15 +1245,6 @@ void stereo_BM_FBS2(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int big
         }
     }
 
-    int *fastindex = new int[(2*winsize+1)*(2*bigwinsize+1)];
-    {
-        int fastindexin = 0;
-        for(int i1=-bigwinsize;i1<=bigwinsize;i1++)
-            for(int j1=-bigwinsize;j1<=bigwinsize;j1++)
-                for(int i2=-winsize;i2<=winsize;i2++)
-                    for(int j2=-winsize;j2<=winsize;j2++)
-                        fastindex[fastindexin++] = ((i1*(2*winsize+1)+i2)*size.width+j1*(2*winsize+1)+j2)*3;
-    }
     for(int i = border;i+border<size.height;i++){
         unsigned char *leftptri = leftptr+i*size.width*3;
         unsigned char *rightptri = rightptr +i*size.width*3;
@@ -1177,36 +1256,20 @@ void stereo_BM_FBS2(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int big
             int windex=j*(2*bigwinsize+1)*(2*bigwinsize+1);
             for(int i1=-bigwinsize;i1<=bigwinsize;i1++){
                 for(int j1=-bigwinsize;j1<=bigwinsize;j1++){
-                    double sumi1[3]={0,0,0};
-                    double sumi2[3]={0,0,0};
-                    for(int i2=-winsize;i2<=winsize;i2++){
-                        for(int j2=-winsize;j2<=winsize;j2++){
-                            sumi1[0] += leftptrij[fastindex[fastindexin]];
-                            sumi1[1] += leftptrij[fastindex[fastindexin]+1];
-                            sumi1[2] += leftptrij[fastindex[fastindexin]+2];
-                            sumi2[0] += rightptrij[fastindex[fastindexin]];
-                            sumi2[1] += rightptrij[fastindex[fastindexin]+1];
-                            sumi2[2] += rightptrij[fastindex[fastindexin]+2];
-                            fastindexin++;
-                        }
-                    }
-                    sumi1[0] = sumi1[0]/(2*winsize+1)/(2*winsize+1);
-                    sumi1[1] = sumi1[1]/(2*winsize+1)/(2*winsize+1);
-                    sumi1[2] = sumi1[2]/(2*winsize+1)/(2*winsize+1);
-                    sumi2[0] = sumi2[0]/(2*winsize+1)/(2*winsize+1);
-                    sumi2[1] = sumi2[1]/(2*winsize+1)/(2*winsize+1);
-                    sumi2[2] = sumi2[2]/(2*winsize+1)/(2*winsize+1);
-                    double w1 =
-                            exp(-sqrt((leftptrij[0] - sumi1[0])*(leftptrij[0] - sumi1[0])+
-                                      (leftptrij[1] - sumi1[1])*(leftptrij[1] - sumi1[1])+
-                                      (leftptrij[2] - sumi1[2])*(leftptrij[2] - sumi1[2]))/yc
-                            -sqrt(i1*i1+j1*j1)/yg);
-                    double w2 =
-                            exp(-sqrt((rightptrij[0] - sumi2[0])*(rightptrij[0] - sumi2[0])+
-                                         (rightptrij[1] - sumi2[1])*(rightptrij[1] - sumi2[1])+
-                                         (rightptrij[2] - sumi2[2])*(rightptrij[2] - sumi2[2]))/yc
-                            -sqrt(i1*i1+j1*j1)/yg);
 
+                    int r = i+i1*(2*winsize+1);
+                    int c = j+j1*(2*winsize+1);
+                    int temp = (r*size.width+c)*3;
+                    double w1 =
+                            exp(-sqrt((leftptrij[0] - leftsum[temp])*(leftptrij[0] - leftsum[temp])+
+                                      (leftptrij[1] - leftsum[temp+1])*(leftptrij[1] - leftsum[temp+1])+
+                                      (leftptrij[2] - leftsum[temp+2])*(leftptrij[2] - leftsum[temp+2]))/yc
+                            -sqrt(i1*i1+j1*j1)*(2*winsize+1)/yg);
+                    double w2 =
+                            exp(-sqrt((rightptrij[0] - rightsum[temp])*(rightptrij[0] - rightsum[temp])+
+                                         (rightptrij[1] - rightsum[temp+1])*(rightptrij[1] - rightsum[temp+1])+
+                                         (rightptrij[2] - rightsum[temp+1])*(rightptrij[2] - rightsum[temp+1]))/yc
+                            -sqrt(i1*i1+j1*j1)*(2*winsize+1)/yg);
                     w1buff[windex] = w1;
                     w2buff[windex] = w2;
                     windex++;
@@ -1249,6 +1312,7 @@ void stereo_BM_FBS2(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int big
                 }
             }
         }
+
         //real dealing
         for(int j = border;j+border<size.width;j++){
             unsigned char *leftptrij = leftptri+j*3;
@@ -1265,25 +1329,9 @@ void stereo_BM_FBS2(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int big
                         double w1 = w1buff[windex];
                         double w2 = w1buff[windex];
                         windex++;
-
-
-
-                        /*
-                        double sad = 0;
-                        for(int i2=-winsize;i2<=winsize;i2++)
-                            for(int j2=-winsize;j2<=winsize;j2++){
-                                sad = sad +
-                                      fabs(leftptrij[fastindex[fastindexin]]-rightptrij[fastindex[fastindexin]-d*3])+
-                                      fabs(leftptrij[fastindex[fastindexin]+1]-rightptrij[fastindex[fastindexin]-d*3+1])+
-                                      fabs(leftptrij[fastindex[fastindexin]+2]-rightptrij[fastindex[fastindexin]-d*3+2]);
-                                fastindexin++;
-                            }
-*/
                         int r = i+i1*(2*winsize+1);
                         int c = j+j1*(2*winsize+1);
-
                         double *sadn = sad_ + (r-winsize)*sadcols%(sadcols*sadrow);
-
                         sum += w1*w2*sadn[c*maxdis+d];
                         sumw += w1*w2;
                     }
@@ -1325,7 +1373,7 @@ void testMyBM(){
 //            stereo_BM_AW(leftmat,rightmat,dis,40,7);
 //            freopen("disresult.txt","w",stdout);
 //            stereo_BM_AW_Lab(leftmat,rightmat,dis,20,17);
-            stereo_BM_FBS2(leftmat,rightmat,dis,140,1,3);
+            stereo_BM_FBS2(leftmat,rightmat,dis,20,1,3);
 //            cout<<dis<<endl;
 //            stereo_BM_AW_gray(leftmat,rightmat,dis,130,7);
 //            stereo_BM_AW_Color(leftmat,rightmat,dis,130,7);
@@ -1344,11 +1392,11 @@ void testMyBM(){
 
 
 
-/*
+///*
 int main(int argc, char *argv[]){
     QApplication a(argc, argv);
     testMyBM();
 
     return a.exec();
 }
-*/
+//*/
