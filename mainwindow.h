@@ -20,6 +20,7 @@ public slots:
 private:
     Ui::MainWindow *ui;
     cv::Mat matLeft;
+    cv::Mat matLeft2;
     cv::Mat matRight;
     cv::Mat uninMat;
     cv::Mat matLeftLab;

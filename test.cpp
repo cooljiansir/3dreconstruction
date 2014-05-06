@@ -420,12 +420,12 @@ void stereo_BM_FBS2Pro(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int 
                             exp(-sqrt((leftptrij[0] - sumi1[0])*(leftptrij[0] - sumi1[0])+
                                       (leftptrij[1] - sumi1[1])*(leftptrij[1] - sumi1[1])+
                                       (leftptrij[2] - sumi1[2])*(leftptrij[2] - sumi1[2]))/yc
-                            -sqrt(i1*i1+j1*j1)/yg);
+                            -sqrt(i1*i1+j1*j1)*(2*winsize+1)/yg);
                     double w2 =
                             exp(-sqrt((rightptrij[0] - sumi2[0])*(rightptrij[0] - sumi2[0])+
                                          (rightptrij[1] - sumi2[1])*(rightptrij[1] - sumi2[1])+
                                          (rightptrij[2] - sumi2[2])*(rightptrij[2] - sumi2[2]))/yc
-                            -sqrt(i1*i1+j1*j1)/yg);
+                            -sqrt(i1*i1+j1*j1)*(2*winsize+1)/yg);
 
                     w1buff[windex] = w1;
                     w2buff[windex] = w2;
@@ -528,7 +528,7 @@ void testAll(){
             clock_t t = clock();
 //            stereoBmProto(leftmat,rightmat,dis,8,20);
 //            stereo_BMBox(leftmat,rightmat,dis,20,5);
-//            stereo_BM_FBS2Pro(leftmat,rightmat,dis,20,1,3);
+            stereo_BM_FBS2Pro(leftmat,rightmat,dis,20,1,3);
 //            stereo_BM_AW_Lab_Pro(leftmat,rightmat,dis,20,10);
             qDebug()<<"used time "<<clock()-t<<"ms"<<endl;
 
@@ -542,10 +542,10 @@ void testAll(){
 
 
 
-///*
+/*
 int main(int argc, char *argv[]){
     QApplication a(argc, argv);
     testAll();
     return a.exec();
 }
-//*/
+*/

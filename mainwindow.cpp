@@ -34,6 +34,7 @@ MainWindow::MainWindow(QWidget *parent) :
             Mat uninMatL = uninMat(Rect(0,0,matLeft.cols,matLeft.rows));
             Mat uninMatR = uninMat(Rect(matLeft.cols,0,matRight.cols,matRight.rows));
             matLeft.copyTo(uninMatL);
+            matLeft.copyTo(matLeft2);
             matRight.copyTo(uninMatR);
             ui->clickLabel->setPixmap(QPixmap::fromImage(Mat2QImage(uninMat)));
             imshow("src",matLeft);
@@ -45,8 +46,8 @@ MainWindow::~MainWindow()
 {
     delete ui;
 }
+//AW
 //显示窗口内的权值
-
 void showWeight(Mat &imgmat,Mat &matLab,int i,int j,int winsize){
 //    Mat img = imgmat.clone();
     Mat img = imgmat;
@@ -87,8 +88,8 @@ void showWeight(Mat &imgmat,Mat &matLab,int i,int j,int winsize){
             }
         }
         Mat vdisp;
+        normalize(disp,disp,0,255,CV_MINMAX);
         disp.convertTo(vdisp,CV_8U);
-        normalize(vdisp,vdisp,0,255,CV_MINMAX);
         for(int i = 0;i<2*winsize+1;i++){
             for(int j = 0;j<2*winsize+1;j++){
                 unsigned char *p0 = inters.ptr<unsigned char>(i,j);
@@ -96,7 +97,75 @@ void showWeight(Mat &imgmat,Mat &matLab,int i,int j,int winsize){
 
             }
         }
-        imshow("img ",img);
+        imshow("AW ",img);
+//        imshow("Weight ",vdisp);
+        //imshow("original ",inters);
+    }
+}
+
+//FBS
+//显示窗口内的权值
+void showWeight2(Mat &imgmat,Mat &matLab,int i,int j,int winsize,int bigwinsize){
+//    Mat img = imgmat.clone();
+    Mat img = imgmat;
+    Size size = img.size();
+    int border = bigwinsize*(2*winsize+1)+winsize;
+    if(i>=border&&i+border<size.height
+            &&j>=border&&j+border<size.width){
+        double yc=7,yg=36;
+//        double yc=20,yg=36;
+
+
+        Mat disp;
+        unsigned char *leftptr = img.data;
+        disp.create((2*winsize+1)*(2*bigwinsize+1),(2*winsize+1)*(2*bigwinsize+1),CV_64F);
+        Size dissize = disp.size();
+
+        Mat inters = img(Rect(j-border,i-border,dissize.width,dissize.height));
+
+        double *disptr = (double *)disp.data;
+
+
+        for(int i1=-bigwinsize;i1<=bigwinsize;i1++){
+            for(int j1=-bigwinsize;j1<=bigwinsize;j1++){
+                double sum[3]={0,0,0};
+                for(int i2=-winsize;i2<=winsize;i2++){
+                    for(int j2=-winsize;j2<=winsize;j2++){
+                        int temp = (i+i1*(2*winsize+1)+i2)*size.width+j+j1*(2*winsize+1)+j2;
+                        temp *=3;
+                        sum[0] += leftptr[temp];
+                        sum[1] += leftptr[temp+1];
+                        sum[2] += leftptr[temp+2];
+                    }
+                }
+                sum[0] = sum[0]/(2*winsize+1)/(2*winsize+1);
+                sum[1] = sum[1]/(2*winsize+1)/(2*winsize+1);
+                sum[2] = sum[2]/(2*winsize+1)/(2*winsize+1);
+                double w =
+                        exp(-sqrt((leftptr[i*size.width*3+j*3] - sum[0])*(leftptr[i*size.width*3+j*3] - sum[0])+
+                                  (leftptr[i*size.width*3+j*3+1] - sum[1])*(leftptr[i*size.width*3+j*3+1] - sum[1])+
+                                  (leftptr[i*size.width*3+j*3+2] - sum[2])*(leftptr[i*size.width*3+j*3+2] - sum[2]))/yc
+                        -sqrt(i1*i1+j1*j1)*(2*winsize+1)/yg);
+                //qDebug()<<"w "<<w<<endl;
+                for(int i2=-winsize;i2<=winsize;i2++){
+                    for(int j2=-winsize;j2<=winsize;j2++){
+                        disptr[(border+i1*(2*winsize+1)+i2)*dissize.width+border+j1*(2*winsize+1)+j2] = w;
+                    }
+                }
+            }
+        }
+
+        Mat vdisp;
+        //disp.convertTo(vdisp,CV_8U);
+        normalize(disp,disp,0,255,CV_MINMAX);
+        disp.convertTo(vdisp,CV_8U);
+        for(int i = 0;i<dissize.height;i++){
+            for(int j = 0;j<dissize.width;j++){
+                unsigned char *p0 = inters.ptr<unsigned char>(i,j);
+                p0[0] = p0[1] = p0[2] = vdisp.at<unsigned char>(i,j);
+            }
+        }
+        imshow("FBS ",img);
 //        imshow("Weight ",vdisp);
         //imshow("original ",inters);
     }
@@ -104,7 +173,8 @@ void showWeight(Mat &imgmat,Mat &matLab,int i,int j,int winsize){
 
 //查看权重值
 void MainWindow::on_pressed(int x, int y){
-    showWeight(this->matLeft,this->matLeftLab,y,x,20);
+    showWeight(this->matLeft,this->matLeftLab,y,x,22);
+    showWeight2(this->matLeft2,this->matLeftLab,y,x,1,7);
 }
 
 /*以前用来研究一行显示的波形图的
