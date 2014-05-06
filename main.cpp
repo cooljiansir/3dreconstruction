@@ -1977,7 +1977,7 @@ int main(int argc, char *argv[])
 //    testLocal();
 //    testDynamic();
 //    test_dp();
-    test_semi();
+//    test_semi();
 //    testMeanShift();
 
     return app.exec();

@@ -28,6 +28,7 @@ MainWindow::MainWindow(QWidget *parent) :
         if(!filename_right.isNull()){
             matLeft = imread(filename_left.toStdString().c_str());
             matRight = imread(filename_right.toStdString().c_str());
+            cvtColor(matLeft,matLeftLab,CV_BGR2Lab);
             uninMat;
             uninMat.create(matLeft.rows,matLeft.cols+matRight.cols,CV_8UC3);
             Mat uninMatL = uninMat(Rect(0,0,matLeft.cols,matLeft.rows));
@@ -35,6 +36,7 @@ MainWindow::MainWindow(QWidget *parent) :
             matLeft.copyTo(uninMatL);
             matRight.copyTo(uninMatR);
             ui->clickLabel->setPixmap(QPixmap::fromImage(Mat2QImage(uninMat)));
+            imshow("src",matLeft);
         }
     }
 }
@@ -45,17 +47,19 @@ MainWindow::~MainWindow()
 }
 //显示窗口内的权值
 
-void showWeight(Mat &imgmat,int i,int j,int winsize){
-    Mat img = imgmat.clone();
+void showWeight(Mat &imgmat,Mat &matLab,int i,int j,int winsize){
+//    Mat img = imgmat.clone();
+    Mat img = imgmat;
     Size size = img.size();
     if(i>=winsize&&i+winsize<size.height
             &&j>=winsize&&j+winsize<size.width){
-        //double yc=7,yg=36;
-        double yc=20,yg=36;
+        double yc=7,yg=36;
+//        double yc=20,yg=36;
 
         Mat inters = img(Rect(j-winsize,i-winsize,2*winsize+1,2*winsize+1));
         Mat disp;
         unsigned char *leftptr = img.data;
+        unsigned char *leftptrlab = matLab.data;
         disp.create(2*winsize+1,2*winsize+1,CV_64F);
         double *disptr = (double *)disp.data;
 
@@ -64,19 +68,20 @@ void showWeight(Mat &imgmat,int i,int j,int winsize){
         for(int i1 = -winsize;i1<=winsize;i1++){
             for(int j1 = -winsize;j1<=winsize;j1++){
                 int q = ((i+i1)*size.width + j+j1)*3;
-                double w1 =
+                /*double w1 =
                         exp(-sqrt((leftptr[p]+leftptr[p+1] +leftptr[p+2]
                             - leftptr[q]-leftptr[q+1]-leftptr[q+2])*
                         (leftptr[p]+leftptr[p+1] + leftptr[p+2]
                         - leftptr[q]-leftptr[q+1]-leftptr[q+2]))/3/yc
                         -sqrt(i1*i1+j1*j1)/yg);
+                */
 
-                /*double w1 =
-                        exp(-sqrt((leftptr[p] - leftptr[q])*(leftptr[p] - leftptr[q])+
-                                  (leftptr[p+1] - leftptr[q+1])*(leftptr[p+1] - leftptr[q+1])+
-                                  (leftptr[p+2] - leftptr[q+2])*(leftptr[p+1] - leftptr[q+2]))/3/yc
+                double w1 =
+                        exp(-sqrt((leftptrlab[p] - leftptrlab[q])*(leftptrlab[p] - leftptrlab[q])*100/255*100/255+
+                                  (leftptrlab[p+1] - leftptrlab[q+1])*(leftptrlab[p+1] - leftptrlab[q+1])+
+                                  (leftptrlab[p+2] - leftptrlab[q+2])*(leftptrlab[p+2] - leftptrlab[q+2]))/yc
                         -sqrt(i1*i1+j1*j1)/yg);
-                        */
+
                 qDebug()<<"w: "<<w1<<endl;
                 disptr[windex++] = w1;
             }
@@ -99,7 +104,7 @@ void showWeight(Mat &imgmat,int i,int j,int winsize){
 
 //查看权重值
 void MainWindow::on_pressed(int x, int y){
-    showWeight(this->matLeft,y,x,20);
+    showWeight(this->matLeft,this->matLeftLab,y,x,20);
 }
 
 /*以前用来研究一行显示的波形图的

@@ -22,6 +22,7 @@ private:
     cv::Mat matLeft;
     cv::Mat matRight;
     cv::Mat uninMat;
+    cv::Mat matLeftLab;
 };
 
 #endif // MAINWINDOW_H
