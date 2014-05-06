@@ -1137,19 +1137,6 @@ void stereo_BM_FBS2(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int big
                         - fabs(leftptr[temp2+1]-rightptr[temp2-3*d+1])
                         - fabs(leftptr[temp2+2]-rightptr[temp2-3*d+2]);
                 s[j*maxdis+d] += st;
-
-                /*
-                double de=0;
-                for(int k=-winsize;k<=winsize;k++){
-                    de = de + fabs(leftptr[(i+k)*size.width*3+j*3]-rightptr[(i+k)*size.width*3+j*3-3*d])
-                            + fabs(leftptr[(i+k)*size.width*3+j*3+1]-rightptr[(i+k)*size.width*3+j*3-3*d+1])
-                            + fabs(leftptr[(i+k)*size.width*3+j*3+2]-rightptr[(i+k)*size.width*3+j*3-3*d+2]);
-                }
-                if(fabs(de-s[j*maxdis+d])>0.001){
-                    qDebug()<<"s 不同"<<endl;
-                    return;
-                }
-                */
             }
         }
         //calculate sad
@@ -1165,14 +1152,7 @@ void stereo_BM_FBS2(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int big
                     sad[j*maxdis+d] = sad[(j-1)*maxdis+d] - s[(j-1-winsize)*maxdis+d]
                             +s[(j+winsize)*maxdis+d];
                 }
-                /*
-                double de=0;
-                for(int i1=-winsize;i1<=winsize;i1++)
-                    for(int j1=-winsize;j1<=winsize;j1++)
-                        de = de + fabs(leftptr[(i+i1)*size.width*3+j*3+j1*3]-rightptr[(i+i1)*size.width*3+j*3+j1*3-d*3])
-                                + fabs(leftptr[(i+i1)*size.width*3+j*3+j1*3+1]-rightptr[(i+i1)*size.width*3+j*3+j1*3-d*3+1])
-                                + fabs(leftptr[(i+i1)*size.width*3+j*3+j1*3+2]-rightptr[(i+i1)*size.width*3+j*3+j1*3-d*3+2]);
-               */
+
             }
         }
     }
@@ -1316,6 +1296,8 @@ void stereo_BM_FBS2(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int big
     }
     delete []w1buff;
     delete []w2buff;
+    delete []sad_;
+    delete []s;
 }
 
 
@@ -1343,7 +1325,7 @@ void testMyBM(){
 //            stereo_BM_AW(leftmat,rightmat,dis,40,7);
 //            freopen("disresult.txt","w",stdout);
 //            stereo_BM_AW_Lab(leftmat,rightmat,dis,20,17);
-            stereo_BM_FBS2(leftmat,rightmat,dis,20,1,3);
+            stereo_BM_FBS2(leftmat,rightmat,dis,140,1,3);
 //            cout<<dis<<endl;
 //            stereo_BM_AW_gray(leftmat,rightmat,dis,130,7);
 //            stereo_BM_AW_Color(leftmat,rightmat,dis,130,7);
@@ -1362,11 +1344,11 @@ void testMyBM(){
 
 
 
-///*
+/*
 int main(int argc, char *argv[]){
     QApplication a(argc, argv);
     testMyBM();
 
     return a.exec();
 }
-//*/
+*/
