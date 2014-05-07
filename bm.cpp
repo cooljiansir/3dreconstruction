@@ -1372,8 +1372,8 @@ void testMyBM(){
 //            stereo_BM_segment(leftmat,rightmat,dis,7,40);
 //            stereo_BM_AW(leftmat,rightmat,dis,40,7);
 //            freopen("disresult.txt","w",stdout);
-//            stereo_BM_AW_Lab(leftmat,rightmat,dis,20,17);
-            stereo_BM_FBS2(leftmat,rightmat,dis,20,1,3);
+            stereo_BM_AW_Lab(leftmat,rightmat,dis,20,19);
+//            stereo_BM_FBS2(leftmat,rightmat,dis,20,1,6);
 //            cout<<dis<<endl;
 //            stereo_BM_AW_gray(leftmat,rightmat,dis,130,7);
 //            stereo_BM_AW_Color(leftmat,rightmat,dis,130,7);
@@ -1382,21 +1382,24 @@ void testMyBM(){
 //            stereo_BM2(leftmat,rightmat,dis,40,3);
 
 
+
             qDebug()<<"use time"<<clock() - t<<"ms"<<endl;
             dis.convertTo(vdisp,CV_8U);
             normalize(vdisp,vdisp,0,255,CV_MINMAX);
-            imshow("AW 35*35 ",vdisp);
+            imshow("FBS 21*21 7*7 ",vdisp);
         }
     }
 }
+//42256 ms
+//77276 ms
+//91554 ms
+//132792 ms
 
-
-
-///*
+/*
 int main(int argc, char *argv[]){
     QApplication a(argc, argv);
     testMyBM();
 
     return a.exec();
 }
-//*/
+*/
