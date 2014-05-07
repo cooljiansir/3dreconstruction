@@ -258,6 +258,7 @@ void stereo_BM_AW_Lab_Pro(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize){
 }
 
 
+
 /*
  *FBS立体匹配
  *自适应权值和Box加速算法
@@ -663,6 +664,173 @@ void stereoDP2(Mat &left,Mat &right,Mat &dis,double P){
     delete []path;
 }
 
+/*
+ *AW 算法+DP算法
+ *采用LAB空间的自适应权值算法计算得到匹配代价
+ *再通过DP算法进行匹配
+ *
+ *
+ *
+ *
+ *
+ */
+void stereo_BM_AW_DP(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,double P){
+    if(left.size()!=right.size())
+        return;
+    double yc=7,yg=36;
+//    double yc=50,yg=36;
+
+    Size size = left.size();
+    dis.create(size,CV_32F);
+
+    float *disptr = (float*)dis.data;
+
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+
+    Mat leftlab,rightlab;
+    cvtColor(left,leftlab,CV_BGR2Lab);
+    cvtColor(right,rightlab,CV_BGR2Lab);
+
+    unsigned char *leftlabptr = leftlab.data;
+    unsigned char *rightlabptr = rightlab.data;
+
+    for(int i = 0;i<size.height;i++)
+        for(int j = 0;j<size.width;j++)
+            disptr[i*size.width+j] = -1;
+
+    //double *mincost = new double[size.width];
+    //double *
+    double *w1buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+    double *w2buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+    double *cost = new double[size.width*size.width];
+    int DPwidth = size.width+1;
+    double *DP_ = new double[DPwidth*DPwidth];
+    double *DP = DP_+DPwidth+1;
+    char *path = new char[size.width*size.width];
+
+    //initial DP
+    for(int i = 0;i<DPwidth;i++)
+        DP_[i] = DP_[i*DPwidth] = 0;
+
+    for(int i = winsize;i+winsize<size.height;i++){
+        unsigned char *leftptri = leftptr+i*size.width*3;
+        unsigned char *rightptri = rightptr+i*size.width*3;
+
+        for(int j = winsize;j+winsize<size.width;j++){
+            int p = (i*size.width + j)*3;
+            int windex = j*(2*winsize+1)*(2*winsize+1);
+            for(int i1 = -winsize;i1<=winsize;i1++){
+                for(int j1 = -winsize;j1<=winsize;j1++){
+                    int q = ((i+i1)*size.width + j+j1)*3;
+                    double w1 =
+                            exp(-sqrt((leftlabptr[p] - leftlabptr[q])*(leftlabptr[p] - leftlabptr[q])
+                                      *100.0/255.0*100.0/255.0+
+                                      (leftlabptr[p+1] - leftlabptr[q+1])*(leftlabptr[p+1] - leftlabptr[q+1])+
+                                      (leftlabptr[p+2] - leftlabptr[q+2])*(leftlabptr[p+2] - leftlabptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    double w2 =
+                            exp(-sqrt((rightlabptr[p] - rightlabptr[q])*(rightlabptr[p] - rightlabptr[q])+
+                                         (rightlabptr[p+1] - rightlabptr[q+1])*(rightlabptr[p+1] - rightlabptr[q+1])+
+                                         (rightlabptr[p+2] - rightlabptr[q+2])*(rightlabptr[p+2] - rightlabptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    w1buff[windex] = w1;
+                    w2buff[windex] = w2;
+                    windex++;
+                }
+            }
+        }
+        for(int j = winsize;j+winsize<size.width;j++){
+            double mincost;
+            int mmindex=-1;
+            for(int d = 0;d<maxdis&&d+winsize<=j;d++){
+                double sum = 0;
+                double sumw = 0;
+                int p = (i*size.width + j)*3;
+                int p_ = p-3*d;
+                int w1index = j*(2*winsize+1)*(2*winsize+1);
+                int w2index = (j-d)*(2*winsize+1)*(2*winsize+1);
+                for(int i1 = -winsize;i1<=winsize;i1++){
+                    for(int j1 = -winsize;j1<=winsize;j1++){
+
+                        int q = ((i+i1)*size.width + j+j1)*3;
+                        int q_ = q-d*3;
+                        double e1 = fabs(leftptr[q]-rightptr[q_])+
+                                fabs(leftptr[q+1]-rightptr[q_+1])+
+                                fabs(leftptr[q+2]-rightptr[q_+2]);
+
+                        double w1 = w1buff[w1index++];
+                        double w2 = w2buff[w2index++];
+                        sum += w1*w2*e1;
+                        sumw += w1*w2;
+                    }
+                }
+                cost[j*size.width+(j-d)] = sum/sumw;
+
+            }
+
+        }
+
+        for(int a = 0;a<size.width;a++){
+            double *DPa = DP+a*DPwidth;
+            double *DPa_1 = DPa - DPwidth;
+            char *patha = path+a*size.width;
+            for(int b = 0;b<size.width;b++){
+                double A;
+                if(a<winsize||b<winsize||a-b>=maxdis||a-b<0)
+                    A = DPa_1[b-1]
+                                + fabs(leftptri[a*3]-rightptri[b*3])
+                                + fabs(leftptri[a*3+1]-rightptri[b*3+1])
+                                + fabs(leftptri[a*3+2]-rightptri[b*3+2]);
+                else {
+                    A = DPa_1[b-1]+cost[a*size.width+b];
+                }
+
+                double B = DPa_1[b] + P;
+                double C = DPa[b-1] + P;
+                if(A<B){
+                    if(A<C){//A is min
+                        DPa[b] = A;
+                        patha[b] = 1;
+                    }else{//C is min
+                        DPa[b] = C;
+                        patha[b] = 3;
+                    }
+                }else{
+                    if(B<C){//B is min
+                        DPa[b] = B;
+                        patha[b] = 2;
+                    }else{//C is min
+                        DPa[b] = C;
+                        patha[b] = 3;
+                    }
+                }
+            }
+        }
+        int indexa = size.width-1;
+        int indexb = size.width-1;
+        float *disptri = disptr+i*size.width;
+        //qDebug()<<"MAX" <<cost[indexa*costwidth+indexb];
+        while(indexa>=0&&indexb>=0){
+            if(path[indexa*size.width+indexb]==1){
+                disptri[indexa] = indexa-indexb;
+                indexa--;
+                indexb--;
+            }else if(path[indexa*size.width+indexb]==2){
+                indexa--;
+            }else if(path[indexa*size.width+indexb]==3){
+                indexb--;
+            }
+        }
+        qDebug()<<"finished "<<i*100/size.height<<"%\r";
+    }
+    delete []w1buff;
+    delete []w2buff;
+    delete []cost;
+}
+
+
+
 
 void testAll(){
     QString leftfilename = QFileDialog::getOpenFileName(
@@ -687,7 +855,8 @@ void testAll(){
 //            stereoBmProto(leftmat,rightmat,dis,8,20);
 //            stereo_BMBox(leftmat,rightmat,dis,20,5);
 //            stereo_BM_FBS2Pro(leftmat,rightmat,dis,20,1,3);
-            stereoDP2(leftmat,rightmat,dis,200);
+//            stereoDP2(leftmat,rightmat,dis,200);
+            stereo_BM_AW_DP(leftmat,rightmat,dis,20,10,30);
 //            stereo_BM_AW_Lab_Pro(leftmat,rightmat,dis,20,10);
             qDebug()<<"used time "<<clock()-t<<"ms"<<endl;
 
