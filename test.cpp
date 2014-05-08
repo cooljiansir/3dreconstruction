@@ -1301,146 +1301,82 @@ void stereo_SGM(Mat &left,Mat &right,Mat &dis,int maxdis,int dir,double P1,doubl
     //A = E(i,j-1,d)
     //B = min(E(i,j-1,d-1),E(i,j-1,d+1))+P1
     //C = minE(i,j-1)+P2
-    if(dir==0){
-        for(int i = 0;i<size.height;i++){
-            unsigned char *leftptri = leftptr+i*size.width*3;
-            unsigned char *rightptri = rightptr+i*size.width*3;
-            for(int j = 0;j<size.width;j++){
-                unsigned char *leftptrij = leftptri+j*3;
-                unsigned char *rightptrij = rightptri+j*3;
-                double *E0j_1 = E0+(j-1)*Emax;
-                double minc = 1<<29;
-                int mind;
-                for(int d = 0;d<maxdis&&d<=j;d++){
-                    unsigned char *rightptrijd = rightptrij-3*d;
-                    double *Et0 = E0 + j*Emax+d+1;
-                    double Cost = fabs(leftptrij[0]  - rightptrijd[0])
-                            + fabs(leftptrij[1]  - rightptrijd[1])
-                            + fabs(leftptrij[2]  - rightptrijd[2]);
+    for(int i = 0;i<size.height;i++){
+        unsigned char *leftptri = leftptr+i*size.width*3;
+        unsigned char *rightptri = rightptr+i*size.width*3;
+        for(int j = 0;j<size.width;j++){
+            unsigned char *leftptrij = leftptri+j*3;
+            unsigned char *rightptrij = rightptri+j*3;
+            double *E0j_1 = E0+(j-1)*Emax;
+            double minc0 = 1<<29;
+            double *E1j_1 = E11+(j-1)*Emax;
+            double minc1 = 1<<29;
+            double *E2j = E21+j*Emax;
+            double minc2 = 1<<29;
+            double *E3j_1 = E31+(j+1)*Emax;
+            double minc3 = 1<<29;
+            int mind;
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                unsigned char *rightptrijd = rightptrij-3*d;
+                double Cost = fabs(leftptrij[0]  - rightptrijd[0])
+                        + fabs(leftptrij[1]  - rightptrijd[1])
+                        + fabs(leftptrij[2]  - rightptrijd[2]);
+                double *Et0 = E0 + j*Emax+d+1;
+                {
                     double A = E0j_1[d+1];
                     double B1 = E0j_1[d];
                     double B2 = E0j_1[d+2];
                     double C = minE0[j-1]+P2;
                     *Et0 = Cost + min(min(A,C),min(B1,B2)+P1);
-                    if(*Et0<minc)
-                        minc = *Et0,mind = d;
+                    if(*Et0<minc0)
+                        minc0 = *Et0,mind=d;
                 }
-                minE0[j] = minc;
-                disptr[i*size.width+j] = mind;
-            }
-        }
-    }
-
-    //1号方向
-    //E(i,j,d) = Cost(i,j,d) + min(A,B,C)
-    //A = E(i-1,j-1,d)
-    //B = min(E(i-1,j-1,d-1),E(i-1,j-1,d+1))+P1
-    //C = minE(i-1,j-1)+P2
-    if(dir==1){
-        for(int i = 0;i<size.height;i++){
-            unsigned char *leftptri = leftptr+i*size.width*3;
-            unsigned char *rightptri = rightptr+i*size.width*3;
-            for(int j = 0;j<size.width;j++){
-                unsigned char *leftptrij = leftptri+j*3;
-                unsigned char *rightptrij = rightptri+j*3;
-                double *E1j_1 = E11+(j-1)*Emax;
-                double minc = 1<<29;
-                int mind;
-                for(int d = 0;d<maxdis&&d<=j;d++){
-                    unsigned char *rightptrijd = rightptrij-3*d;
-                    double *Et1 = E12 + j*Emax+d+1;
-                    double Cost = fabs(leftptrij[0]  - rightptrijd[0])
-                            + fabs(leftptrij[1]  - rightptrijd[1])
-                            + fabs(leftptrij[2]  - rightptrijd[2]);
+                double *Et1 = E12 + j*Emax+d+1;
+                {
                     double A = E1j_1[d+1];
                     double B1 = E1j_1[d];
                     double B2 = E1j_1[d+2];
                     double C = minE1[j-1]+P2;
                     *Et1 = Cost + min(min(A,C),min(B1,B2)+P1);
-                    if(*Et1<minc)
-                        minc = *Et1,mind = d;
+                    if(*Et1<minc1)
+                        minc1 = *Et1;
                 }
-                minE1[j] = minc;
-                disptr[i*size.width+j] = mind;
-            }
-            double *temp = E11;
-            E11 = E12;
-            E12 = temp;
-        }
-    }
-    //2号方向
-    //E(i,j,d) = Cost(i,j,d) + min(A,B,C)
-    //A = E(i-1,j,d)
-    //B = min(E(i-1,j,d-1),E(i-1,j,d+1))+P1
-    //C = minE(i-1,j)+P2
-    if(dir==2){
-        for(int i = 0;i<size.height;i++){
-            unsigned char *leftptri = leftptr+i*size.width*3;
-            unsigned char *rightptri = rightptr+i*size.width*3;
-            for(int j = 0;j<size.width;j++){
-                unsigned char *leftptrij = leftptri+j*3;
-                unsigned char *rightptrij = rightptri+j*3;
-                double *E2j = E21+j*Emax;
-                double minc = 1<<29;
-                int mind;
-                for(int d = 0;d<maxdis&&d<=j;d++){
-                    unsigned char *rightptrijd = rightptrij-3*d;
-                    double *Et2 = E22 + j*Emax+d+1;
-                    double Cost = fabs(leftptrij[0]  - rightptrijd[0])
-                            + fabs(leftptrij[1]  - rightptrijd[1])
-                            + fabs(leftptrij[2]  - rightptrijd[2]);
+                double *Et2 = E22 + j*Emax+d+1;
+                {
                     double A = E2j[d+1];
                     double B1 = E2j[d];
                     double B2 = E2j[d+2];
                     double C = minE2[j]+P2;
                     *Et2 = Cost + min(min(A,C),min(B1,B2)+P1);
-                    if(*Et2<minc)
-                        minc = *Et2,mind = d;
+                    if(*Et2<minc2)
+                        minc2 = *Et2;
                 }
-                minE2[j] = minc;
-                disptr[i*size.width+j] = mind;
-            }
-            double *temp = E21;
-            E21 = E22;
-            E22 = temp;
-        }
-    }
-    //3号方向
-    //E(i,j,d) = Cost(i,j,d) + min(A,B,C)
-    //A = E(i-1,j+1,d)
-    //B = min(E(i-1,j+1,d-1),E(i-1,j+1,d+1))+P1
-    //C = minE(i-1,j+1)+P2
-    if(dir==3){
-        for(int i = 0;i<size.height;i++){
-            unsigned char *leftptri = leftptr+i*size.width*3;
-            unsigned char *rightptri = rightptr+i*size.width*3;
-            for(int j = 0;j<size.width;j++){
-                unsigned char *leftptrij = leftptri+j*3;
-                unsigned char *rightptrij = rightptri+j*3;
-                double *E3j_1 = E31+(j+1)*Emax;
-                double minc = 1<<29;
-                int mind;
-                for(int d = 0;d<maxdis&&d<=j;d++){
-                    unsigned char *rightptrijd = rightptrij-3*d;
-                    double *Et3 = E32 + j*Emax+d+1;
-                    double Cost = fabs(leftptrij[0]  - rightptrijd[0])
-                            + fabs(leftptrij[1]  - rightptrijd[1])
-                            + fabs(leftptrij[2]  - rightptrijd[2]);
+                double *Et3 = E32 + j*Emax+d+1;
+                {
                     double A = E3j_1[d+1];
                     double B1 = E3j_1[d];
                     double B2 = E3j_1[d+2];
                     double C = minE3[j]+P2;
                     *Et3 = Cost + min(min(A,C),min(B1,B2)+P1);
-                    if(*Et3<minc)
-                        minc = *Et3,mind = d;
+                    if(*Et3<minc3)
+                        minc3 = *Et3;
                 }
-                minE3[j] = minc;
-                disptr[i*size.width+j] = mind;
             }
-            double *temp = E31;
-            E31 = E32;
-            E32 = temp;
+            minE0[j] = minc0;
+            minE1[j] = minc1;
+            minE2[j] = minc2;
+            minE3[j] = minc3;
+            disptr[i*size.width+j] = mind;
         }
+        double *temp = E11;
+        E11 = E12;
+        E12 = temp;
+        temp = E21;
+        E21 = E22;
+        E22 = temp;
+        temp = E31;
+        E31 = E32;
+        E32 = temp;
     }
     delete []E_;
     delete []minE_;
@@ -1472,7 +1408,7 @@ void testAll(){
 //            stereoDP2(leftmat,rightmat,dis,20,20);
 //            stereo_BM_AW_DP(leftmat,rightmat,dis,20,7,20);
 //            stereo_BM_FBS_DP(leftmat,rightmat,dis,20,1,5,20*9);
-            stereo_SGM(leftmat,rightmat,dis,20,3,20,80);
+            stereo_SGM(leftmat,rightmat,dis,20,2,20,80);
 
 //            stereo_BM_AW_Lab_Pro(leftmat,rightmat,dis,20,10);
             qDebug()<<"used time "<<clock()-t<<"ms"<<endl;
