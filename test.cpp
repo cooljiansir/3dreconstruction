@@ -573,7 +573,7 @@ void stereo_BM_FBS2Pro(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int 
     delete []rightsum;
 }
 
-void stereoDP2(Mat &left,Mat &right,Mat &dis,double P){
+void stereoDP2(Mat &left,Mat &right,Mat &dis,int maxdis,double P){
     if(left.size()!=right.size())
         return;
     Size size = left.size();
@@ -610,7 +610,10 @@ void stereoDP2(Mat &left,Mat &right,Mat &dis,double P){
             char *patha = path+a*size.width;
             for(int b = 0;b<size.width;b++){
                 //A (a,b) is matched
-                double A = costa_1[b-1]
+                double A;
+                if(a-b<0||a-b>=maxdis)
+                    A=1<<29;
+                else A = costa_1[b-1]
                                 + fabs(leftptri[a*3]-rightptri[b*3])
                                 + fabs(leftptri[a*3+1]-rightptri[b*3+1])
                                 + fabs(leftptri[a*3+2]-rightptri[b*3+2]);
@@ -1220,6 +1223,228 @@ void stereo_BM_FBS_DP(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int b
 }
 
 
+//单个方向扫描
+void stereo_SGM(Mat &left,Mat &right,Mat &dis,int maxdis,int dir,double P1,double P2){
+    if(left.size()!=right.size())
+        return;
+
+    Size size = left.size();
+    dis.create(size,CV_32F);
+
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+    float *disptr = (float*)dis.data;
+
+    //多两个个作为边界
+    int Ewidth = size.width+2;
+    int Emax = maxdis+2;//当d=-1和d=maxdis时的边界
+    double *E_ = new double[Ewidth*Emax*7];//其实只有3个方向需要，但是为了程序统一，4个方向都存起来
+    double *minE_ = new double[Ewidth*4];//所有d的最小值
+    double *E0 = E_ + 1*Emax;
+    double *E11 = E_ + Ewidth*Emax + 1*Emax;;
+    double *E12 = E_ + 2*Ewidth*Emax + 1*Emax;;
+    double *E21 = E_ + 3*Ewidth*Emax + 1*Emax;;
+    double *E22 = E_ + 4*Ewidth*Emax + 1*Emax;;
+    double *E31 = E_ + 5*Ewidth*Emax + 1*Emax;;
+    double *E32 = E_ + 6*Ewidth*Emax + 1*Emax;;
+
+    double *minE0 = minE_ + 1;
+    double *minE1 = minE_ +   Ewidth+1;
+    double *minE2 = minE_ + 2*Ewidth+1;
+    double *minE3 = minE_ + 3*Ewidth+1;
+
+    //initial and borders
+    for(int i=-1;i<=size.width;i++){
+        for(int d = 0;d<maxdis;d++){
+            E0[i*Emax+d+1] = 0;
+            E11[i*Emax+d+1] = 0;
+            E12[i*Emax+d+1] = 0;
+            E21[i*Emax+d+1] = 0;
+            E22[i*Emax+d+1] = 0;
+            E31[i*Emax+d+1] = 0;
+            E32[i*Emax+d+1] = 0;
+        }
+        int d = -1;
+        E0[i*Emax+d+1] = 1<<29;
+        E11[i*Emax+d+1] = 1<<29;
+        E12[i*Emax+d+1] = 1<<29;
+        E21[i*Emax+d+1] = 1<<29;
+        E22[i*Emax+d+1] = 1<<29;
+        E31[i*Emax+d+1] = 1<<29;
+        E32[i*Emax+d+1] = 1<<29;
+        d = maxdis;
+        E0[i*Emax+d+1] = 1<<29;
+        E11[i*Emax+d+1] = 1<<29;
+        E12[i*Emax+d+1] = 1<<29;
+        E21[i*Emax+d+1] = 1<<29;
+        E22[i*Emax+d+1] = 1<<29;
+        E31[i*Emax+d+1] = 1<<29;
+        E32[i*Emax+d+1] = 1<<29;
+    }
+    for(int i = -1;i<=size.width;i++){
+        minE0[i] = 0;
+        minE1[i] = 0;
+        minE2[i] = 0;
+        minE3[i] = 0;
+    }
+
+    //四个方向
+    //
+    //1 2  3
+    // ↖↑↗
+    //0←
+    //
+    int dx[4]={-1,-1,0,1};
+
+    //0号方向
+    //E(i,j,d) = Cost(i,j,d) + min(A,B,C)
+    //A = E(i,j-1,d)
+    //B = min(E(i,j-1,d-1),E(i,j-1,d+1))+P1
+    //C = minE(i,j-1)+P2
+    if(dir==0){
+        for(int i = 0;i<size.height;i++){
+            unsigned char *leftptri = leftptr+i*size.width*3;
+            unsigned char *rightptri = rightptr+i*size.width*3;
+            for(int j = 0;j<size.width;j++){
+                unsigned char *leftptrij = leftptri+j*3;
+                unsigned char *rightptrij = rightptri+j*3;
+                double *E0j_1 = E0+(j-1)*Emax;
+                double minc = 1<<29;
+                int mind;
+                for(int d = 0;d<maxdis&&d<=j;d++){
+                    unsigned char *rightptrijd = rightptrij-3*d;
+                    double *Et0 = E0 + j*Emax+d+1;
+                    double Cost = fabs(leftptrij[0]  - rightptrijd[0])
+                            + fabs(leftptrij[1]  - rightptrijd[1])
+                            + fabs(leftptrij[2]  - rightptrijd[2]);
+                    double A = E0j_1[d+1];
+                    double B1 = E0j_1[d];
+                    double B2 = E0j_1[d+2];
+                    double C = minE0[j-1]+P2;
+                    *Et0 = Cost + min(min(A,C),min(B1,B2)+P1);
+                    if(*Et0<minc)
+                        minc = *Et0,mind = d;
+                }
+                minE0[j] = minc;
+                disptr[i*size.width+j] = mind;
+            }
+        }
+    }
+
+    //1号方向
+    //E(i,j,d) = Cost(i,j,d) + min(A,B,C)
+    //A = E(i-1,j-1,d)
+    //B = min(E(i-1,j-1,d-1),E(i-1,j-1,d+1))+P1
+    //C = minE(i-1,j-1)+P2
+    if(dir==1){
+        for(int i = 0;i<size.height;i++){
+            unsigned char *leftptri = leftptr+i*size.width*3;
+            unsigned char *rightptri = rightptr+i*size.width*3;
+            for(int j = 0;j<size.width;j++){
+                unsigned char *leftptrij = leftptri+j*3;
+                unsigned char *rightptrij = rightptri+j*3;
+                double *E1j_1 = E11+(j-1)*Emax;
+                double minc = 1<<29;
+                int mind;
+                for(int d = 0;d<maxdis&&d<=j;d++){
+                    unsigned char *rightptrijd = rightptrij-3*d;
+                    double *Et1 = E12 + j*Emax+d+1;
+                    double Cost = fabs(leftptrij[0]  - rightptrijd[0])
+                            + fabs(leftptrij[1]  - rightptrijd[1])
+                            + fabs(leftptrij[2]  - rightptrijd[2]);
+                    double A = E1j_1[d+1];
+                    double B1 = E1j_1[d];
+                    double B2 = E1j_1[d+2];
+                    double C = minE1[j-1]+P2;
+                    *Et1 = Cost + min(min(A,C),min(B1,B2)+P1);
+                    if(*Et1<minc)
+                        minc = *Et1,mind = d;
+                }
+                minE1[j] = minc;
+                disptr[i*size.width+j] = mind;
+            }
+            double *temp = E11;
+            E11 = E12;
+            E12 = temp;
+        }
+    }
+    //2号方向
+    //E(i,j,d) = Cost(i,j,d) + min(A,B,C)
+    //A = E(i-1,j,d)
+    //B = min(E(i-1,j,d-1),E(i-1,j,d+1))+P1
+    //C = minE(i-1,j)+P2
+    if(dir==2){
+        for(int i = 0;i<size.height;i++){
+            unsigned char *leftptri = leftptr+i*size.width*3;
+            unsigned char *rightptri = rightptr+i*size.width*3;
+            for(int j = 0;j<size.width;j++){
+                unsigned char *leftptrij = leftptri+j*3;
+                unsigned char *rightptrij = rightptri+j*3;
+                double *E2j = E21+j*Emax;
+                double minc = 1<<29;
+                int mind;
+                for(int d = 0;d<maxdis&&d<=j;d++){
+                    unsigned char *rightptrijd = rightptrij-3*d;
+                    double *Et2 = E22 + j*Emax+d+1;
+                    double Cost = fabs(leftptrij[0]  - rightptrijd[0])
+                            + fabs(leftptrij[1]  - rightptrijd[1])
+                            + fabs(leftptrij[2]  - rightptrijd[2]);
+                    double A = E2j[d+1];
+                    double B1 = E2j[d];
+                    double B2 = E2j[d+2];
+                    double C = minE2[j]+P2;
+                    *Et2 = Cost + min(min(A,C),min(B1,B2)+P1);
+                    if(*Et2<minc)
+                        minc = *Et2,mind = d;
+                }
+                minE2[j] = minc;
+                disptr[i*size.width+j] = mind;
+            }
+            double *temp = E21;
+            E21 = E22;
+            E22 = temp;
+        }
+    }
+    //3号方向
+    //E(i,j,d) = Cost(i,j,d) + min(A,B,C)
+    //A = E(i-1,j+1,d)
+    //B = min(E(i-1,j+1,d-1),E(i-1,j+1,d+1))+P1
+    //C = minE(i-1,j+1)+P2
+    if(dir==3){
+        for(int i = 0;i<size.height;i++){
+            unsigned char *leftptri = leftptr+i*size.width*3;
+            unsigned char *rightptri = rightptr+i*size.width*3;
+            for(int j = 0;j<size.width;j++){
+                unsigned char *leftptrij = leftptri+j*3;
+                unsigned char *rightptrij = rightptri+j*3;
+                double *E3j_1 = E31+(j+1)*Emax;
+                double minc = 1<<29;
+                int mind;
+                for(int d = 0;d<maxdis&&d<=j;d++){
+                    unsigned char *rightptrijd = rightptrij-3*d;
+                    double *Et3 = E32 + j*Emax+d+1;
+                    double Cost = fabs(leftptrij[0]  - rightptrijd[0])
+                            + fabs(leftptrij[1]  - rightptrijd[1])
+                            + fabs(leftptrij[2]  - rightptrijd[2]);
+                    double A = E3j_1[d+1];
+                    double B1 = E3j_1[d];
+                    double B2 = E3j_1[d+2];
+                    double C = minE3[j]+P2;
+                    *Et3 = Cost + min(min(A,C),min(B1,B2)+P1);
+                    if(*Et3<minc)
+                        minc = *Et3,mind = d;
+                }
+                minE3[j] = minc;
+                disptr[i*size.width+j] = mind;
+            }
+            double *temp = E31;
+            E31 = E32;
+            E32 = temp;
+        }
+    }
+    delete []E_;
+    delete []minE_;
+}
 
 void testAll(){
     QString leftfilename = QFileDialog::getOpenFileName(
@@ -1244,9 +1469,10 @@ void testAll(){
 //            stereoBmProto(leftmat,rightmat,dis,8,20);
 //            stereo_BMBox(leftmat,rightmat,dis,20,5);
 //            stereo_BM_FBS2Pro(leftmat,rightmat,dis,20,1,3);
-//            stereoDP2(leftmat,rightmat,dis,200);
-            stereo_BM_AW_DP(leftmat,rightmat,dis,20,7,30);
-//            stereo_BM_FBS_DP(leftmat,rightmat,dis,20,1,4,30*9);
+//            stereoDP2(leftmat,rightmat,dis,20,20);
+//            stereo_BM_AW_DP(leftmat,rightmat,dis,20,7,20);
+//            stereo_BM_FBS_DP(leftmat,rightmat,dis,20,1,5,20*9);
+            stereo_SGM(leftmat,rightmat,dis,20,3,20,80);
 
 //            stereo_BM_AW_Lab_Pro(leftmat,rightmat,dis,20,10);
             qDebug()<<"used time "<<clock()-t<<"ms"<<endl;
@@ -1255,7 +1481,7 @@ void testAll(){
             dis.convertTo(vdisp,CV_8U);
             normalize(vdisp,vdisp,0,255,CV_MINMAX);
 
-            imshow("DP P=200",vdisp);
+            imshow("SGM",vdisp);
         }
     }
 }
