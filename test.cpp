@@ -1390,6 +1390,70 @@ void stereo_SGM(Mat &left,Mat &right,Mat &dis,int maxdis,int dir,double P1,doubl
     delete []minE_;
 }
 
+void stereo_Itera(Size size,int *cost,Mat &dis,int maxdis,int P1,int P2,int iter){
+    int *disint = new int[size.width*size.height];
+    int *disint2 = new int[size.width*size.height];
+    if(dis.size().height<=0)
+        return;
+    float *disptr = (float*)dis.data;
+    //initalborder
+    for(int i = 0;i<size.height;i++)
+        for(int j = 0;j<size.width;j++)
+            disint[i*size.width+j] = disptr[i*size.width+j];
+
+    if(1){
+    int T = -1;
+    int Tmax = iter;
+    while(++T<Tmax){
+        for(int i = 1;i+1<size.height;i++){
+            int *disinti = disint+i*size.width;
+            int *disinti_p = disinti-size.width;
+            int *disinti_n = disinti+size.width;
+            int *disint2i = disint2+i*size.width;
+            int *costi = cost + i*size.width*maxdis;
+            for(int j = 1;j<size.width;j++){
+                int mmin=1<<29;
+                int mmindex;
+                int *costij = costi+j*maxdis;
+                //八邻域
+                int near[8]={disinti_p[j-1],disinti_p[j],disinti_p[j+1],
+                             disinti[j-1],disinti[j+1],
+                             disinti_n[j-1],disinti_n[j],disinti_n[j+1]
+                            };
+                for(int d = 0;d<maxdis&&d<=j;d++){
+                    //int cost = (leftptri[j] - rightptri[j-d])*(leftptri[j] - rightptri[j-d]);
+                    int co = costij[d];
+                    for(int ni = 0;ni<8;ni++){
+                        if(abs(d-near[ni])==1){
+                            co += P1;
+                        }else if(abs(d-near[ni])>1){
+                            co += P2;
+                        }
+                    }
+                    if(co<mmin){
+                        mmin = co;
+                        mmindex = d;
+                    }
+                }
+                disint2i[j] = mmindex;
+            }
+        }
+
+        int *temp = disint;
+        disint = disint2;
+        disint2 = temp;
+    }
+    }
+
+    for(int i = 0;i<size.height;i++){
+        for(int j = 0;j<size.width;j++){
+            disptr[i*size.width+j] = disint[i*size.width+j];
+        }
+    }
+    delete []disint;
+    delete []disint2;
+
+}
 
 void stereo_MSGM(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2){
     if(left.size()!=right.size())
@@ -1560,10 +1624,10 @@ void stereo_MSGM(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2){
                 *minLr31j = min(*minLr31j,Lr31j[d+1]);
 
                 LrSumij[d] = 0
-                        +*minLr0j
-                        +*minLr11j
-                        +*minLr21j
-                        +*minLr31j
+                        +Lr0j[d+1]
+                        +Lr11j[d+1]
+                        +Lr21j[d+1]
+                        +Lr31j[d+1]
                         ;
 
             }
@@ -1645,10 +1709,10 @@ void stereo_MSGM(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2){
 //                if(*minLr0j+*minLr11j+*minLr21j+*minLr31j<minc)
 //                    minc = *minLr0j+*minLr11j+*minLr21j+*minLr31j,mind = d;
                 LrSumij[d] += 0
-                        + *minLr0j
-                        +*minLr11j
-                        +*minLr21j
-                        +*minLr31j;
+                        +Lr0j[d+1]
+                        +Lr11j[d+1]
+                        +Lr21j[d+1]
+                        +Lr31j[d+1];
                 if(LrSumij[d]<minc)
                     minc = LrSumij[d],mind = d;
             }
@@ -1663,6 +1727,7 @@ void stereo_MSGM(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2){
         minLr01  = temp;
     }
 
+    stereo_Itera(size,cost,dis,maxdis,P1,P2,20);
     delete []cost;
     delete []LrSum;
     delete []LrBuff_;
@@ -1770,7 +1835,126 @@ void stereo_BMBox_Cost(Mat &left,Mat &right,int *costout,int maxdis,int winsize)
     qDebug()<<"释放完s1"<<endl;
 
 }
-void stereo_MSGM_FW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int P1,int P2){
+
+
+
+//换成Lab空间
+//L = L*100/255
+//a = a-128
+//b = b-128
+void stereo_BM_AW_Lab_Cost(Mat &left,Mat &right,int *costout,int maxdis,int winsize){
+    if(left.size()!=right.size())
+        return;
+    double yc=7,yg=36;
+//    double yc=50,yg=36;
+
+    Size size = left.size();
+
+
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+
+    Mat leftlab,rightlab;
+    cvtColor(left,leftlab,CV_BGR2Lab);
+    cvtColor(right,rightlab,CV_BGR2Lab);
+
+    unsigned char *leftlabptr = leftlab.data;
+    unsigned char *rightlabptr = rightlab.data;
+
+
+    //double *mincost = new double[size.width];
+    //double *
+    double *w1buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+    double *w2buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+
+    for(int k = 0;k<4;k++){
+        int mini_[4]={0,size.height-winsize-1,0,0};
+        int maxi_[4]={winsize,size.height-1,size.height,size.height};
+        int minj_[4]={0,0,0,size.width-1-winsize};
+        int maxj_[4]={size.width,size.width,winsize,size.width};
+        for(int i = mini_[k];i<maxi_[k];i++){
+            int *costi = costout+i*size.width*maxdis;
+            unsigned char *leftptri = leftptr+i*size.width*3;
+            unsigned char *rightptri = rightptr+i*size.width*3;
+            for(int j = minj_[k];j<maxj_[k];j++){
+                int *costij = costi+j*maxdis;
+                unsigned char *leftptrij = leftptri+j*3;
+                unsigned char *rightptrij = rightptri+j*3;
+                for(int d = 0;d<maxdis&&d<=j;d++){
+                    unsigned char *rightptrijd = rightptrij-3*d;
+                    costij[d] = abs(leftptrij[0]-rightptrijd[0])
+                                +abs(leftptrij[1]-rightptrijd[1])
+                                +abs(leftptrij[2]-rightptrijd[2]);
+                    costij[d]*=100;
+                }
+            }
+        }
+    }
+
+
+    for(int i = winsize;i+winsize<size.height;i++){
+        for(int j = winsize;j+winsize<size.width;j++){
+            int p = (i*size.width + j)*3;
+            int windex = j*(2*winsize+1)*(2*winsize+1);
+            for(int i1 = -winsize;i1<=winsize;i1++){
+                for(int j1 = -winsize;j1<=winsize;j1++){
+                    int q = ((i+i1)*size.width + j+j1)*3;
+                    double w1 =
+                            exp(-sqrt((leftlabptr[p] - leftlabptr[q])*(leftlabptr[p] - leftlabptr[q])
+                                      *100.0/255.0*100.0/255.0+
+                                      (leftlabptr[p+1] - leftlabptr[q+1])*(leftlabptr[p+1] - leftlabptr[q+1])+
+                                      (leftlabptr[p+2] - leftlabptr[q+2])*(leftlabptr[p+2] - leftlabptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    double w2 =
+                            exp(-sqrt((rightlabptr[p] - rightlabptr[q])*(rightlabptr[p] - rightlabptr[q])+
+                                         (rightlabptr[p+1] - rightlabptr[q+1])*(rightlabptr[p+1] - rightlabptr[q+1])+
+                                         (rightlabptr[p+2] - rightlabptr[q+2])*(rightlabptr[p+2] - rightlabptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    w1buff[windex] = w1;
+                    w2buff[windex] = w2;
+                    windex++;
+                }
+            }
+        }
+        int *costi = costout+i*size.width*maxdis;
+        for(int j = winsize;j+winsize<size.width;j++){
+            double mincost;
+            int mmindex=-1;
+            int *costij = costi+j*maxdis;
+            for(int d = 0;d<maxdis&&d+winsize<=j;d++){
+                double sum = 0;
+                double sumw = 0;
+                int p = (i*size.width + j)*3;
+                int p_ = p-3*d;
+                int w1index = j*(2*winsize+1)*(2*winsize+1);
+                int w2index = (j-d)*(2*winsize+1)*(2*winsize+1);
+                for(int i1 = -winsize;i1<=winsize;i1++){
+                    for(int j1 = -winsize;j1<=winsize;j1++){
+
+                        int q = ((i+i1)*size.width + j+j1)*3;
+                        int q_ = q-d*3;
+                        double e1 = fabs(leftptr[q]-rightptr[q_])+
+                                fabs(leftptr[q+1]-rightptr[q_+1])+
+                                fabs(leftptr[q+2]-rightptr[q_+2]);
+
+                        double w1 = w1buff[w1index++];
+                        double w2 = w2buff[w2index++];
+                        sum += w1*w2*e1;
+                        sumw += w1*w2;
+                    }
+                }
+                costij[d] = sum*100.0/sumw;
+            }
+
+        }
+        qDebug()<<"finished "<<i*100/size.height<<"%\r";
+    }
+    delete []w1buff;
+    delete []w2buff;
+}
+
+
+void stereo_MSGM_FW_AW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int P1,int P2,int method,int iter){
     if(left.size()!=right.size())
         return;
     Size size = left.size();
@@ -1791,7 +1975,30 @@ void stereo_MSGM_FW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int P1,
     }
 
 
-    stereo_BMBox_Cost(left,right,cost,maxdis,winsize);
+    if(winsize==0){
+        //get cost first
+        //other cost function should be here
+        for(int i = 0;i<size.height;i++){
+            unsigned char *leftptri = leftptr+i*size.width*3;
+            unsigned char *rightptri = rightptr+i*size.width*3;
+            int *costi = cost+i*size.width*maxdis;
+            for(int j = 0;j<size.width;j++){
+                unsigned char *leftptrij = leftptri+j*3;
+                unsigned char *rightptrij = rightptri+j*3;
+                int *costij = costi+j*maxdis;
+                for(int d = 0;d<maxdis&&d<=j;d++){
+                    unsigned char *rightptrijd = rightptrij - 3*d;
+                    costij[d] = abs(leftptrij[0]-rightptrijd[0])
+                                + abs(leftptrij[1]-rightptrijd[1])
+                                + abs(leftptrij[2]-rightptrijd[2]);
+                }
+            }
+        }
+    }
+    else {
+        if(method==0)stereo_BMBox_Cost(left,right,cost,maxdis,winsize);
+        else if(method==1)stereo_BM_AW_Lab_Cost(left,right,cost,maxdis,winsize);
+    }
 
 
     int *LrSum   = new int[size.width*size.height*maxdis];
@@ -1914,10 +2121,10 @@ void stereo_MSGM_FW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int P1,
                 *minLr31j = min(*minLr31j,Lr31j[d+1]);
 
                 LrSumij[d] = 0
-                        +*minLr0j
-                        +*minLr11j
-                        +*minLr21j
-                        +*minLr31j
+                        +Lr0j[d+1]
+                        +Lr11j[d+1]
+                        +Lr21j[d+1]
+                        +Lr31j[d+1]
                         ;
 
             }
@@ -1999,10 +2206,11 @@ void stereo_MSGM_FW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int P1,
 //                if(*minLr0j+*minLr11j+*minLr21j+*minLr31j<minc)
 //                    minc = *minLr0j+*minLr11j+*minLr21j+*minLr31j,mind = d;
                 LrSumij[d] += 0
-                        + *minLr0j
-                        +*minLr11j
-                        +*minLr21j
-                        +*minLr31j;
+                        +Lr0j[d+1]
+                        +Lr11j[d+1]
+                        +Lr21j[d+1]
+                        +Lr31j[d+1]
+                        ;
                 if(LrSumij[d]<minc)
                     minc = LrSumij[d],mind = d;
             }
@@ -2017,11 +2225,16 @@ void stereo_MSGM_FW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int P1,
         minLr01  = temp;
     }
 
+
+    if(iter)
+        stereo_Itera(size,cost,dis,maxdis,P1,P2,iter);
+
     delete []cost;
     delete []LrSum;
     delete []LrBuff_;
     delete []minLr_;
 }
+
 
 void testAll(){
     QString leftfilename = "D:/works/qtwork5_5/build-3dreconstruction-Desktop_Qt_5_1_0_MinGW_32bit-Debug/images/opencv/tsukubaL.bmp";
@@ -2055,7 +2268,7 @@ void testAll(){
 //            stereo_BM_FBS_DP(leftmat,rightmat,dis,20,1,5,20*9);
 //            stereo_SGM(leftmat,rightmat,dis,20,1,10,40);
 //            stereo_MSGM(leftmat,rightmat,dis,20,4,20);
-            stereo_MSGM_FW(leftmat,rightmat,dis,20,3,4*3*3,20*3*3);
+            stereo_MSGM_FW_AW(leftmat,rightmat,dis,20,3,8*7*7,32*7*7,0,0);
 
 //            stereo_BM_AW_Lab_Pro(leftmat,rightmat,dis,20,10);
             qDebug()<<"used time "<<clock()-t<<"ms"<<endl;
