@@ -1321,8 +1321,9 @@ void stereo_SGM(Mat &left,Mat &right,Mat &dis,int maxdis,int dir,double P1,doubl
                 double Cost = fabs(leftptrij[0]  - rightptrijd[0])
                         + fabs(leftptrij[1]  - rightptrijd[1])
                         + fabs(leftptrij[2]  - rightptrijd[2]);
-                double *Et0 = E0 + j*Emax+d+1;
-                {
+                if(dir==0){
+                    double *Et0 = E0 + j*Emax+d+1;
+                    {
                     double A = E0j_1[d+1];
                     double B1 = E0j_1[d];
                     double B2 = E0j_1[d+2];
@@ -1330,36 +1331,43 @@ void stereo_SGM(Mat &left,Mat &right,Mat &dis,int maxdis,int dir,double P1,doubl
                     *Et0 = Cost + min(min(A,C),min(B1,B2)+P1);
                     if(*Et0<minc0)
                         minc0 = *Et0,mind=d;
+                    }
                 }
-                double *Et1 = E12 + j*Emax+d+1;
-                {
+                else if(dir==1){
+                    double *Et1 = E12 + j*Emax+d+1;
+                    {
                     double A = E1j_1[d+1];
                     double B1 = E1j_1[d];
                     double B2 = E1j_1[d+2];
                     double C = minE1[j-1]+P2;
                     *Et1 = Cost + min(min(A,C),min(B1,B2)+P1);
                     if(*Et1<minc1)
-                        minc1 = *Et1;
+                        minc1 = *Et1,mind=d;
+                    }
                 }
-                double *Et2 = E22 + j*Emax+d+1;
-                {
+                else if(dir==2){
+                    double *Et2 = E22 + j*Emax+d+1;
+                    {
                     double A = E2j[d+1];
                     double B1 = E2j[d];
                     double B2 = E2j[d+2];
                     double C = minE2[j]+P2;
                     *Et2 = Cost + min(min(A,C),min(B1,B2)+P1);
                     if(*Et2<minc2)
-                        minc2 = *Et2;
+                        minc2 = *Et2,mind=d;
+                    }
                 }
-                double *Et3 = E32 + j*Emax+d+1;
-                {
+                else if(dir==3){
+                    double *Et3 = E32 + j*Emax+d+1;
+                    {
                     double A = E3j_1[d+1];
                     double B1 = E3j_1[d];
                     double B2 = E3j_1[d+2];
-                    double C = minE3[j]+P2;
+                    double C = minE3[j+1]+P2;
                     *Et3 = Cost + min(min(A,C),min(B1,B2)+P1);
                     if(*Et3<minc3)
-                        minc3 = *Et3;
+                        minc3 = *Et3,mind=d;
+                    }
                 }
             }
             minE0[j] = minc0;
@@ -1382,8 +1390,290 @@ void stereo_SGM(Mat &left,Mat &right,Mat &dis,int maxdis,int dir,double P1,doubl
     delete []minE_;
 }
 
+
+void stereo_MSGM(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2){
+    if(left.size()!=right.size())
+        return;
+    Size size = left.size();
+
+    dis.create(size,CV_32F);
+    float *disptr = (float *)dis.data;
+
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+
+    //-1,size.width+1
+    int LrWidth = size.width+2;
+    int LrMax  = maxdis+2;
+
+    int *cost = new int[size.width*size.height*maxdis];
+    if(!cost){
+        return ;
+    }
+
+
+    //get cost first
+    //other cost function should be here
+    for(int i = 0;i<size.height;i++){
+        unsigned char *leftptri = leftptr+i*size.width*3;
+        unsigned char *rightptri = rightptr+i*size.width*3;
+        int *costi = cost+i*size.width*maxdis;
+        for(int j = 0;j<size.width;j++){
+            unsigned char *leftptrij = leftptri+j*3;
+            unsigned char *rightptrij = rightptri+j*3;
+            int *costij = costi+j*maxdis;
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                unsigned char *rightptrijd = rightptrij - 3*d;
+                /*costij[d] = (leftptrij[0]-rightptrijd[0])*(leftptrij[0]-rightptrijd[0])
+                            + (leftptrij[1]-rightptrijd[1])*(leftptrij[1]-rightptrijd[1])
+                            + (leftptrij[2]-rightptrijd[2])*(leftptrij[2]-rightptrijd[2]);
+                            */
+
+
+                costij[d] = abs(leftptrij[0]-rightptrijd[0])
+                            + abs(leftptrij[1]-rightptrijd[1])
+                            + abs(leftptrij[2]-rightptrijd[2]);
+
+//                costij[d] = abs(leftptrij[0]-rightptrijd[0]+leftptrij[1]-rightptrijd[1]+leftptrij[2]-rightptrijd[2]);
+            }
+        }
+    }
+
+
+    int *LrSum   = new int[size.width*size.height*maxdis];
+    int *LrBuff_ = new int[LrWidth*LrMax*4*2];//4个方向，双缓冲,Lr(j,d+1)
+    int *minLr_ = new int[LrWidth*4*2];//4个方向，双缓冲
+    if(!LrSum||!LrBuff_||!minLr_){
+        return ;
+    }
+
+    int *Lr0 = LrBuff_+LrMax;
+    int *Lr01 = Lr0+4*LrWidth*LrMax;
+    int *minLr0 = minLr_+1;
+    int *minLr01 = minLr0+4*LrWidth;
+
+
+    //initial Lr
+    for(int i = -1;i<=size.width;i++){
+        int *Lr1 = Lr0+LrWidth*LrMax;
+        int *Lr2 = Lr0+2*LrWidth*LrMax;
+        int *Lr3 = Lr0+3*LrWidth*LrMax;
+        int *Lr11 = Lr01+LrWidth*LrMax;
+        int *Lr21 = Lr01+2*LrWidth*LrMax;
+        int *Lr31 = Lr01+3*LrWidth*LrMax;
+        for(int d = -1;d<=maxdis;d++){
+            int v = 0;
+            if(d==-1||d==maxdis)
+                v = 1<<29;
+            Lr0[i*LrMax+d+1] = v;
+            Lr1[i*LrMax+d+1] = v;
+            Lr2[i*LrMax+d+1] = v;
+            Lr3[i*LrMax+d+1] = v;
+            Lr01[i*LrMax+d+1] = v;
+            Lr11[i*LrMax+d+1] = v;
+            Lr21[i*LrMax+d+1] = v;
+            Lr31[i*LrMax+d+1] = v;
+        }
+    }
+
+    //initial minLr
+    for(int i = -1;i<=size.width;i++){
+        int *minLr1 = minLr0+LrWidth;
+        int *minLr2 = minLr0+2*LrWidth;
+        int *minLr3 = minLr0+3*LrWidth;
+        int *minLr11 = minLr01+LrWidth;
+        int *minLr21 = minLr01+2*LrWidth;
+        int *minLr31 = minLr01+3*LrWidth;
+        minLr0[i] = 0;
+        minLr1[i] = 0;
+        minLr2[i] = 0;
+        minLr3[i] = 0;
+        minLr01[i] = 0;
+        minLr11[i] = 0;
+        minLr21[i] = 0;
+        minLr31[i] = 0;
+    }
+
+    //四个方向
+    //
+    //1 2  3
+    // ↖↑↗
+    //0←
+    //
+    for(int i = 0;i<size.height;i++){
+        int *Lr1 = Lr0+LrWidth*LrMax;
+        int *Lr2 = Lr0+2*LrWidth*LrMax;
+        int *Lr3 = Lr0+3*LrWidth*LrMax;
+        int *Lr11 = Lr01+LrWidth*LrMax;
+        int *Lr21 = Lr01+2*LrWidth*LrMax;
+        int *Lr31 = Lr01+3*LrWidth*LrMax;
+        int *minLr1 = minLr0+LrWidth;
+        int *minLr2 = minLr0+2*LrWidth;
+        int *minLr3 = minLr0+3*LrWidth;
+        int *minLr11 = minLr01+LrWidth;
+        int *minLr21 = minLr01+2*LrWidth;
+        int *minLr31 = minLr01+3*LrWidth;
+
+        int *costi = cost+i*size.width*maxdis;
+        int *LrSumi = LrSum + i*size.width*maxdis;
+        for(int j = 0;j<size.width;j++){
+            int *costij = costi+j*maxdis;
+            int *LrSumij = LrSumi+j*maxdis;
+
+            int *Lr0j_1 = Lr0+(j-1)*LrMax;
+            int *minLr0j = minLr0+j;
+            *minLr0j = 1<<29;
+            int *Lr0j = Lr0+j*LrMax;
+
+            int *Lr11j = Lr11+j*LrMax;
+            int *Lr1j_1 = Lr1 + (j-1)*LrMax;
+            int *minLr11j = minLr11+j;
+            *minLr11j =  1<<29;
+
+            int *Lr21j = Lr21+j*LrMax;
+            int *Lr2j= Lr2+j*LrMax;
+            int *minLr21j = minLr21+j;
+            *minLr21j = 1<<29;
+
+            int *Lr31j = Lr31+j*LrMax;
+            int *Lr3j_1 = Lr3 + (j+1)*LrMax;
+            int *minLr31j = minLr31 + j;
+            *minLr31j = 1<<29;
+
+            int minc = 1<<29;
+            int mind=0;
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                Lr0j[d+1] = costij[d]
+                        + min(min(Lr0j_1[d+1],minLr0[j-1]+P2),min(Lr0j_1[d],Lr0j_1[d+2])+P1)- minLr0[j-1];
+                *minLr0j = min(*minLr0j,Lr0j[d+1]);
+
+                Lr11j[d+1] = costij[d]
+                        + min(min(Lr1j_1[d+1],minLr1[j-1]+P2),min(Lr1j_1[d],Lr1j_1[d+2])+P1) - minLr1[j-1];
+                *minLr11j = min(*minLr11j,Lr11j[d+1]);
+
+                Lr21j[d+1] = costij[d]
+                        +min(min(Lr2j[d+1],minLr2[j]+P2),min(Lr2j[d],Lr2j[d+2])+P1) - minLr2[j];
+                *minLr21j = min(*minLr21j,Lr21j[d+1]);
+
+                Lr31j[d+1] = costij[d]
+                        +min(min(Lr3j_1[d+1],minLr3[j+1]+P2),min(Lr3j_1[d],Lr3j_1[d+2])+P1) - minLr3[j+1];
+                *minLr31j = min(*minLr31j,Lr31j[d+1]);
+
+                LrSumij[d] = 0
+                        +*minLr0j
+                        +*minLr11j
+                        +*minLr21j
+                        +*minLr31j
+                        ;
+
+            }
+            disptr[i*size.width+j] = mind;
+        }
+        int *temp = Lr0;
+        Lr0  = Lr01;
+        Lr01 = temp;
+
+        temp = minLr0;
+        minLr0 = minLr01;
+        minLr01  = temp;
+    }
+    //四个方向
+    //
+    //1 2  3
+    // ↖↑↗
+    //0←
+    //
+    for(int i = size.height-1;i>=0;i--){
+        int *Lr1 = Lr0+LrWidth*LrMax;
+        int *Lr2 = Lr0+2*LrWidth*LrMax;
+        int *Lr3 = Lr0+3*LrWidth*LrMax;
+        int *Lr11 = Lr01+LrWidth*LrMax;
+        int *Lr21 = Lr01+2*LrWidth*LrMax;
+        int *Lr31 = Lr01+3*LrWidth*LrMax;
+        int *minLr1 = minLr0+LrWidth;
+        int *minLr2 = minLr0+2*LrWidth;
+        int *minLr3 = minLr0+3*LrWidth;
+        int *minLr11 = minLr01+LrWidth;
+        int *minLr21 = minLr01+2*LrWidth;
+        int *minLr31 = minLr01+3*LrWidth;
+
+        int *costi = cost+i*size.width*maxdis;
+        int *LrSumi = LrSum + i*size.width*maxdis;
+        for(int j = size.width-1;j>=0;j--){
+            int *costij = costi+j*maxdis;
+            int *LrSumij = LrSumi+j*maxdis;
+
+            int *Lr0j_1 = Lr0+(j+1)*LrMax;
+            int *minLr0j = minLr0+j;
+            *minLr0j = 1<<29;
+            int *Lr0j = Lr0+j*LrMax;
+
+            int *Lr11j = Lr11+j*LrMax;
+            int *Lr1j_1 = Lr1 + (j-1)*LrMax;
+            int *minLr11j = minLr11+j;
+            *minLr11j =  1<<29;
+
+            int *Lr21j = Lr21+j*LrMax;
+            int *Lr2j= Lr2+j*LrMax;
+            int *minLr21j = minLr21+j;
+            *minLr21j = 1<<29;
+
+            int *Lr31j = Lr31+j*LrMax;
+            int *Lr3j_1 = Lr3 + (j+1)*LrMax;
+            int *minLr31j = minLr31 + j;
+            *minLr31j = 1<<29;
+
+            int minc = 1<<29;
+            int mind=0;
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                Lr0j[d+1] = costij[d]
+                        + min(min(Lr0j_1[d+1],minLr0[j+1]+P2),min(Lr0j_1[d],Lr0j_1[d+2])+P1)- minLr0[j+1];
+                *minLr0j = min(*minLr0j,Lr0j[d+1]);
+
+                Lr11j[d+1] = costij[d]
+                        + min(min(Lr1j_1[d+1],minLr1[j-1]+P2),min(Lr1j_1[d],Lr1j_1[d+2])+P1) - minLr1[j-1];
+                *minLr11j = min(*minLr11j,Lr11j[d+1]);
+
+                Lr21j[d+1] = costij[d]
+                        +min(min(Lr2j[d+1],minLr2[j]+P2),min(Lr2j[d],Lr2j[d+2])+P1) - minLr2[j];
+                *minLr21j = min(*minLr21j,Lr21j[d+1]);
+
+                Lr31j[d+1] = costij[d]
+                        +min(min(Lr3j_1[d+1],minLr3[j+1]+P2),min(Lr3j_1[d],Lr3j_1[d+2])+P1) - minLr3[j+1];
+                *minLr31j = min(*minLr31j,Lr31j[d+1]);
+
+//                if(*minLr0j+*minLr11j+*minLr21j+*minLr31j<minc)
+//                    minc = *minLr0j+*minLr11j+*minLr21j+*minLr31j,mind = d;
+                LrSumij[d] += 0
+                        + *minLr0j
+                        +*minLr11j
+                        +*minLr21j
+                        +*minLr31j;
+                if(LrSumij[d]<minc)
+                    minc = LrSumij[d],mind = d;
+            }
+            disptr[i*size.width+j] = mind;
+        }
+        int *temp = Lr0;
+        Lr0  = Lr01;
+        Lr01 = temp;
+
+        temp = minLr0;
+        minLr0 = minLr01;
+        minLr01  = temp;
+    }
+
+    delete []cost;
+    delete []LrSum;
+    delete []LrBuff_;
+    delete []minLr_;
+}
+
 void testAll(){
-    QString leftfilename = QFileDialog::getOpenFileName(
+    QString leftfilename = "D:/works/qtwork5_5/build-3dreconstruction-Desktop_Qt_5_1_0_MinGW_32bit-Debug/images/opencv/tsukubaL.bmp";
+    QString rightfilename = "D:/works/qtwork5_5/build-3dreconstruction-Desktop_Qt_5_1_0_MinGW_32bit-Debug/images/opencv/tsukubaR.bmp";
+
+    /*QString leftfilename = QFileDialog::getOpenFileName(
        0,
        "Binocular Calibration - Open Left Image",
        NULL,
@@ -1395,6 +1685,7 @@ void testAll(){
            NULL,
            "photos (*.img *.png *.bmp *.jpg);;All files(*.*)");
         if (!rightfilename.isNull()) { //用户选择了左图文件
+        */
             Mat leftmat = imread(leftfilename.toUtf8().data());
             Mat rightmat = imread(rightfilename.toUtf8().data());
 
@@ -1408,7 +1699,8 @@ void testAll(){
 //            stereoDP2(leftmat,rightmat,dis,20,20);
 //            stereo_BM_AW_DP(leftmat,rightmat,dis,20,7,20);
 //            stereo_BM_FBS_DP(leftmat,rightmat,dis,20,1,5,20*9);
-            stereo_SGM(leftmat,rightmat,dis,20,2,20,80);
+//            stereo_SGM(leftmat,rightmat,dis,20,1,10,40);
+            stereo_MSGM(leftmat,rightmat,dis,20,4,20);
 
 //            stereo_BM_AW_Lab_Pro(leftmat,rightmat,dis,20,10);
             qDebug()<<"used time "<<clock()-t<<"ms"<<endl;
@@ -1417,9 +1709,9 @@ void testAll(){
             dis.convertTo(vdisp,CV_8U);
             normalize(vdisp,vdisp,0,255,CV_MINMAX);
 
-            imshow("SGM",vdisp);
-        }
-    }
+            imshow("Single Scanline ",vdisp);
+//        }
+//    }
 }
 
 
