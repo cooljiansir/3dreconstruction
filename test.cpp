@@ -1668,6 +1668,360 @@ void stereo_MSGM(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2){
     delete []LrBuff_;
     delete []minLr_;
 }
+/*
+ *从上往下，BlockMatching
+ *
+ *Sum(x,y,d) = Sum(x,y-1,d) + s(x,y+winsize,d) - s(x,y-winsize-1,d)
+ *s(x,y,d)   = s(x-1,y,d) + I(x+winsize,y,d)-I(x-winsize-1,y,d)
+ *I(x,y,d)   = fabs(c(x,y)-c(x-d,y))
+ *
+ *
+ */
+
+void stereo_BMBox_Cost(Mat &left,Mat &right,int *costout,int maxdis,int winsize){
+    if(left.size()!=right.size())
+        return;
+    Mat leftgr,rightgr;
+    Size size = left.size();
+
+    leftgr = Mat::zeros(size.height+2*winsize+1,size.width+2*winsize+1,CV_8U);
+    rightgr = Mat::zeros(leftgr.size(),CV_8U);
+    Size size2 = leftgr.size();
+
+    Mat leftgray = leftgr(Rect(winsize+1,winsize+1,size.width,size.height));
+    Mat rightgray = rightgr(Rect(winsize+1,winsize+1,size.width,size.height));
+
+    cvtColor(left,leftgray,CV_BGR2GRAY);
+    cvtColor(right,rightgray,CV_BGR2GRAY);
+
+
+    unsigned char *leftptr = leftgray.data;
+    unsigned char *rightptr = rightgray.data;
+
+
+    int *sad = new int[maxdis];
+    int dfafs;
+    int *s0_   = new int[(size.height+2*winsize+1)*maxdis];
+    int *s1_   = new int[(size.height+2*winsize+1)*maxdis];
+
+    int *s0 = s0_ + (winsize+1)*maxdis;
+    int *s1 = s1_ + (winsize+1)*maxdis;
+
+
+    //initial s0
+    for(int i = - winsize-1;i<size.height+winsize;i++){
+        for(int d = 0;d<maxdis;d++)
+            s0[i*maxdis+d] = s1[i*maxdis+d] = 0;
+    }
+
+
+    for(int j = 0;j<size.width;j++){
+        for(int d = 0;d<maxdis&&d<=j;d++){
+            sad[d] = 0;
+            for(int i1=0;i1<winsize;i1++){
+                for(int j1 = -winsize;j1<=winsize;j1++){
+                    sad[d] += abs(leftptr[i1*size2.width+j+j1]-rightptr[i1*size2.width+j+j1-d]);
+                }
+            }
+        }
+
+        //cal new s0
+        for(int i = - winsize-1;i<size.height+winsize;i++){
+            //d<j
+            int tem = i*size2.width+j+winsize;
+            int tem2 = i*size2.width+j-winsize-1;
+            int *s0temp = s0 + i*maxdis;
+            int *s1temp = s1 + i*maxdis;
+            for(int d = 0;d<maxdis&&d<j;d++){
+                s1temp[d] = s0temp[d]
+                        + abs(leftptr[tem]-rightptr[tem-d])
+                        - abs(leftptr[tem2]-rightptr[tem2-d]);
+            }
+            //d=j
+            if(j<maxdis){
+                s1[i*maxdis+j] = 0;
+                for(int j1=-winsize;j1<=winsize;j1++){
+                    s1[i*maxdis+j] += abs(leftptr[i*size2.width+j+j1]-rightptr[i*size2.width+j1]);
+                }
+            }
+        }
+        int *temp = s0;
+        s0 = s1;
+        s1 = temp;
+        int *costoutj = costout+j*maxdis;
+        for(int i = 0;i<size.height;i++){
+            int mind;
+            int minsad=1<<29;
+            int tem = (i+winsize)*maxdis;
+            int tem2 = (i-1-winsize)*maxdis;
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                sad[d] = sad[d] + s0[tem+d] - s0[tem2+d];
+                costoutj[d] = sad[d];
+            }
+            costoutj += size.width*maxdis;
+        }
+
+    }
+    delete []sad;
+    qDebug()<<"释放完sad"<<endl;
+    delete []s0_;
+    qDebug()<<"释放完s0"<<endl;
+    delete []s1_;
+    qDebug()<<"释放完s1"<<endl;
+
+}
+void stereo_MSGM_FW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int P1,int P2){
+    if(left.size()!=right.size())
+        return;
+    Size size = left.size();
+
+    dis.create(size,CV_32F);
+    float *disptr = (float *)dis.data;
+
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+
+    //-1,size.width+1
+    int LrWidth = size.width+2;
+    int LrMax  = maxdis+2;
+
+    int *cost = new int[size.width*size.height*maxdis];
+    if(!cost){
+        return ;
+    }
+
+
+    stereo_BMBox_Cost(left,right,cost,maxdis,winsize);
+
+
+    int *LrSum   = new int[size.width*size.height*maxdis];
+    int *LrBuff_ = new int[LrWidth*LrMax*4*2];//4个方向，双缓冲,Lr(j,d+1)
+    int *minLr_ = new int[LrWidth*4*2];//4个方向，双缓冲
+    if(!LrSum||!LrBuff_||!minLr_){
+        return ;
+    }
+
+    int *Lr0 = LrBuff_+LrMax;
+    int *Lr01 = Lr0+4*LrWidth*LrMax;
+    int *minLr0 = minLr_+1;
+    int *minLr01 = minLr0+4*LrWidth;
+
+
+    //initial Lr
+    for(int i = -1;i<=size.width;i++){
+        int *Lr1 = Lr0+LrWidth*LrMax;
+        int *Lr2 = Lr0+2*LrWidth*LrMax;
+        int *Lr3 = Lr0+3*LrWidth*LrMax;
+        int *Lr11 = Lr01+LrWidth*LrMax;
+        int *Lr21 = Lr01+2*LrWidth*LrMax;
+        int *Lr31 = Lr01+3*LrWidth*LrMax;
+        for(int d = -1;d<=maxdis;d++){
+            int v = 0;
+            if(d==-1||d==maxdis)
+                v = 1<<29;
+            Lr0[i*LrMax+d+1] = v;
+            Lr1[i*LrMax+d+1] = v;
+            Lr2[i*LrMax+d+1] = v;
+            Lr3[i*LrMax+d+1] = v;
+            Lr01[i*LrMax+d+1] = v;
+            Lr11[i*LrMax+d+1] = v;
+            Lr21[i*LrMax+d+1] = v;
+            Lr31[i*LrMax+d+1] = v;
+        }
+    }
+
+    //initial minLr
+    for(int i = -1;i<=size.width;i++){
+        int *minLr1 = minLr0+LrWidth;
+        int *minLr2 = minLr0+2*LrWidth;
+        int *minLr3 = minLr0+3*LrWidth;
+        int *minLr11 = minLr01+LrWidth;
+        int *minLr21 = minLr01+2*LrWidth;
+        int *minLr31 = minLr01+3*LrWidth;
+        minLr0[i] = 0;
+        minLr1[i] = 0;
+        minLr2[i] = 0;
+        minLr3[i] = 0;
+        minLr01[i] = 0;
+        minLr11[i] = 0;
+        minLr21[i] = 0;
+        minLr31[i] = 0;
+    }
+
+    //四个方向
+    //
+    //1 2  3
+    // ↖↑↗
+    //0←
+    //
+    for(int i = 0;i<size.height;i++){
+        int *Lr1 = Lr0+LrWidth*LrMax;
+        int *Lr2 = Lr0+2*LrWidth*LrMax;
+        int *Lr3 = Lr0+3*LrWidth*LrMax;
+        int *Lr11 = Lr01+LrWidth*LrMax;
+        int *Lr21 = Lr01+2*LrWidth*LrMax;
+        int *Lr31 = Lr01+3*LrWidth*LrMax;
+        int *minLr1 = minLr0+LrWidth;
+        int *minLr2 = minLr0+2*LrWidth;
+        int *minLr3 = minLr0+3*LrWidth;
+        int *minLr11 = minLr01+LrWidth;
+        int *minLr21 = minLr01+2*LrWidth;
+        int *minLr31 = minLr01+3*LrWidth;
+
+        int *costi = cost+i*size.width*maxdis;
+        int *LrSumi = LrSum + i*size.width*maxdis;
+        for(int j = 0;j<size.width;j++){
+            int *costij = costi+j*maxdis;
+            int *LrSumij = LrSumi+j*maxdis;
+
+            int *Lr0j_1 = Lr0+(j-1)*LrMax;
+            int *minLr0j = minLr0+j;
+            *minLr0j = 1<<29;
+            int *Lr0j = Lr0+j*LrMax;
+
+            int *Lr11j = Lr11+j*LrMax;
+            int *Lr1j_1 = Lr1 + (j-1)*LrMax;
+            int *minLr11j = minLr11+j;
+            *minLr11j =  1<<29;
+
+            int *Lr21j = Lr21+j*LrMax;
+            int *Lr2j= Lr2+j*LrMax;
+            int *minLr21j = minLr21+j;
+            *minLr21j = 1<<29;
+
+            int *Lr31j = Lr31+j*LrMax;
+            int *Lr3j_1 = Lr3 + (j+1)*LrMax;
+            int *minLr31j = minLr31 + j;
+            *minLr31j = 1<<29;
+
+            int minc = 1<<29;
+            int mind=0;
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                Lr0j[d+1] = costij[d]
+                        + min(min(Lr0j_1[d+1],minLr0[j-1]+P2),min(Lr0j_1[d],Lr0j_1[d+2])+P1)- minLr0[j-1];
+                *minLr0j = min(*minLr0j,Lr0j[d+1]);
+
+                Lr11j[d+1] = costij[d]
+                        + min(min(Lr1j_1[d+1],minLr1[j-1]+P2),min(Lr1j_1[d],Lr1j_1[d+2])+P1) - minLr1[j-1];
+                *minLr11j = min(*minLr11j,Lr11j[d+1]);
+
+                Lr21j[d+1] = costij[d]
+                        +min(min(Lr2j[d+1],minLr2[j]+P2),min(Lr2j[d],Lr2j[d+2])+P1) - minLr2[j];
+                *minLr21j = min(*minLr21j,Lr21j[d+1]);
+
+                Lr31j[d+1] = costij[d]
+                        +min(min(Lr3j_1[d+1],minLr3[j+1]+P2),min(Lr3j_1[d],Lr3j_1[d+2])+P1) - minLr3[j+1];
+                *minLr31j = min(*minLr31j,Lr31j[d+1]);
+
+                LrSumij[d] = 0
+                        +*minLr0j
+                        +*minLr11j
+                        +*minLr21j
+                        +*minLr31j
+                        ;
+
+            }
+            disptr[i*size.width+j] = mind;
+        }
+        int *temp = Lr0;
+        Lr0  = Lr01;
+        Lr01 = temp;
+
+        temp = minLr0;
+        minLr0 = minLr01;
+        minLr01  = temp;
+    }
+    //四个方向
+    //
+    //1 2  3
+    // ↖↑↗
+    //0←
+    //
+    for(int i = size.height-1;i>=0;i--){
+        int *Lr1 = Lr0+LrWidth*LrMax;
+        int *Lr2 = Lr0+2*LrWidth*LrMax;
+        int *Lr3 = Lr0+3*LrWidth*LrMax;
+        int *Lr11 = Lr01+LrWidth*LrMax;
+        int *Lr21 = Lr01+2*LrWidth*LrMax;
+        int *Lr31 = Lr01+3*LrWidth*LrMax;
+        int *minLr1 = minLr0+LrWidth;
+        int *minLr2 = minLr0+2*LrWidth;
+        int *minLr3 = minLr0+3*LrWidth;
+        int *minLr11 = minLr01+LrWidth;
+        int *minLr21 = minLr01+2*LrWidth;
+        int *minLr31 = minLr01+3*LrWidth;
+
+        int *costi = cost+i*size.width*maxdis;
+        int *LrSumi = LrSum + i*size.width*maxdis;
+        for(int j = size.width-1;j>=0;j--){
+            int *costij = costi+j*maxdis;
+            int *LrSumij = LrSumi+j*maxdis;
+
+            int *Lr0j_1 = Lr0+(j+1)*LrMax;
+            int *minLr0j = minLr0+j;
+            *minLr0j = 1<<29;
+            int *Lr0j = Lr0+j*LrMax;
+
+            int *Lr11j = Lr11+j*LrMax;
+            int *Lr1j_1 = Lr1 + (j-1)*LrMax;
+            int *minLr11j = minLr11+j;
+            *minLr11j =  1<<29;
+
+            int *Lr21j = Lr21+j*LrMax;
+            int *Lr2j= Lr2+j*LrMax;
+            int *minLr21j = minLr21+j;
+            *minLr21j = 1<<29;
+
+            int *Lr31j = Lr31+j*LrMax;
+            int *Lr3j_1 = Lr3 + (j+1)*LrMax;
+            int *minLr31j = minLr31 + j;
+            *minLr31j = 1<<29;
+
+            int minc = 1<<29;
+            int mind=0;
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                Lr0j[d+1] = costij[d]
+                        + min(min(Lr0j_1[d+1],minLr0[j+1]+P2),min(Lr0j_1[d],Lr0j_1[d+2])+P1)- minLr0[j+1];
+                *minLr0j = min(*minLr0j,Lr0j[d+1]);
+
+                Lr11j[d+1] = costij[d]
+                        + min(min(Lr1j_1[d+1],minLr1[j-1]+P2),min(Lr1j_1[d],Lr1j_1[d+2])+P1) - minLr1[j-1];
+                *minLr11j = min(*minLr11j,Lr11j[d+1]);
+
+                Lr21j[d+1] = costij[d]
+                        +min(min(Lr2j[d+1],minLr2[j]+P2),min(Lr2j[d],Lr2j[d+2])+P1) - minLr2[j];
+                *minLr21j = min(*minLr21j,Lr21j[d+1]);
+
+                Lr31j[d+1] = costij[d]
+                        +min(min(Lr3j_1[d+1],minLr3[j+1]+P2),min(Lr3j_1[d],Lr3j_1[d+2])+P1) - minLr3[j+1];
+                *minLr31j = min(*minLr31j,Lr31j[d+1]);
+
+//                if(*minLr0j+*minLr11j+*minLr21j+*minLr31j<minc)
+//                    minc = *minLr0j+*minLr11j+*minLr21j+*minLr31j,mind = d;
+                LrSumij[d] += 0
+                        + *minLr0j
+                        +*minLr11j
+                        +*minLr21j
+                        +*minLr31j;
+                if(LrSumij[d]<minc)
+                    minc = LrSumij[d],mind = d;
+            }
+            disptr[i*size.width+j] = mind;
+        }
+        int *temp = Lr0;
+        Lr0  = Lr01;
+        Lr01 = temp;
+
+        temp = minLr0;
+        minLr0 = minLr01;
+        minLr01  = temp;
+    }
+
+    delete []cost;
+    delete []LrSum;
+    delete []LrBuff_;
+    delete []minLr_;
+}
 
 void testAll(){
     QString leftfilename = "D:/works/qtwork5_5/build-3dreconstruction-Desktop_Qt_5_1_0_MinGW_32bit-Debug/images/opencv/tsukubaL.bmp";
@@ -1700,7 +2054,8 @@ void testAll(){
 //            stereo_BM_AW_DP(leftmat,rightmat,dis,20,7,20);
 //            stereo_BM_FBS_DP(leftmat,rightmat,dis,20,1,5,20*9);
 //            stereo_SGM(leftmat,rightmat,dis,20,1,10,40);
-            stereo_MSGM(leftmat,rightmat,dis,20,4,20);
+//            stereo_MSGM(leftmat,rightmat,dis,20,4,20);
+            stereo_MSGM_FW(leftmat,rightmat,dis,20,3,4*3*3,20*3*3);
 
 //            stereo_BM_AW_Lab_Pro(leftmat,rightmat,dis,20,10);
             qDebug()<<"used time "<<clock()-t<<"ms"<<endl;

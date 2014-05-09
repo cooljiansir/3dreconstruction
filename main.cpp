@@ -1967,8 +1967,8 @@ void testMeanShift(){
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    MainWindow w;
-    w.show();
+//    MainWindow w;
+//    w.show();
     //cvNamedWindow("test");
 //    testsegment();
 //    testBM();
@@ -1979,6 +1979,7 @@ int main(int argc, char *argv[])
 //    test_dp();
 //    test_semi();
 //    testMeanShift();
+    testsbm();
 
     return app.exec();
 }
