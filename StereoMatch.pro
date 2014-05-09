@@ -19,7 +19,8 @@ SOURCES += main.cpp\
     bm.cpp \
     simulated.cpp \
     test.cpp \
-    cvsgbm.cpp
+    cvsgbm.cpp \
+    myWorld.cpp
 
 HEADERS  += mainwindow.h \
     clicklabel.h \

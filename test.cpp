@@ -1733,6 +1733,7 @@ void stereo_MSGM(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2){
     delete []LrBuff_;
     delete []minLr_;
 }
+
 /*
  *从上往下，BlockMatching
  *
@@ -2236,6 +2237,7 @@ void stereo_MSGM_FW_AW(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,int 
 }
 
 
+
 void testAll(){
     QString leftfilename = "D:/works/qtwork5_5/build-3dreconstruction-Desktop_Qt_5_1_0_MinGW_32bit-Debug/images/opencv/tsukubaL.bmp";
     QString rightfilename = "D:/works/qtwork5_5/build-3dreconstruction-Desktop_Qt_5_1_0_MinGW_32bit-Debug/images/opencv/tsukubaR.bmp";
@@ -2268,7 +2270,8 @@ void testAll(){
 //            stereo_BM_FBS_DP(leftmat,rightmat,dis,20,1,5,20*9);
 //            stereo_SGM(leftmat,rightmat,dis,20,1,10,40);
 //            stereo_MSGM(leftmat,rightmat,dis,20,4,20);
-            stereo_MSGM_FW_AW(leftmat,rightmat,dis,20,3,8*7*7,32*7*7,0,0);
+//            stereo_MSGM_FW_AW(leftmat,rightmat,dis,20,7,800,32*100,1,10);
+            stereo_MSGM_FW_AW(leftmat,rightmat,dis,20,0,8,32,0,20);
 
 //            stereo_BM_AW_Lab_Pro(leftmat,rightmat,dis,20,10);
             qDebug()<<"used time "<<clock()-t<<"ms"<<endl;
@@ -2277,7 +2280,7 @@ void testAll(){
             dis.convertTo(vdisp,CV_8U);
             normalize(vdisp,vdisp,0,255,CV_MINMAX);
 
-            imshow("Single Scanline ",vdisp);
+            imshow("SGM P1=8 P2=32 ",vdisp);
 //        }
 //    }
 }
@@ -2285,10 +2288,10 @@ void testAll(){
 
 
 
-///*
+/*
 int main(int argc, char *argv[]){
     QApplication a(argc, argv);
     testAll();
     return a.exec();
 }
-//*/
+*/

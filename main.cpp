@@ -41,9 +41,9 @@ void testBM(){
            // bm.state->roi1 = roil;
             //bm.state->roi2 = roir;
             bm.state->preFilterCap = 31;
-            bm.state->SADWindowSize = 7;
+            bm.state->SADWindowSize = 3;
             bm.state->minDisparity = 0;
-            bm.state->numberOfDisparities = 16*6;
+            bm.state->numberOfDisparities = 16*7;
             bm.state->textureThreshold = 10;
             bm.state->uniquenessRatio = 15;
             bm.state->speckleWindowSize = 100;
