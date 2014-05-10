@@ -14,8 +14,10 @@ using namespace std;
 
 
 
+
 /*
  *从上往下，BlockMatching
+ *加入BT算法
  *
  *Sum(x,y,d) = Sum(x,y-1,d) + s(x,y+winsize,d) - s(x,y-winsize-1,d)
  *s(x,y,d)   = s(x-1,y,d) + I(x+winsize,y,d)-I(x-winsize-1,y,d)
@@ -24,7 +26,162 @@ using namespace std;
  *
  */
 
-extern void stereo_BMBox_Cost(Mat &left,Mat &right,int *costout,int maxdis,int winsize);
+void stereo_BMBox_BT(Mat &left,Mat &right,int *costout,int maxdis,int winsize){
+    if(left.size()!=right.size())
+        return;
+    Mat leftgr,rightgr;
+    Size size = left.size();
+
+    leftgr = Mat::zeros(size.height+2*winsize+1,size.width+2*winsize+1,CV_8U);
+    rightgr = Mat::zeros(leftgr.size(),CV_8U);
+    Size size2 = leftgr.size();
+
+    Mat leftgray = leftgr(Rect(winsize+1,winsize+1,size.width,size.height));
+    Mat rightgray = rightgr(Rect(winsize+1,winsize+1,size.width,size.height));
+
+    cvtColor(left,leftgray,CV_BGR2GRAY);
+    cvtColor(right,rightgray,CV_BGR2GRAY);
+
+
+    unsigned char *leftptr = leftgray.data;
+    unsigned char *rightptr = rightgray.data;
+
+
+    int *sad = new int[maxdis];
+    int dfafs;
+    int *s0_   = new int[(size.height+2*winsize+1)*maxdis];
+    int *s1_   = new int[(size.height+2*winsize+1)*maxdis];
+
+    int *s0 = s0_ + (winsize+1)*maxdis;
+    int *s1 = s1_ + (winsize+1)*maxdis;
+
+
+    //initial s0
+    for(int i = - winsize-1;i<size.height+winsize;i++){
+        for(int d = 0;d<maxdis;d++)
+            s0[i*maxdis+d] = s1[i*maxdis+d] = 0;
+    }
+
+
+    for(int j = 0;j<size.width;j++){
+        for(int d = 0;d<maxdis&&d<=j;d++){
+            sad[d] = 0;
+            for(int i1=0;i1<winsize;i1++){
+                for(int j1 = -winsize;j1<=winsize;j1++){
+                    int temp = i1*size2.width+j+j1;
+//                    sad[d] += abs(leftptr[i1*size2.width+j+j1]-rightptr[i1*size2.width+j+j1-d]);
+                    int a1=leftptr[temp-1],a2=leftptr[temp],a3=leftptr[temp+1],
+                            b1=rightptr[temp-d-1],b2=rightptr[temp-d],b3=rightptr[temp-d+1];
+                    a1 = (a1+a2)/2;
+                    a3 = (a2+a3)/2;
+                    b1 = (b1+b2)/2;
+                    b3 = (b2+b3)/2;
+                    sad[d] +=              min(
+                                                min(
+                                                    min(
+                                                        min(abs(a1-b1),abs(a1-b2)),
+                                                        min(abs(a1-b3),abs(a2-b1))),
+                                                    min(
+                                                        min(abs(a2-b2),abs(a2-b3)),
+                                                        min(abs(a3-b1),abs(a3-b2)))),
+                                                abs(a3-b3));
+
+                }
+            }
+        }
+
+        //cal new s0
+        for(int i = - winsize-1;i<size.height+winsize;i++){
+            //d<j
+            int tem = i*size2.width+j+winsize;
+            int tem2 = i*size2.width+j-winsize-1;
+            int *s0temp = s0 + i*maxdis;
+            int *s1temp = s1 + i*maxdis;
+            for(int d = 0;d<maxdis&&d<j;d++){
+//                s1temp[d] = s0temp[d]
+//                        + abs(leftptr[tem]-rightptr[tem-d])
+//                        - abs(leftptr[tem2]-rightptr[tem2-d]);
+                int a1=leftptr[tem-1],a2=leftptr[tem],a3=leftptr[tem+1],
+                        b1=rightptr[tem-d-1],b2=rightptr[tem-d],b3=rightptr[tem-d+1];
+                a1 = (a1+a2)/2;
+                a3 = (a2+a3)/2;
+                b1 = (b1+b2)/2;
+                b3 = (b2+b3)/2;
+                s1temp[d] = s0temp[d] + min(
+                                            min(
+                                                min(
+                                                    min(abs(a1-b1),abs(a1-b2)),
+                                                    min(abs(a1-b3),abs(a2-b1))),
+                                                min(
+                                                    min(abs(a2-b2),abs(a2-b3)),
+                                                    min(abs(a3-b1),abs(a3-b2)))),
+                                            abs(a3-b3));
+                a1=leftptr[tem2-1],a2=leftptr[tem2],a3=leftptr[tem2+1],
+                        b1=rightptr[tem2-d-1],b2=rightptr[tem2-d],b3=rightptr[tem2-d+1];
+                a1 = (a1+a2)/2;
+                a3 = (a2+a3)/2;
+                b1 = (b1+b2)/2;
+                b3 = (b2+b3)/2;
+                s1temp[d] -=            min(
+                                            min(
+                                                min(
+                                                    min(abs(a1-b1),abs(a1-b2)),
+                                                    min(abs(a1-b3),abs(a2-b1))),
+                                                min(
+                                                    min(abs(a2-b2),abs(a2-b3)),
+                                                    min(abs(a3-b1),abs(a3-b2)))),
+                                            abs(a3-b3));
+
+            }
+            //d=j
+            if(j<maxdis){
+                s1[i*maxdis+j] = 0;
+                for(int j1=-winsize;j1<=winsize;j1++){
+//                    s1[i*maxdis+j] += abs(leftptr[i*size2.width+j+j1]-rightptr[i*size2.width+j1]);
+                    int temp = i*size2.width+j1;
+                    int a1 = leftptr[temp+j-1],a2=leftptr[temp+j],a3=leftptr[temp+j+1];
+                    int b1 = rightptr[temp-1],b2 = rightptr[temp],b3 = rightptr[temp+1];
+                    a1 = (a1+a2)/2;
+                    a3 = (a2+a3)/2;
+                    b1 = (b1+b2)/2;
+                    b3 = (b2+b3)/2;
+                    s1[i*maxdis+j] +=      min(
+                                                min(
+                                                    min(
+                                                        min(abs(a1-b1),abs(a1-b2)),
+                                                        min(abs(a1-b3),abs(a2-b1))),
+                                                    min(
+                                                        min(abs(a2-b2),abs(a2-b3)),
+                                                        min(abs(a3-b1),abs(a3-b2)))),
+                                                abs(a3-b3));
+                }
+            }
+        }
+        int *temp = s0;
+        s0 = s1;
+        s1 = temp;
+        int *costj = costout+j*maxdis;
+        for(int i = 0;i<size.height;i++){
+            int mind;
+            int minsad=1<<29;
+            int tem = (i+winsize)*maxdis;
+            int tem2 = (i-1-winsize)*maxdis;
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                sad[d] = sad[d] + s0[tem+d] - s0[tem2+d];
+                costj[d] = sad[d];
+            }
+            costj +=size.width*maxdis;
+        }
+
+    }
+    delete []sad;
+    qDebug()<<"释放完sad"<<endl;
+    delete []s0_;
+    qDebug()<<"释放完s0"<<endl;
+    delete []s1_;
+    qDebug()<<"释放完s1"<<endl;
+
+}
 
 void stereo_MSGM_MY(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2,int iter,int winsize){
     if(left.size()!=right.size())
@@ -46,7 +203,7 @@ void stereo_MSGM_MY(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2,int i
         return ;
     }
     if(winsize){
-        stereo_BMBox_Cost(left,right,cost,maxdis,winsize);
+        stereo_BMBox_BT(left,right,cost,maxdis,winsize);
     }
     else{
         //get cost first
@@ -64,37 +221,55 @@ void stereo_MSGM_MY(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2,int i
                     costij[d] = abs(leftptrij[0]-rightptrijd[0])
                                 + abs(leftptrij[1]-rightptrijd[1])
                                 + abs(leftptrij[2]-rightptrijd[2]);
+
+                    continue;
+                    int a1,a2,a3,b1,b2,b3;
+                    a2 = leftptrij[0] + leftptrij[1] + leftptrij[2];
+                    b2 = rightptrijd[0] + rightptrijd[1]+rightptrijd[2];
+                    if(i>0){
+                        a1 = leftptrij[-3] + leftptrij[-2] + leftptrij[-1];
+                    }else{
+                        a1 = 1<<29;
+                    }
+                    if(i+1<size.width){
+                        a2 = leftptrij[3] + leftptrij[4] + leftptrij[5];
+                    }
+                    else{
+                        a2 = 1<<29;
+                    }
+                    int j1 = j-d;
+                    if(j1>0){
+                        b1 = rightptrijd[-3] + rightptrijd[-2] + rightptrijd[-1];
+                    }
+                    else{
+                        b1 = 1<<29;
+                    }
+                    if(j1+1<size.width){
+                        b3 = rightptrijd[3] + rightptrijd[4] + rightptrijd[5];
+                    }else{
+                        b3 = 1<<29;
+                    }
+                    a1 = (a1+a2)/2;
+                    a3 = (a2+a3)/2;
+                    b1 = (b1+b2)/2;
+                    b3 = (b2+b3)/2;
+                    costij[d] =
+                    //min(min(min(min(abs(a1-b1),abs(a1-b2)),min(abs(a1-b3),abs(a2-b1))),
+//                        min(min(abs(a2-b2),abs(a2-b3)),min(abs(a3-b1),abs(a3-b2)))),abs(a3-b3));
+                            min(
+                                                                            min(
+                                                                                min(
+                                                                                    min(abs(a1-b1),abs(a1-b2)),
+                                                                                    min(abs(a1-b3),abs(a2-b1))),
+                                                                                min(
+                                                                                    min(abs(a2-b2),abs(a2-b3)),
+                                                                                    min(abs(a3-b1),abs(a3-b2)))),
+                                                                            abs(a3-b3));
                 }
             }
         }
     }
 
-    //BT
-
-//    /*
-     for(int i = 0;i<size.height;i++){
-        int *costi = cost+i*size.width*maxdis;
-        for(int j = 0;j<size.width;j++){
-            int *costij = costi + j*maxdis;
-            for(int d = 0;d<maxdis&&d<=j;d++){
-                int a,b,c;
-                if(d>0){
-                    a = costij[d-1];
-                }else{
-                    a=1<<29;
-                }
-                if(d+1<maxdis&&d+1<=j){
-                    c = costij[d+1];
-                }else{
-                    c = 1<<29;
-                }
-                b = costij[d];
-                costij[d] = min(min((a+b)/2,b),(c+b)/2);
-            }
-        }
-
-    }
-//    */
     int *LrSum   = new int[size.width*size.height*maxdis];
     int *LrBuff_ = new int[LrWidth*LrMax*4*2];//4个方向，双缓冲,Lr(j,d+1)
     int *minLr_ = new int[LrWidth*4*2];//4个方向，双缓冲
@@ -298,8 +473,6 @@ void stereo_MSGM_MY(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2,int i
                         +min(min(Lr3j_1[d+1],minLr3[j+1]+P2),min(Lr3j_1[d],Lr3j_1[d+2])+P1)- minLr3[j+1];
                 *minLr31j = min(*minLr31j,Lr31j[d+1]);
 
-//                if(*minLr0j+*minLr11j+*minLr21j+*minLr31j<minc)
-//                    minc = *minLr0j+*minLr11j+*minLr21j+*minLr31j,mind = d;
                 LrSumij[d] += 0
                         +Lr0j[d+1]
                         +Lr11j[d+1]
@@ -356,7 +529,7 @@ void testMyWorld(){
 
 
             clock_t t = clock();
-            stereo_MSGM_MY(leftmat,rightmat,dis,16*7,10*3*3,40*3*3,1,1);
+            stereo_MSGM_MY(leftmat,rightmat,dis,16,20,80,1,0);
 
             qDebug()<<"used time "<<clock()-t<<"ms"<<endl;
 
