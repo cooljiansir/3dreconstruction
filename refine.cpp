@@ -30,9 +30,10 @@ void LRC(int *cost,int maxdis,Size size,int maxdiff,int *dis){
                 if(costij[d]<minc)
                     minc = costij[d],mind = d;
             }
-            lcost[j]  =mind;
+            lcost[j] = mind;
+//            dis[i*size.width+j] = mind;
         }
-
+//        continue;
         //R
         for(int j = 0;j<size.width;j++){
             int minc = 1<<29;
@@ -199,7 +200,7 @@ void testRefine(){
             delete []cost;
             delete []disint;
 
-            imshow("NEW SGM T=100",vdisp);
+            imshow("Filtered diff=1 minarea=200",vdisp);
 //        }
 //    }
 }
@@ -207,10 +208,10 @@ void testRefine(){
 
 
 
-///*
+/*
 int main(int argc, char *argv[]){
     QApplication a(argc, argv);
     testRefine();
     return a.exec();
 }
-//*/
+*/

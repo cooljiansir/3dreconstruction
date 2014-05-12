@@ -13,7 +13,36 @@ using namespace std;
 
 
 
+//灰度图转梯度图
+void Xsobel(Mat &img,Mat &res,int thre){
+    Size size = img.size();
 
+    Mat temp;
+    temp.create(size,CV_8U);
+    unsigned char *resptr = temp.data;
+
+    //initial border
+    for(int i = 0;i<size.height;i++){
+        resptr[i*size.width] = resptr[i*size.width+size.width-1] = 0;
+    }
+    for(int i = 0;i<size.width;i++){
+        resptr[i] = resptr[(size.height-1)*size.width+i] = 0;
+    }
+
+    for(int i = 1;i+1<size.height;i++){
+        unsigned char *imgptri = img.ptr<unsigned char>(i);
+        unsigned char *imgptri_n = img.ptr<unsigned char>(i+1);
+        unsigned char *imgptri_p = img.ptr<unsigned char>(i-1);
+        unsigned char *resptri = resptr+i*size.width;
+        for(int j = 1;j+1<size.width;j++){
+            int d = (imgptri[j+1] - imgptri[j-1])*2 + imgptri_n[j+1] - imgptri_n[j-1]+imgptri_p[j+1] - imgptri_p[j-1];
+            if(d<-thre)d = -thre;
+            if(d>thre)d = thre;
+            resptri[j] = d + 128;
+        }
+    }
+    temp.copyTo(res);
+}
 
 /*
  *从上往下，BlockMatching
@@ -26,7 +55,7 @@ using namespace std;
  *
  */
 
-void stereo_BMBox_BT(Mat &left,Mat &right,int *costout,int maxdis,int winsize){
+void stereo_BMBox_BT(Mat &left,Mat &right,int *costout,int maxdis,int winsize,int prefilter){
     if(left.size()!=right.size())
         return;
     Mat leftgr,rightgr;
@@ -34,13 +63,18 @@ void stereo_BMBox_BT(Mat &left,Mat &right,int *costout,int maxdis,int winsize){
 
     leftgr = Mat::zeros(size.height+2*winsize+1,size.width+2*winsize+1,CV_8U);
     rightgr = Mat::zeros(leftgr.size(),CV_8U);
-    Size size2 = leftgr.size();
+    Size size2 = leftgr.size();    
 
     Mat leftgray = leftgr(Rect(winsize+1,winsize+1,size.width,size.height));
     Mat rightgray = rightgr(Rect(winsize+1,winsize+1,size.width,size.height));
 
     cvtColor(left,leftgray,CV_BGR2GRAY);
     cvtColor(right,rightgray,CV_BGR2GRAY);
+
+    Xsobel(leftgray,leftgray,prefilter);
+    Xsobel(rightgray,rightgray,prefilter);
+    imshow("sobel left",leftgray);
+    imshow("sobel right",rightgray);
 
 
     unsigned char *leftptr = leftgray.data;
@@ -70,22 +104,18 @@ void stereo_BMBox_BT(Mat &left,Mat &right,int *costout,int maxdis,int winsize){
                 for(int j1 = -winsize;j1<=winsize;j1++){
                     int temp = i1*size2.width+j+j1;
 //                    sad[d] += abs(leftptr[i1*size2.width+j+j1]-rightptr[i1*size2.width+j+j1-d]);
+                    sad[d] += abs(leftptr[temp]-rightptr[i1*size2.width+j+j1-d]);
                     int a1=leftptr[temp-1],a2=leftptr[temp],a3=leftptr[temp+1],
                             b1=rightptr[temp-d-1],b2=rightptr[temp-d],b3=rightptr[temp-d+1];
                     a1 = (a1+a2)/2;
                     a3 = (a2+a3)/2;
                     b1 = (b1+b2)/2;
                     b3 = (b2+b3)/2;
-                    sad[d] +=              min(
-                                                min(
-                                                    min(
-                                                        min(abs(a1-b1),abs(a1-b2)),
-                                                        min(abs(a1-b3),abs(a2-b1))),
-                                                    min(
-                                                        min(abs(a2-b2),abs(a2-b3)),
-                                                        min(abs(a3-b1),abs(a3-b2)))),
-                                                abs(a3-b3));
 
+                    int A =  max(max(0,a2-max(max(b1,b2),b3)),min(min(b1,b2),b3)-a2);
+                    int B =  max(max(0,b2-max(max(a1,a2),a3)),min(min(a1,a2),a3)-b2);
+
+                    sad[d] += min(A,B);
                 }
             }
         }
@@ -107,31 +137,21 @@ void stereo_BMBox_BT(Mat &left,Mat &right,int *costout,int maxdis,int winsize){
                 a3 = (a2+a3)/2;
                 b1 = (b1+b2)/2;
                 b3 = (b2+b3)/2;
-                s1temp[d] = s0temp[d] + min(
-                                            min(
-                                                min(
-                                                    min(abs(a1-b1),abs(a1-b2)),
-                                                    min(abs(a1-b3),abs(a2-b1))),
-                                                min(
-                                                    min(abs(a2-b2),abs(a2-b3)),
-                                                    min(abs(a3-b1),abs(a3-b2)))),
-                                            abs(a3-b3));
+                int A =  max(max(0,a2-max(max(b1,b2),b3)),min(min(b1,b2),b3)-a2);
+                int B =  max(max(0,b2-max(max(a1,a2),a3)),min(min(a1,a2),a3)-b2);
+                s1temp[d] = s0temp[d] +
+                        min(A,B);
+
                 a1=leftptr[tem2-1],a2=leftptr[tem2],a3=leftptr[tem2+1],
                         b1=rightptr[tem2-d-1],b2=rightptr[tem2-d],b3=rightptr[tem2-d+1];
                 a1 = (a1+a2)/2;
                 a3 = (a2+a3)/2;
                 b1 = (b1+b2)/2;
                 b3 = (b2+b3)/2;
-                s1temp[d] -=            min(
-                                            min(
-                                                min(
-                                                    min(abs(a1-b1),abs(a1-b2)),
-                                                    min(abs(a1-b3),abs(a2-b1))),
-                                                min(
-                                                    min(abs(a2-b2),abs(a2-b3)),
-                                                    min(abs(a3-b1),abs(a3-b2)))),
-                                            abs(a3-b3));
-
+                A =  max(max(0,a2-max(max(b1,b2),b3)),min(min(b1,b2),b3)-a2);
+                B =  max(max(0,b2-max(max(a1,a2),a3)),min(min(a1,a2),a3)-b2);
+                s1temp[d] -=
+                        min(A,B);
             }
             //d=j
             if(j<maxdis){
@@ -145,15 +165,11 @@ void stereo_BMBox_BT(Mat &left,Mat &right,int *costout,int maxdis,int winsize){
                     a3 = (a2+a3)/2;
                     b1 = (b1+b2)/2;
                     b3 = (b2+b3)/2;
-                    s1[i*maxdis+j] +=      min(
-                                                min(
-                                                    min(
-                                                        min(abs(a1-b1),abs(a1-b2)),
-                                                        min(abs(a1-b3),abs(a2-b1))),
-                                                    min(
-                                                        min(abs(a2-b2),abs(a2-b3)),
-                                                        min(abs(a3-b1),abs(a3-b2)))),
-                                                abs(a3-b3));
+                    int A =  max(max(0,a2-max(max(b1,b2),b3)),min(min(b1,b2),b3)-a2);
+                    int B =  max(max(0,b2-max(max(a1,a2),a3)),min(min(a1,a2),a3)-b2);
+                    s1[i*maxdis+j] +=
+                            min(A,B);
+
                 }
             }
         }
@@ -183,7 +199,7 @@ void stereo_BMBox_BT(Mat &left,Mat &right,int *costout,int maxdis,int winsize){
 
 }
 
-void stereo_MSGM_MY(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2,int iter,int winsize){
+void stereo_MSGM_MY(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2,int iter,int winsize,int prefilter){
     if(left.size()!=right.size())
         return;
     Size size = left.size();
@@ -191,8 +207,12 @@ void stereo_MSGM_MY(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2,int i
     dis.create(size,CV_32F);
     float *disptr = (float *)dis.data;
 
-    unsigned char *leftptr = left.data;
-    unsigned char *rightptr = right.data;
+    Mat leftgray,rightgray;
+    cvtColor(left,leftgray,CV_BGR2GRAY);
+    cvtColor(right,rightgray,CV_BGR2GRAY);
+
+    unsigned char *leftptr = leftgray.data;
+    unsigned char *rightptr = rightgray.data;
 
     //-1,size.width+1
     int LrWidth = size.width+2;
@@ -203,68 +223,59 @@ void stereo_MSGM_MY(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2,int i
         return ;
     }
     if(winsize){
-        stereo_BMBox_BT(left,right,cost,maxdis,winsize);
+        stereo_BMBox_BT(left,right,cost,maxdis,winsize,prefilter);
     }
     else{
         //get cost first
         //other cost function should be here
         for(int i = 0;i<size.height;i++){
-            unsigned char *leftptri = leftptr+i*size.width*3;
-            unsigned char *rightptri = rightptr+i*size.width*3;
+            unsigned char *leftptri = leftptr+i*size.width;
+            unsigned char *rightptri = rightptr+i*size.width;
             int *costi = cost+i*size.width*maxdis;
             for(int j = 0;j<size.width;j++){
-                unsigned char *leftptrij = leftptri+j*3;
-                unsigned char *rightptrij = rightptri+j*3;
+                unsigned char *leftptrij = leftptri+j;
+                unsigned char *rightptrij = rightptri+j;
                 int *costij = costi+j*maxdis;
+                int a1,a2,a3;
+                a2 = *leftptrij;
+                if(j>0){
+                    a1 = leftptrij[-1];
+                }else{
+                    a1 = a2;
+                }
+                if(j+1<size.width){
+                    a3 = leftptrij[1];
+                }else{
+                    a3 = a2;
+                }
+                a1 = (a1+a2)/2;
+                a3 = (a2+a3)/2;
                 for(int d = 0;d<maxdis&&d<=j;d++){
-                    unsigned char *rightptrijd = rightptrij - 3*d;
-                    costij[d] = abs(leftptrij[0]-rightptrijd[0])
-                                + abs(leftptrij[1]-rightptrijd[1])
-                                + abs(leftptrij[2]-rightptrijd[2]);
+                    unsigned char *rightptrijd = rightptrij - d;
+                    costij[d] = abs(leftptrij[0]-rightptrijd[0]);
+//                                + abs(leftptrij[1]-rightptrijd[1])
+//                                + abs(leftptrij[2]-rightptrijd[2]);
 
                     continue;
-                    int a1,a2,a3,b1,b2,b3;
-                    a2 = leftptrij[0] + leftptrij[1] + leftptrij[2];
-                    b2 = rightptrijd[0] + rightptrijd[1]+rightptrijd[2];
-                    if(i>0){
-                        a1 = leftptrij[-3] + leftptrij[-2] + leftptrij[-1];
-                    }else{
-                        a1 = 1<<29;
-                    }
-                    if(i+1<size.width){
-                        a2 = leftptrij[3] + leftptrij[4] + leftptrij[5];
-                    }
-                    else{
-                        a2 = 1<<29;
-                    }
+                    int b1,b2,b3;
+                    b2 = rightptrijd[0];
                     int j1 = j-d;
                     if(j1>0){
-                        b1 = rightptrijd[-3] + rightptrijd[-2] + rightptrijd[-1];
+                        b1 = rightptrijd[-1];
                     }
                     else{
-                        b1 = 1<<29;
+                        b1 = b2;
                     }
                     if(j1+1<size.width){
-                        b3 = rightptrijd[3] + rightptrijd[4] + rightptrijd[5];
+                        b3 = rightptrijd[1];
                     }else{
-                        b3 = 1<<29;
+                        b3 = b2;
                     }
-                    a1 = (a1+a2)/2;
-                    a3 = (a2+a3)/2;
                     b1 = (b1+b2)/2;
                     b3 = (b2+b3)/2;
-                    costij[d] =
-                    //min(min(min(min(abs(a1-b1),abs(a1-b2)),min(abs(a1-b3),abs(a2-b1))),
-//                        min(min(abs(a2-b2),abs(a2-b3)),min(abs(a3-b1),abs(a3-b2)))),abs(a3-b3));
-                            min(
-                                                                            min(
-                                                                                min(
-                                                                                    min(abs(a1-b1),abs(a1-b2)),
-                                                                                    min(abs(a1-b3),abs(a2-b1))),
-                                                                                min(
-                                                                                    min(abs(a2-b2),abs(a2-b3)),
-                                                                                    min(abs(a3-b1),abs(a3-b2)))),
-                                                                            abs(a3-b3));
+                    int A =  max(max(0,a2-max(max(b1,b2),b3)),min(min(b1,b2),b3)-a2);
+                    int B =  max(max(0,b2-max(max(a1,a2),a3)),min(min(a1,a2),a3)-b2);
+                    costij[d] = min(A,B);
                 }
             }
         }
@@ -529,7 +540,7 @@ void testMyWorld(){
 
 
             clock_t t = clock();
-            stereo_MSGM_MY(leftmat,rightmat,dis,16,20,80,1,0);
+            stereo_MSGM_MY(leftmat,rightmat,dis,16*7,8*3*3,32*3*3,2,1,63);
 
             qDebug()<<"used time "<<clock()-t<<"ms"<<endl;
 
@@ -544,10 +555,10 @@ void testMyWorld(){
 
 
 
-/*
+///*
 int main(int argc, char *argv[]){
     QApplication a(argc, argv);
     testMyWorld();
     return a.exec();
 }
-*/
+//*/
