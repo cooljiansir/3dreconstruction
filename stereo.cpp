@@ -1,4 +1,6 @@
 #include "stereo.h"
+#include <QDebug>
+#include <highgui.h>
 
 
 //左右一致性校验
@@ -362,9 +364,161 @@ void stereo_BMBox_BT(Mat &left,Mat &right,int *costout,int maxdis,int winsize,in
     delete []s1_;
 }
 
+//换成Lab空间
+//L = L*100/255
+//a = a-128
+//b = b-128
+void stereo_BM_AW_Cost(Mat &left,Mat &right,int *costin,int maxdis,int winsize){
+    if(left.size()!=right.size())
+        return;
+    double yc=7,yg=36;
+//    double yc=50,yg=36;
+
+    Size size = left.size();
+
+
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+
+    Mat leftlab,rightlab;
+    cvtColor(left,leftlab,CV_BGR2Lab);
+    cvtColor(right,rightlab,CV_BGR2Lab);
+
+    unsigned char *leftlabptr = leftlab.data;
+    unsigned char *rightlabptr = rightlab.data;
+
+    int *cost = new int[size.width*size.height*maxdis];
+
+    Mat dis;
+    dis.create(size,CV_32F);
+    float *disptr = (float*)dis.data;
+
+    //double *mincost = new double[size.width];
+    //double *
+    double *w1buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+    double *w2buff = new double[(2*winsize+1)*(2*winsize+1)*size.width];
+
+
+    for(int i = winsize;i+winsize<size.height;i++){
+        for(int j = winsize;j+winsize<size.width;j++){
+            int p = (i*size.width + j)*3;
+            int windex = j*(2*winsize+1)*(2*winsize+1);
+            for(int i1 = -winsize;i1<=winsize;i1++){
+                for(int j1 = -winsize;j1<=winsize;j1++){
+                    int q = ((i+i1)*size.width + j+j1)*3;
+                    double w1 =
+                            exp(-sqrt((leftlabptr[p] - leftlabptr[q])*(leftlabptr[p] - leftlabptr[q])
+                                      *100.0/255.0*100.0/255.0+
+                                      (leftlabptr[p+1] - leftlabptr[q+1])*(leftlabptr[p+1] - leftlabptr[q+1])+
+                                      (leftlabptr[p+2] - leftlabptr[q+2])*(leftlabptr[p+2] - leftlabptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    double w2 =
+                            exp(-sqrt((rightlabptr[p] - rightlabptr[q])*(rightlabptr[p] - rightlabptr[q])+
+                                         (rightlabptr[p+1] - rightlabptr[q+1])*(rightlabptr[p+1] - rightlabptr[q+1])+
+                                         (rightlabptr[p+2] - rightlabptr[q+2])*(rightlabptr[p+2] - rightlabptr[q+2]))/yc
+                            -sqrt(i1*i1+j1*j1)/yg);
+                    w1buff[windex] = w1;
+                    w2buff[windex] = w2;
+                    windex++;
+                }
+            }
+        }
+        int *costini = costin+i*size.width*maxdis;
+        int *costi = cost+i*size.width*maxdis;
+        for(int j = winsize;j+winsize<size.width;j++){
+            double mincost;
+            int mmindex=-1;
+            int *costij = costi+j*maxdis;
+            for(int d = 0;d<maxdis&&d+winsize<=j;d++){
+                double sum = 0;
+                double sumw = 0;
+                int p = (i*size.width + j)*3;
+                int p_ = p-3*d;
+                int w1index = j*(2*winsize+1)*(2*winsize+1);
+                int w2index = (j-d)*(2*winsize+1)*(2*winsize+1);
+                for(int i1 = -winsize;i1<=winsize;i1++){
+                    for(int j1 = -winsize;j1<=winsize;j1++){
+
+                        int q = ((i+i1)*size.width + j+j1)*3;
+                        int q_ = q-d*3;
+//                        double e1 = fabs(leftptr[q]-rightptr[q_])+
+//                                fabs(leftptr[q+1]-rightptr[q_+1])+
+//                                fabs(leftptr[q+2]-rightptr[q_+2]);
+                        double e1 = costini[(i1*size.width+j+j1)*maxdis+d];
+
+                        double w1 = w1buff[w1index++];
+                        double w2 = w2buff[w2index++];
+                        sum += w1*w2*e1;
+                        sumw += w1*w2;
+                    }
+                }
+                costij[d] = sum/sumw;
+            }
+        }
+        qDebug()<<"finished "<<i*100/size.height<<"%\r";
+    }
+
+    for(int k = 0;k<4;k++){
+        int i0[4]={0,size.height-winsize,0,0},
+                in[4]={winsize,size.height,size.height,size.height},
+                j0[4]={0,0,0,size.width-winsize},
+                jn[4]={size.width,size.width,winsize,size.width};
+        for(int i = i0[k];i<in[k];i++){
+            for(int j = j0[k];j<jn[k];j++){
+                for(int d = 0;d<maxdis&&d<=j;d++){
+                    cost[(i*size.width+j)*maxdis+d] = 0;
+                }
+            }
+        }
+    }
+    for(int i = winsize;i+winsize<size.height;i++){
+        int *costini = costin+i*size.width*maxdis;
+        int *costi = cost + i*size.width*maxdis;
+        for(int j = winsize;j+winsize<size.width;j++){
+            int *costinij = costini+j*maxdis;
+            int *costij = costi + j*maxdis;
+            for(int d = 0;d<maxdis&&d<=j;d++){
+                costinij[d] = costij[d];
+            }
+        }
+    }
+
+
+    delete []w1buff;
+    delete []w2buff;
+    delete []cost;
+}
+
+
+/*
+ *抛物线拟合
+ *d = d + (C(-1)-C(1))/(2C(-1)-4C(0)+2C(1))
+ *
+ */
+
+void subpixel(int *cost,Size size,int *disint,int maxdis,float *dis){
+    for(int i = 0;i<size.height;i++){
+        int *costi = cost+i*size.width*maxdis;
+        int *disinti = disint+i*size.width;
+        float *disi = dis+i*size.width;
+        for(int j = 0;j<size.width;j++){
+            int *costij = costi + j*maxdis;
+            int d = disinti[j];
+            if(d>0&&d<maxdis){
+                int c_1=costij[d-1],c0 = costij[d],c1 = costij[d+1];
+                int bo = c_1-2*c0+c1;
+                if(bo!=0)
+                    disi[j] = d+(c_1-c1)/(bo*2.0);
+                else
+                    disi[j] = d;
+            }else
+                disi[j] = d;
+        }
+    }
+}
 
 void stereo_MSGM_MY(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2,int iter,
-                    int winsize,int prefilter,bool BT,bool lrc,bool uniq,bool filt){
+                    int winsize,int prefilter,bool BT,bool lrc,bool uniq,bool filt,bool subpix,int AW_FBS){
     if(left.size()!=right.size())
         return;
     Size size = left.size();
@@ -385,7 +539,16 @@ void stereo_MSGM_MY(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2,int i
 
     int *cost = new int[size.width*size.height*maxdis];
 
-    stereo_BMBox_BT(left,right,cost,maxdis,winsize,prefilter,BT);
+
+    if(AW_FBS==1){
+        stereo_BMBox_BT(left,right,cost,maxdis,0,prefilter,BT);
+        stereo_BM_AW_Cost(left,right,cost,maxdis,winsize);
+    }else if(AW_FBS==2){
+        stereo_BMBox_BT(left,right,cost,maxdis,0,prefilter,BT);
+    }
+    else{
+        stereo_BMBox_BT(left,right,cost,maxdis,winsize,prefilter,BT);
+    }
 
     int *disint = new int[size.width*size.height];
     int *LrSum   = new int[size.width*size.height*maxdis];
@@ -625,8 +788,11 @@ void stereo_MSGM_MY(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2,int i
     if(filt)
         connetFilter(disint,size,2,200);
 
-    for(int i = 0;i<size.width*size.height;i++)
-        disptr[i] = disint[i];
+    if(subpix)
+        subpixel(cost,size,disint,maxdis,disptr);
+    else
+        for(int i = 0;i<size.width*size.height;i++)
+            disptr[i] = disint[i];
 
     delete []cost;
     delete []LrSum;
@@ -636,14 +802,23 @@ void stereo_MSGM_MY(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2,int i
 }
 
 //WTA BM 算法
-void WTA_(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,bool BT,int prefilter,bool lrc,bool uniq,bool filt){
+void WTA_(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,bool BT,int prefilter,
+          bool lrc,bool uniq,bool filt,bool subpix,int AW_FBS){
     if(left.size()!=right.size())
         return;
     Size size = left.size();
     int *cost = new int[size.width*size.height*maxdis];
     int *disint = new int[size.width*size.height];
 
-    stereo_BMBox_BT(left,right,cost,maxdis,winsize,prefilter,BT);
+    if(AW_FBS==1){
+        stereo_BMBox_BT(left,right,cost,maxdis,0,prefilter,BT);
+        stereo_BM_AW_Cost(left,right,cost,maxdis,winsize);
+    }else if(AW_FBS==2){
+        stereo_BMBox_BT(left,right,cost,maxdis,0,prefilter,BT);
+    }
+    else{
+        stereo_BMBox_BT(left,right,cost,maxdis,winsize,prefilter,BT);
+    }
     for(int i = 0;i<size.height;i++){
         int *costi = cost+i*size.width*maxdis;
         for(int j = 0;j<size.width;j++){
@@ -667,10 +842,13 @@ void WTA_(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,bool BT,int prefi
 
     dis.create(size,CV_32F);
     float *disptr = (float*)dis.data;
-    for(int i = 0;i<size.width*size.height;i++)
-        disptr[i] = disint[i];
-
-
+    if(subpix){
+        subpixel(cost,size,disint,maxdis,disptr);
+    }
+    else{
+        for(int i = 0;i<size.width*size.height;i++)
+            disptr[i] = disint[i];
+    }
     delete []cost;
     delete []disint;
 }
@@ -746,16 +924,24 @@ void Stereo::stereoMatch(Mat &leftmat, Mat &rightmat, Mat &dismat){
         bm(leftmatgray,rightmatgray,dismat,CV_32F);
     }
     else if(this->method==METHOD_CUSTOM){
+        int AW_FBS = 0;
+        if(this->costAggregation==Stereo::COST_AGGREGATION_AW)
+            AW_FBS = 1;
+        else if(this->costAggregation==Stereo::COST_AGGREGATION_FBS)
+            AW_FBS = 2;
         if(this->computeDisparity==Stereo::COMPUTE_DISPARITY_ITER_SGM){
             stereo_MSGM_MY(leftmat,rightmat,dismat,
                        maxdis,P1,P2,this->iterTimes,this->winsize/2,
                        this->costCalulate_SOBEL?64:-1,this->costCalulate_BT,
-                       this->disRefineLRC,this->disRefineUnique,this->disRefineFilter);
+                       this->disRefineLRC,this->disRefineUnique,this->disRefineFilter,
+                           this->disRefineSubPixel,AW_FBS                           );
         }else if(this->computeDisparity==Stereo::COMPUTE_DISPARITY_WTA){
             WTA_(leftmat,rightmat,dismat,maxdis,winsize/2,this->costCalulate_BT,
                  this->costCalulate_SOBEL?64:-1,this->disRefineLRC
-                 ,this->disRefineUnique,this->disRefineFilter
+                 ,this->disRefineUnique,this->disRefineFilter,this->disRefineSubPixel,AW_FBS
                  );
+        }else if(this->computeDisparity==Stereo::COMPUTE_DISPARITY_DP){
+
         }
     }
 }

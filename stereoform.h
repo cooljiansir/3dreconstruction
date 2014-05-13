@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <cv.h>
 #include "stereo.h"
+#include <QMutex>
 
 using namespace cv;
 
@@ -31,6 +32,8 @@ private slots:
 private:
     Ui::StereoForm *ui;
     void resizeMat(Mat &src,Mat &res,int width,int height);
+
+    QMutex mutex;
 
 
 private:

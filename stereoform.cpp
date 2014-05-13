@@ -130,7 +130,7 @@ void StereoForm::checkForm(){
 
 void StereoForm::on_pushButton_refresh_clicked()
 {
-    stereo.stereoMatch(leftmat,rightmat,dismat);
+    mutex.lock();
     //set params
     if(ui->radioAW->isChecked())
         this->stereo.costAggregation=Stereo::COST_AGGREGATION_AW;
@@ -156,7 +156,7 @@ void StereoForm::on_pushButton_refresh_clicked()
     this->stereo.disRefineFilter = ui->checkBox_Filter->isChecked();
     this->stereo.disRefineLRC = ui->checkBox_LRC->isChecked();
     this->stereo.disRefineSubPixel = ui->checkBox_Subpixel->isChecked();
-    this->stereo.disRefineUnique = ui->checkBox_Unique->isCheckable();
+    this->stereo.disRefineUnique = ui->checkBox_Unique->isChecked();
 
     this->stereo.iterTimes = ui->lineEdit_IterTimes->text().toInt();
     if(ui->radioCustom->isChecked()){
@@ -172,7 +172,7 @@ void StereoForm::on_pushButton_refresh_clicked()
 
     this->stereo.stereoMatch(leftmat,rightmat,dismat);
     this->updateImage();
-
+    mutex.unlock();
 }
 void StereoForm::updateImage(){
     Mat leftshow,rightshow;
