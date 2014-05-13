@@ -1,3 +1,6 @@
+#if 0
+#define
+
 #include <QApplication>
 #include "cv.h"
 #include "highgui.h"
@@ -215,3 +218,4 @@ int main(int argc, char *argv[]){
     return a.exec();
 }
 */
+#endif

@@ -19,7 +19,15 @@ public:
     explicit StereoForm(Mat &leftmat,Mat &rightmat,QWidget *parent = 0);
     ~StereoForm();
     void resizeEvent(QResizeEvent *);
-    
+    void initialForm();
+    void updateImage();
+
+public slots:
+
+    void checkForm();
+private slots:
+    void on_pushButton_refresh_clicked();
+
 private:
     Ui::StereoForm *ui;
     void resizeMat(Mat &src,Mat &res,int width,int height);
