@@ -4,6 +4,7 @@
 #include <QFileDialog>
 #include <algorithm>
 #include <time.h>
+#include "stereoform.h"
 
 #include <QDebug>
 
@@ -529,20 +530,22 @@ void testMyWorld(){
 
             Mat leftmat = imread(leftfilename.toUtf8().data());
             Mat rightmat = imread(rightfilename.toUtf8().data());
+            StereoForm *form = new StereoForm(leftmat,rightmat);
+            form->showMaximized();
 
-            Mat dis,vdisp;
-
-
-            clock_t t = clock();
-            stereo_MSGM_MY(leftmat,rightmat,dis,16*7,8,32,5,0,63,true);
-
-            qDebug()<<"used time "<<clock()-t<<"ms"<<endl;
+//            Mat dis,vdisp;
 
 
-            dis.convertTo(vdisp,CV_8U);
-            normalize(vdisp,vdisp,0,255,CV_MINMAX);
+//            clock_t t = clock();
+//            stereo_MSGM_MY(leftmat,rightmat,dis,16*7,8,32,5,0,63,true);
 
-            imshow("SGM P1=8 P2=32 ",vdisp);
+//            qDebug()<<"used time "<<clock()-t<<"ms"<<endl;
+
+
+//            dis.convertTo(vdisp,CV_8U);
+//            normalize(vdisp,vdisp,0,255,CV_MINMAX);
+
+//            imshow("SGM P1=8 P2=32 ",vdisp);
         }
     }
 }

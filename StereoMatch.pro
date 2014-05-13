@@ -21,14 +21,19 @@ SOURCES += main.cpp\
     test.cpp \
     cvsgbm.cpp \
     myWorld.cpp \
-    refine.cpp
+    refine.cpp \
+    stereoform.cpp \
+    stereo.cpp
 
 HEADERS  += mainwindow.h \
     clicklabel.h \
-    uti.h
+    uti.h \
+    stereoform.h \
+    stereo.h
 
 FORMS    += mainwindow.ui \
-    clicklabel.ui
+    clicklabel.ui \
+    stereoform.ui
 
 
 
