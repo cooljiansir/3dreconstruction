@@ -13,14 +13,6 @@ RTFDocument::RTFDocument(){
     this->image_width = -1;
     this->image_height = -1;
 
-    //各种匹配方法添加
-    this->stereoMatchMethods.push_back(new StereoMatchOpencvSGBM());
-    this->stereoMatchMethods.push_back(new StereoMatchOpencvBM());
-//    this->stereoMatchMethods.push_back(new StereoMatchOpencvVar());
-    this->stereoMatchMethods.push_back(new StereoMatchBM());
-    this->stereoMatchMethods.push_back(new StereoMatchDynamic());
-    this->stereoMatchMethods.push_back(new StereoMatchSGBM_DP());
-    this->stereoMatchMethods.push_back(new StereoMatchAW());
 }
 RTFDocument::~RTFDocument(){
     for(int i = 0;i<this->stereoMatchMethods.size();i++){

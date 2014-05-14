@@ -8,6 +8,7 @@
 #include <QMutex>
 #include <QStandardItemModel>
 #include "glwidget.h"
+#include "stereoform.h"
 
 #define FILE_NAME   "dre"   //文件后缀名
 
@@ -80,11 +81,11 @@ private:
     //bool isStereoLoading;//互斥信号量
     QMutex mutex;
 public slots:
-    void on_stereoMatchLoadBut_clicked();
 
     void on_polar_Open_clicked();
 
-    void on_stereoMatchRadio_clicked();
+    void stereoUpate(Mat &left,Mat &right,Mat &dis);//stereoform update its image
+
 
 public:
     void loadCalidUI();
@@ -107,6 +108,7 @@ private:
     Mat dispMat;//差视图
     bool disOk;//
     Mat Q;//Q矩阵
+
 public:
     RTFDocument *doc;
 

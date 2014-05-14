@@ -36,7 +36,10 @@ MainWindow::MainWindow(QWidget *parent) :
     this->ui->stackedWidget->setCurrentIndex(0);//welcome!
     this->setupCalibUI();
     this->setupBinUI();
-    this->setupStereoUI();
+
+    connect(ui->steroContainer,SIGNAL(updateImages(Mat&,Mat&,Mat&)),
+            this,SLOT(stereoUpate(Mat&,Mat&,Mat&)));
+
 }
 
 MainWindow::~MainWindow()
@@ -381,49 +384,7 @@ void MainWindow::on_actionPolar_Correction_triggered()
     ui->stackedWidget->setCurrentIndex(3);
 }
 
-void MainWindow::setupStereoUI(){
-    ui->stereoRadio0->setChecked(true);
-    int nkind = this->doc->stereoMatchMethods.size();
-    ui->stereoRadio0->setVisible(nkind>0);
-    if(nkind>0)
-        ui->stereoRadio0->setText(QString::fromStdString(this->doc->stereoMatchMethods[0]->getKindName()));
-    ui->stereoRadio1->setVisible(nkind>1);
-    if(nkind>1)
-        ui->stereoRadio1->setText(QString::fromStdString(this->doc->stereoMatchMethods[1]->getKindName()));
-    ui->stereoRadio2->setVisible(nkind>2);
-    if(nkind>2)
-        ui->stereoRadio2->setText(QString::fromStdString(this->doc->stereoMatchMethods[2]->getKindName()));
-    ui->stereoRadio3->setVisible(nkind>3);
-    if(nkind>3)
-        ui->stereoRadio3->setText(QString::fromStdString(this->doc->stereoMatchMethods[3]->getKindName()));
-    ui->stereoRadio4->setVisible(nkind>4);
-    if(nkind>4)
-        ui->stereoRadio4->setText(QString::fromStdString(this->doc->stereoMatchMethods[4]->getKindName()));
-    ui->stereoRadio5->setVisible(nkind>5);
-    if(nkind>5)
-        ui->stereoRadio5->setText(QString::fromStdString(this->doc->stereoMatchMethods[5]->getKindName()));
-    ui->stereoRadio6->setVisible(nkind>6);
-    if(nkind>6)
-        ui->stereoRadio6->setText(QString::fromStdString(this->doc->stereoMatchMethods[6]->getKindName()));
-    ui->stereoRadio7->setVisible(nkind>7);
-    if(nkind>7)
-        ui->stereoRadio7->setText(QString::fromStdString(this->doc->stereoMatchMethods[7]->getKindName()));
-    this->loadStereoParam(0);
-    connect(ui->stereoRadio0,SIGNAL(clicked()),this,SLOT(on_stereoMatchRadio_clicked()));
-    connect(ui->stereoRadio1,SIGNAL(clicked()),this,SLOT(on_stereoMatchRadio_clicked()));
-    connect(ui->stereoRadio2,SIGNAL(clicked()),this,SLOT(on_stereoMatchRadio_clicked()));
-    connect(ui->stereoRadio3,SIGNAL(clicked()),this,SLOT(on_stereoMatchRadio_clicked()));
-    connect(ui->stereoRadio4,SIGNAL(clicked()),this,SLOT(on_stereoMatchRadio_clicked()));
-    connect(ui->stereoRadio5,SIGNAL(clicked()),this,SLOT(on_stereoMatchRadio_clicked()));
-    connect(ui->stereoRadio6,SIGNAL(clicked()),this,SLOT(on_stereoMatchRadio_clicked()));
-    connect(ui->stereoRadio7,SIGNAL(clicked()),this,SLOT(on_stereoMatchRadio_clicked()));
-    connect(ui->slider0,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->slider1,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->slider2,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->slider3,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->slider4,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->slider5,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-}
+
 
 void MainWindow::on_leftUndistored_clicked()
 {
@@ -510,76 +471,18 @@ void MainWindow::on_savePolarBut_clicked()
 void MainWindow::on_actionStereoMatch_triggered()
 {
     this->ui->stackedWidget->setCurrentIndex(4);
+    if(this->polar_left.size().width>0){
+        if(this->polar_changed)
+            ui->steroContainer->setImage(this->polar_left,this->polar_right,this->dispMat);
+        this->disOk =  true;
+    }else{
+        QMessageBox::information(this,"ERROR","Please Input two images in Polar correction");
+    }
     if(this->polar_changed){
-        on_stereoMatchLoadBut_clicked();
         this->polar_changed = false;
     }
 }
 
-void MainWindow::on_stereoMatchLoadBut_clicked()
-{
-    if(this->doc->stereoMatchMethods.size()==0)
-        return;
-    if(!this->polar_finished){
-        QMessageBox::information(this,"ERROR","Please Select two images in Polar Correction Menu");
-        return;
-    }
-    qDebug()<<"调用"<<endl;
-    this->mutex.lock();
-    qDebug()<<"进入"<<endl;
-
-    QPixmap left = QPixmap::fromImage(Mat2QImage(this->polar_left));
-    QPixmap right = QPixmap::fromImage(Mat2QImage(this->polar_right));
-    ui->stereoMatchLeftLabel->setPixmap(left.scaled(ui->stereoMatchLeftLabel->width()
-                                                    ,ui->stereoMatchLeftLabel->height()));
-
-    ui->stereoMatchRightLabel->setPixmap(right.scaled(ui->stereoMatchRightLabel->width()
-                                                      ,ui->stereoMatchRightLabel->height()));
-    //Mat leftM = imread(fileNameLeft.toUtf8().data());
-    //Mat rightM = imread(fileNameRight.toUtf8().data());
-    Mat vdisp,vdisp3;
-    int kind = -1;
-    if(ui->stereoRadio0->isChecked())kind = 0;
-    if(ui->stereoRadio1->isChecked())kind = 1;
-    if(ui->stereoRadio2->isChecked())kind = 2;
-    if(ui->stereoRadio3->isChecked())kind = 3;
-    if(ui->stereoRadio4->isChecked())kind = 4;
-    if(ui->stereoRadio5->isChecked())kind = 5;
-    if(ui->stereoRadio6->isChecked())kind = 6;
-
-    StereoMatchOpencvSGBM *st = (StereoMatchOpencvSGBM*)this->doc->stereoMatchMethods[kind];
-
-
-    st->setParamValue(0,ui->slider0->value());
-    qDebug()<<"set param "<<ui->slider0->value()<<endl;
-
-    st->setParamValue(1,ui->slider1->value());
-    st->setParamValue(2,ui->slider2->value());
-    st->setParamValue(3,ui->slider3->value());
-    st->setParamValue(4,ui->slider4->value());
-    st->setParamValue(5,ui->slider5->value());
-    this->loadStereoParam(kind);
-
-    Mat disp;
-    qDebug()<<"计算"<<endl;
-    st->stereoMatch(this->polar_left,this->polar_right,disp);
-    qDebug()<<"计算完成"<<endl;
-    this->dispMat = disp;
-//    StereoMatch *st = new StereoMatchOpencvSBM();// st;
-//    st->stereoMatch(this->polar_left,this->polar_right,this->dispMat);
-
-    this->disOk = true;
-    this->dispMat.convertTo(vdisp,CV_8U);
-
-    cvtColor(vdisp,vdisp3,CV_GRAY2BGR);
-    QPixmap re = QPixmap::fromImage(Mat2QImage(vdisp3));
-    ui->stereoMatchResultLabel->setPixmap(re.scaled(ui->stereoMatchResultLabel->width()
-                                                    ,ui->stereoMatchResultLabel->height()));
-
-    //this->isStereoLoading = false;
-    this->mutex.unlock();
-    qDebug()<<"正常退出"<<endl;
-}
 
 void MainWindow::on_polar_Open_clicked()
 {
@@ -624,84 +527,7 @@ void MainWindow::on_polar_Open_clicked()
     return;
 }
 
-void MainWindow::loadStereoParam(int k){
-    disconnect(ui->slider0,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    disconnect(ui->slider1,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    disconnect(ui->slider2,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    disconnect(ui->slider3,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    disconnect(ui->slider4,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    disconnect(ui->slider5,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
 
-
-    StereoMatch *st = this->doc->stereoMatchMethods[k];
-    int kind = st->getParamCount();
-    this->ui->sliderLabel0->setVisible(kind>0);
-    this->ui->slider0->setVisible(kind>0);
-    this->ui->sliderLabel0v->setVisible(kind>0);
-    if(kind>0){
-        ui->sliderLabel0->setText(QString::fromStdString(st->getParamName(0)));
-        ui->slider0->setMinimum(st->getParamMin(0));
-        ui->slider0->setMaximum(st->getParamMax(0));
-        ui->slider0->setValue(st->getParamValue(0));
-
-        ui->sliderLabel0v->setText(QString::number(st->getParamValue(0)));
-    }
-    this->ui->sliderLabel1->setVisible(kind>1);
-    this->ui->slider1->setVisible(kind>1);
-    this->ui->sliderLabel1v->setVisible(kind>1);
-    if(kind>1){
-        ui->sliderLabel1->setText(QString::fromStdString(st->getParamName(1)));
-        ui->slider1->setMinimum(st->getParamMin(1));
-        ui->slider1->setMaximum(st->getParamMax(1));
-        ui->slider1->setValue(st->getParamValue(1));
-        ui->sliderLabel1v->setText(QString::number(st->getParamValue(1)));
-    }
-
-    this->ui->sliderLabel2->setVisible(kind>2);
-    this->ui->slider2->setVisible(kind>2);
-    this->ui->sliderLabel2v->setVisible(kind>2);
-    if(kind>2){
-        ui->sliderLabel2->setText(QString::fromStdString(st->getParamName(2)));
-        ui->slider2->setMinimum(st->getParamMin(2));
-        ui->slider2->setMaximum(st->getParamMax(2));
-        ui->slider2->setValue(st->getParamValue(2));
-        ui->sliderLabel2v->setText(QString::number(st->getParamValue(2)));
-    }
-
-    this->ui->sliderLabel3->setVisible(kind>3);
-    this->ui->slider3->setVisible(kind>3);
-    this->ui->sliderLabel3v->setVisible(kind>3);
-    if(kind>3){
-        ui->sliderLabel3->setText(QString::fromStdString(st->getParamName(3)));
-        ui->slider3->setValue(st->getParamValue(3));
-        ui->slider3->setMaximum(st->getParamMax(3));
-        ui->slider3->setMinimum(st->getParamMin(3));
-        ui->sliderLabel3v->setText(QString::number(st->getParamValue(3)));
-    }
-
-    this->ui->sliderLabel4->setVisible(kind>4);
-    this->ui->slider4->setVisible(kind>4);
-    this->ui->sliderLabel4v->setVisible(kind>4);
-    if(kind>4){
-        ui->sliderLabel4->setText(QString::fromStdString(st->getParamName(4)));
-        ui->slider4->setValue(st->getParamValue(4));
-        ui->slider4->setMaximum(st->getParamMax(4));
-        ui->slider4->setMinimum(st->getParamMin(4));
-        ui->sliderLabel4v->setText(QString::number(st->getParamValue(4)));
-    }
-
-    this->ui->sliderLabel5->setVisible(kind>5);
-    this->ui->slider5->setVisible(kind>5);
-    this->ui->sliderLabel5v->setVisible(kind>5);
-
-
-    connect(ui->slider0,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->slider1,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->slider2,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->slider3,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->slider4,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-    connect(ui->slider5,SIGNAL(valueChanged(int)),this,SLOT(on_stereoMatchLoadBut_clicked()));
-}
 
 void MainWindow::on_reproject_AddBut_clicked()
 {
@@ -742,15 +568,11 @@ void MainWindow::on_reproject_ZAdd_clicked()
 {
     ui->glWidget->translateBy(0,0,50);
 }
-void MainWindow::on_stereoMatchRadio_clicked(){
-    int kind = -1;
-    if(ui->stereoRadio0->isChecked())kind = 0;
-    if(ui->stereoRadio1->isChecked())kind = 1;
-    if(ui->stereoRadio2->isChecked())kind = 2;
-    if(ui->stereoRadio3->isChecked())kind = 3;
-    if(ui->stereoRadio4->isChecked())kind = 4;
-    if(ui->stereoRadio5->isChecked())kind = 5;
-    if(ui->stereoRadio6->isChecked())kind = 6;
-    this->loadStereoParam(kind);
-    this->on_stereoMatchLoadBut_clicked();
+
+void MainWindow::stereoUpate(Mat &left, Mat &right, Mat &dis){
+    qDebug()<<"update stereo image"<<endl;
+    this->polar_left = left.clone();
+    this->polar_right = right.clone();
+    this->dispMat = dis.clone();
+    this->disOk = true;
 }
