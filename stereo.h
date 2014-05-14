@@ -40,6 +40,14 @@ public:
     static const int COMPUTE_DISPARITY_WTA = 1;
     static const int COMPUTE_DISPARITY_DP = 2;
     static const int COMPUTE_DISPARITY_ITER_SGM = 3;
+
+private:
+    void saveMat(Mat &mat);
+    void readMat(Mat &mat);
+public:
+    void save(Mat &left,Mat &right,Mat &dis,const char path[]);
+    void read(Mat &left, Mat &right, Mat &dis, const char path[]);
+
 };
 
 #endif // STEREO_H

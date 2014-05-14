@@ -29,6 +29,10 @@ public slots:
 private slots:
     void on_pushButton_refresh_clicked();
 
+    void on_pushButtonSave_clicked();
+
+    void on_pushButton_Open_clicked();
+
 private:
     Ui::StereoForm *ui;
     void resizeMat(Mat &src,Mat &res,int width,int height);

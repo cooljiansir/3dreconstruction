@@ -227,4 +227,21 @@ int main(int argc, char *argv[])
     return app.exec();
 }
 
+void StereoForm::on_pushButtonSave_clicked()
+{
+    QString filename = QFileDialog::getSaveFileName(this,"Save setting and disparity map",NULL,"stereo files(*.ste );");
+    if(!filename.isEmpty()){
+        stereo.save(leftmat,rightmat,dismat,filename.toStdString().c_str());
+    }
+}
 
+void StereoForm::on_pushButton_Open_clicked()
+{
+    QString filename = QFileDialog::getOpenFileName(this,"Open setting and disparity map",NULL,"stereo files(*.ste );");
+    if(!filename.isEmpty()){
+        stereo.read(leftmat,rightmat,dismat,filename.toStdString().c_str());
+        this->initialForm();
+        this->checkForm();
+        this->updateImage();
+    }
+}

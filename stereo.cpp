@@ -1,6 +1,10 @@
 #include "stereo.h"
 #include <QDebug>
 #include <highgui.h>
+#include <iostream>
+
+using namespace std;
+using namespace cv;
 
 
 //左右一致性校验
@@ -1149,6 +1153,132 @@ void stereo_MSGM_MY(Mat &left,Mat &right,Mat &dis,int maxdis,int P1,int P2,int i
     delete []disint;
 }
 
+//DP算法
+void stereoDP_(Mat &left,Mat &right,Mat &dis,int maxdis,double P,int winsize,int prefilter,bool BT,int AW_FBS,
+               bool lrc,bool filt,bool uniq,bool subpix){
+    if(left.size()!=right.size())
+        return;
+    Size size = left.size();
+
+    unsigned char *leftptr = left.data;
+    unsigned char *rightptr = right.data;
+
+    dis.create(size,CV_32F);
+    float *disptr = (float*)dis.data;
+
+    //[-1,width)
+    //[-1,width)二位数组
+    //边界值
+    int costwidth = size.width+1;
+    double *cost_ = new double[costwidth*costwidth];
+    double *cost = cost_+costwidth+1;
+    //用于保存路径
+    char   *path = new char[size.width*size.width];
+
+    int *costfr = new int[size.width*size.height*maxdis];
+    int *disint = new int[size.width*size.height];
+
+    if(AW_FBS==1){
+        stereo_BMBox_BT(left,right,costfr,maxdis,0,prefilter,BT);
+        stereo_BM_AW_Cost(left,right,costfr,maxdis,winsize);
+    }else if(AW_FBS==2){
+        stereo_BMBox_BT(left,right,costfr,maxdis,0,prefilter,BT);
+        stereo_BM_FBS_COST_COM(left,right,costfr,maxdis,1,winsize);
+    }
+    else{
+        stereo_BMBox_BT(left,right,costfr,maxdis,winsize,prefilter,BT);
+    }
+
+
+    //边界值初始化
+    //至始至终都没有改变，所以，初始化一次就行了
+    for(int i = 0;i<costwidth;i++)
+        cost_[i] = cost_[i*costwidth] = 0;
+
+    for(int i=0;i<size.width*size.height;i++)
+        disptr[i] = -1;
+
+    for(int i = 0;i<size.height;i++){
+        unsigned char *leftptri = leftptr+i*size.width*3;
+        unsigned char *rightptri = rightptr+i*size.width*3;
+        int *costfri  = costfr+i*size.width*maxdis;
+        for(int a = 0;a<size.width;a++){
+            double *costa = cost+a*costwidth;
+            double *costa_1 = costa-costwidth;
+            char *patha = path+a*size.width;
+            int *costfria = costfri+a*maxdis;
+            for(int b = 0;b<size.width;b++){
+                //A (a,b) is matched
+                double A;
+                if(a-b<0||a-b>=maxdis)
+                    A=1<<29;
+                else {
+                    A = costa_1[b-1]
+//                                + fabs(leftptri[a*3]-rightptri[b*3])
+//                                + fabs(leftptri[a*3+1]-rightptri[b*3+1])
+//                                + fabs(leftptri[a*3+2]-rightptri[b*3+2]);
+                            +costfria[a-b];
+
+                }
+                //a is blocked
+                double B = costa_1[b] + P;
+                //b is blocked
+                double C = costa[b-1] + P;
+                if(A<B){
+                    if(A<C){//A is min
+                        costa[b] = A;
+                        patha[b] = 1;
+                    }else{//C is min
+                        costa[b] = C;
+                        patha[b] = 3;
+                    }
+                }else{
+                    if(B<C){//B is min
+                        costa[b] = B;
+                        patha[b] = 2;
+                    }else{//C is min
+                        costa[b] = C;
+                        patha[b] = 3;
+                    }
+                }
+            }
+        }
+        int indexa = size.width-1;
+        int indexb = size.width-1;
+        float *disptri = disptr+i*size.width;
+        //qDebug()<<"MAX" <<cost[indexa*costwidth+indexb];
+        while(indexa>=0&&indexb>=0){
+            if(path[indexa*size.width+indexb]==1){
+//                disptri[indexa] = indexa-indexb;
+                disint[i*size.width+indexa] = indexa-indexb;
+                indexa--;
+                indexb--;
+            }else if(path[indexa*size.width+indexb]==2){
+                indexa--;
+            }else if(path[indexa*size.width+indexb]==3){
+                indexb--;
+            }
+        }
+
+    }
+    if(lrc)
+        LRC(costfr,maxdis,size,2,disint);
+    if(uniq)
+        uniquenessC(costfr,disint,maxdis,size);
+    if(filt)
+        connetFilter(disint,size,2,200);
+
+    if(subpix)
+        subpixel(costfr,size,disint,maxdis,disptr);
+    else
+        for(int i = 0;i<size.width*size.height;i++)
+            disptr[i] = disint[i];
+    delete []cost_;
+    delete []path;
+    delete []costfr;
+    delete []disint;
+}
+
 //WTA BM 算法
 void WTA_(Mat &left,Mat &right,Mat &dis,int maxdis,int winsize,bool BT,int prefilter,
           bool lrc,bool uniq,bool filt,bool subpix,int AW_FBS){
@@ -1290,7 +1420,130 @@ void Stereo::stereoMatch(Mat &leftmat, Mat &rightmat, Mat &dismat){
                  ,this->disRefineUnique,this->disRefineFilter,this->disRefineSubPixel,AW_FBS
                  );
         }else if(this->computeDisparity==Stereo::COMPUTE_DISPARITY_DP){
+            stereoDP_(leftmat,rightmat,dismat,maxdis,P1,winsize/2,this->costCalulate_SOBEL?64:-1,
+                      this->costCalulate_BT,AW_FBS,this->disRefineLRC,this->disRefineFilter,this->disRefineUnique
+                      ,this->disRefineSubPixel);
+        }
+    }
+}
 
+void Stereo::save(Mat &left, Mat &right, Mat &dis, const char path[]){
+    freopen(path,"w",stdout);
+    //参数
+    cout<<method<<endl;
+    cout<<maxdis<<endl;
+    cout<<costCalulate_BT<<endl;
+    cout<<costCalulate_SOBEL<<endl;
+    cout<<costAggregation<<endl;
+    cout<<winsize<<endl;
+    cout<<computeDisparity<<endl;
+    cout<<P1<<endl;//DP算法的参数//Iter-SGM的参数
+    cout<<P2<<endl;//Iter-SGM的参数
+    cout<<iterTimes<<endl;//Iter-SGM的参数
+    cout<<disRefineLRC<<endl;
+    cout<<disRefineUnique<<endl;
+    cout<<disRefineFilter<<endl;
+    cout<<disRefineSubPixel<<endl;
+
+//    cout<<left<<endl;
+//    cout<<right<<endl;
+//    cout<<dis<<endl;
+    saveMat(left);
+    saveMat(right);
+    saveMat(dis);
+    fclose(stdout);
+}
+
+void Stereo::read(Mat &left, Mat &right, Mat &dis, const char path[]){
+    freopen(path,"r",stdin);
+    //参数
+    cin>>method;
+    cin>>maxdis;
+    cin>>costCalulate_BT;
+    cin>>costCalulate_SOBEL;
+    cin>>costAggregation;
+    cin>>winsize;
+    cin>>computeDisparity;
+    cin>>P1;//DP算法的参数//Iter-SGM的参数
+    cin>>P2;//Iter-SGM的参数
+    cin>>iterTimes;//Iter-SGM的参数
+    cin>>disRefineLRC;
+    cin>>disRefineUnique;
+    cin>>disRefineFilter;
+    cin>>disRefineSubPixel;
+
+
+
+    readMat(left);
+    readMat(right);
+    readMat(dis);
+    fclose(stdin);
+//    cin>>left;
+//    cin>>right;
+//    cin>>dis;
+}
+
+void Stereo::readMat(Mat &mat){
+    Size size;
+    int chann;
+    int temp;
+    cin>>size.width>>size.height>>chann;
+    if(chann==3){
+        mat.create(size,CV_8UC3);
+        unsigned char  *matptr = mat.data;
+        for(int i = 0;i<size.height;i++){
+            for(int j = 0;j<size.width;j++){
+                for(int k = 0;k<chann;k++){
+                    cin>>temp;
+                    *matptr = temp;
+                    matptr++;
+                }
+            }
+        }
+    }else{
+        mat.create(size,CV_32F);
+        float *matptr = (float *)mat.data;
+        for(int i = 0;i<size.height;i++){
+            for(int j = 0;j<size.width;j++){
+                for(int k = 0;k<chann;k++){
+                    cin>>*matptr;
+                    matptr++;
+                }
+            }
+        }
+    }
+
+
+}
+
+
+void Stereo::saveMat(Mat &mat){
+    Size size = mat.size();
+    int chann = mat.channels();
+    int temp;
+    cout<<size.width<<" "<<size.height<<" "<<chann<<endl;
+    if(chann==3){
+        unsigned char  *matptr = mat.data;
+        for(int i = 0;i<size.height;i++){
+            for(int j = 0;j<size.width;j++){
+                for(int k = 0;k<chann;k++){
+                    temp = *matptr;
+                    cout<<temp<<" ";
+                    matptr++;
+                }
+            }
+            cout<<endl;
+        }
+    }else{
+        float *matptr = (float *)mat.data;
+        for(int i = 0;i<size.height;i++){
+            for(int j = 0;j<size.width;j++){
+                for(int k = 0;k<chann;k++){
+                    cout<<*matptr<<" ";
+                    matptr++;
+                }
+            }
+            cout<<endl;
         }
     }
 }
