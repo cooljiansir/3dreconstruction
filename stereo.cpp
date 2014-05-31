@@ -357,7 +357,7 @@ void stereo_BMBox_BT(Mat &left,Mat &right,int *costout,int maxdis,int winsize,in
             int tem2 = (i-1-winsize)*maxdis;
             for(int d = 0;d<maxdis&&d<=j;d++){
                 sad[d] = sad[d] + s0[tem+d] - s0[tem2+d];
-                costj[d] = sad[d];
+                costj[d] = sad[d]/(2*winsize+1)/(2*winsize+1);
             }
             costj +=size.width*maxdis;
         }
@@ -1340,7 +1340,7 @@ Stereo::Stereo()
     costCalulate_BT = true;
     costCalulate_SOBEL = true;
     costAggregation = COST_AGGREGATION_FW;
-    winsize = 1;
+    winsize = 7;
     computeDisparity = COMPUTE_DISPARITY_ITER_SGM;
     P1 = 8;
     P2 = 32;
@@ -1424,6 +1424,7 @@ void Stereo::stereoMatch(Mat &leftmat, Mat &rightmat, Mat &dismat){
                       this->costCalulate_BT,AW_FBS,this->disRefineLRC,this->disRefineFilter,this->disRefineUnique
                       ,this->disRefineSubPixel);
         }
+        medianBlur(dismat,dismat,3);
     }
 }
 
