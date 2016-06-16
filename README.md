@@ -34,4 +34,4 @@
 * 3d reconstruction :opengl 三维点云重建
 
 ## 快速浏览
-![](http://cooljiansir.oss-cn-beijing.aliyuncs.com/github/quicklook.gif)
+![](https://raw.githubusercontent.com/cooljiansir/3dreconstruction/master/quicklook.gif)
